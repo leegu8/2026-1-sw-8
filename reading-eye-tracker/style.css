@@ -1,0 +1,70 @@
+body {
+    font-family: '맑은 고딕', sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+    background-color: #f8f9fa;
+}
+
+h1 {
+    color: #333;
+}
+
+.container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.text-area {
+    font-size: 1.3rem;
+    line-height: 2.2;
+    text-align: left;
+    color: #222;
+}
+
+#gaze-dot {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(255, 0, 0, 0.7);
+    border-radius: 50%;
+    border: 2px solid white;
+    pointer-events: none;
+    z-index: 9999;
+    box-shadow: 0 0 10px red;
+    display: none;
+    
+}
+
+.controls {
+    margin: 20px;
+}
+
+button {
+    padding: 12px 25px;
+    font-size: 1.1rem;
+    margin: 0 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#start-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+#stop-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+#status {
+    margin-top: 20px;
+    font-size: 1.1rem;
+    font-weight: bold;
+}

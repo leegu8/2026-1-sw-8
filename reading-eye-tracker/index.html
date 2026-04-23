@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서 아이트래킹</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- WebGazer 라이브러리 불러오기 (CDN 방식) -->
+    <script src="https://cdn.jsdelivr.net/npm/webgazer@2.1.0/dist/webgazer.js"></script>
+</head>
+<body>
+    <h1>독서 아이트래킹 테스트</h1>
+    
+    <!-- 시선 표시 점 -->
+    <div id="gaze-dot"></div>
+
+    <div class="container">
+        <div id="article" class="text-area">
+            여기에 긴 글을 넣을 예정입니다. 지금은 테스트용으로 짧은 글을 넣어봅니다.<br><br>
+            눈으로 천천히 읽어보세요. 웹캠이 당신의 시선을 따라갈 거예요.
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="start-btn">시작하기 (웹캠 켜기)</button>
+        <button id="stop-btn">멈추기</button>
+    </div>
+
+    <div id="status"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
