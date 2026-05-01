@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서하기 | 독서 아이트래킹</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/webgazer@2.1.0/dist/webgazer.js"></script>
+</head>
+<body>
+    <div id="gaze-dot"></div>
+
+    <header class="page-header">
+        <div class="logo">👁 독서 아이트래킹</div>
+        <div class="progress-bar">
+            <div class="progress-step done">
+                <div class="circle">✓</div> 시선 보정
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step done">
+                <div class="circle">✓</div> 사용 안내
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step active">
+                <div class="circle">3</div> 독서하기
+            </div>
+        </div>
+    </header>
+
+    <div class="page-content">
+        <div class="reading-area">
+            <h2>📖 오늘의 글</h2>
+            <div class="reading-text">
+                <p>
+                    사람이 글을 읽을 때, 눈은 결코 일정한 속도로 움직이지 않는다. 눈은 짧은 순간 한 지점에 고정되었다가, 빠르게 다음 지점으로 이동하는 과정을 반복한다. 이 고정 동작을 '고착'이라 하고, 빠른 이동을 '도약'이라 부른다.
+                </p>
+                <p>
+                    능숙한 독자는 한 번의 고착으로 여러 단어를 인식하고, 불필요한 역방향 도약을 줄인다. 반면 초보 독자는 한 단어씩 읽거나, 앞으로 되돌아가는 경향이 잦다. 이러한 차이가 독서 속도와 이해도에 직접적인 영향을 미친다.
+                </p>
+                <p>
+                    독서 능력은 훈련을 통해 개선될 수 있다. 눈의 움직임 패턴을 인식하고, 의식적으로 넓은 범위를 한 번에 파악하는 연습을 반복하면, 점차 효율적인 독서 습관이 형성된다.
+                </p>
+            </div>
+        </div>
+
+        <div class="reading-controls">
+            <button id="stop-btn" class="btn btn-danger">추적 중지</button>
+            <button id="recal-btn" class="btn btn-warning">재보정</button>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <script src="reading.js"></script>
+</body>
+</html>

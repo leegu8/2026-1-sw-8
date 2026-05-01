@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서 아이트래킹</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/webgazer@2.1.0/dist/webgazer.js"></script>
+</head>
+<body>
+    <!-- 시선 점: 모든 뷰에서 공유 -->
+    <div id="gaze-dot"></div>
+
+    <header class="page-header">
+        <div class="logo">👁 독서 아이트래킹</div>
+        <div class="progress-bar" id="progress-bar">
+            <div class="progress-step active" id="step-calibration">
+                <div class="circle">1</div> 시선 보정
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step" id="step-guide">
+                <div class="circle">2</div> 사용 안내
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step" id="step-reading">
+                <div class="circle">3</div> 독서하기
+            </div>
+        </div>
+    </header>
+
+    <!-- ================ VIEW 1: 보정 ================ -->
+    <div id="view-calibration" class="view">
+
+        <!-- 보정 오버레이: 버튼 클릭 후 화면 전체를 덮음 -->
+        <div id="calibration-overlay">
+            <div id="cal-header">
+                <div id="cal-instruction">각 점을 바라보면서 5번씩 클릭하세요</div>
+                <div id="cal-progress">0 / 9 완료</div>
+            </div>
+        </div>
+
+        <div class="page-content" style="text-align:center;">
+            <h2 style="font-size:1.6rem; margin-bottom:12px;">시선 보정</h2>
+            <p style="color:#666; margin-bottom:32px; line-height:1.8;">
+                정확한 시선 추적을 위해 초기 보정이 필요합니다.<br>
+                화면이 어두워지면 각 점을 <strong>바라보면서</strong> 클릭해 주세요.
+            </p>
+            <button id="start-btn" class="btn btn-primary">웹캠 켜고 보정 시작</button>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <!-- ================ VIEW 2: 안내 ================ -->
+    <div id="view-guide" class="view" style="display:none;">
+        <div class="page-content">
+            <h2 style="font-size:1.6rem; margin-bottom:8px;">사용 안내</h2>
+            <p style="color:#666; margin-bottom:28px;">독서를 시작하기 전에 아래 내용을 확인해 주세요.</p>
+
+            <div class="guide-notice">
+                💡 이 페이지를 보는 동안 <strong>마우스를 자연스럽게 움직여 주세요.</strong>
+                시선 보정 데이터가 계속 쌓이고 있습니다.
+            </div>
+
+            <div class="guide-list">
+                <div class="guide-item">
+                    <div class="num">1</div>
+                    <div>
+                        <h3>올바른 자세 유지</h3>
+                        <p>화면과 40~60cm 거리를 유지하고, 정면을 바라보세요.</p>
+                    </div>
+                </div>
+                <div class="guide-item">
+                    <div class="num">2</div>
+                    <div>
+                        <h3>밝은 환경에서 사용</h3>
+                        <p>얼굴에 충분한 빛이 닿아야 합니다. 역광이나 어두운 환경은 피해 주세요.</p>
+                    </div>
+                </div>
+                <div class="guide-item">
+                    <div class="num">3</div>
+                    <div>
+                        <h3>독서 중 마우스 사용 자제</h3>
+                        <p>독서 페이지에서는 마우스 보정이 비활성화됩니다.</p>
+                    </div>
+                </div>
+                <div class="guide-item">
+                    <div class="num">4</div>
+                    <div>
+                        <h3>정확도가 낮다면</h3>
+                        <p>"재보정" 버튼으로 보정을 다시 진행하세요.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align:center;">
+                <button id="reading-btn" class="btn btn-success">독서 시작하기 →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================ VIEW 3: 독서 ================ -->
+    <div id="view-reading" class="view" style="display:none;">
+        <div class="page-content">
+            <div class="reading-area">
+                <h2>📖 오늘의 글</h2>
+                <div class="reading-text">
+                    <p>
+                        <span class="reading-line">사람이 글을 읽을 때, 눈은 결코 일정한 속도로 움직이지 않는다.</span>
+                        <span class="reading-line">눈은 짧은 순간 한 지점에 고정되었다가, 빠르게 다음 지점으로 이동하는 과정을 반복한다.</span>
+                        <span class="reading-line">이 고정 동작을 '고착'이라 하고, 빠른 이동을 '도약'이라 부른다.</span>
+                    </p>
+                    <p>
+                        <span class="reading-line">능숙한 독자는 한 번의 고착으로 여러 단어를 인식하고, 불필요한 역방향 도약을 줄인다.</span>
+                        <span class="reading-line">반면 초보 독자는 한 단어씩 읽거나, 앞으로 되돌아가는 경향이 잦다.</span>
+                        <span class="reading-line">이러한 차이가 독서 속도와 이해도에 직접적인 영향을 미친다.</span>
+                    </p>
+                    <p>
+                        <span class="reading-line">독서 능력은 훈련을 통해 개선될 수 있다.</span>
+                        <span class="reading-line">눈의 움직임 패턴을 인식하고, 의식적으로 넓은 범위를 한 번에 파악하는 연습을 반복하면,</span>
+                        <span class="reading-line">점차 효율적인 독서 습관이 형성된다.</span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="reading-controls">
+                <button id="done-btn" class="btn btn-success">다 읽었어요 →</button>
+                <button id="stop-btn" class="btn btn-danger">추적 중지</button>
+                <button id="recal-btn" class="btn btn-warning">재보정</button>
+                <div id="reading-status"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================ VIEW 4: 결과 ================ -->
+    <div id="view-result" class="view" style="display:none;">
+        <div class="page-content">
+            <h2 style="font-size:1.6rem; margin-bottom:8px;">📊 독서 분석 결과</h2>
+            <p style="color:#888; font-size:0.9rem; margin-bottom:28px;">
+                시선 추적 정확도의 한계로 인해 수치는 참고용입니다.
+            </p>
+
+            <div id="result-metrics"></div>
+
+            <div id="result-feedback" class="result-feedback"></div>
+
+            <div style="text-align:center; margin-top:32px; display:flex; gap:12px; justify-content:center;">
+                <button id="retry-btn"  class="btn btn-primary">다시 읽기</button>
+                <button id="recal2-btn" class="btn btn-warning">재보정 후 다시 읽기</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
