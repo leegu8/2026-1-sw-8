@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서 분석 결과 - 독서 아이트래킹</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="gaze-dot"></div>
+
+    <header class="page-header">
+        <div class="logo">👁 독서 아이트래킹</div>
+    </header>
+
+    <div class="page-content">
+        <h2 style="font-size:1.6rem; margin-bottom:8px;">📊 독서 분석 결과</h2>
+        <p style="color:#888; font-size:0.9rem; margin-bottom:28px;">
+            시선 추적 정확도의 한계로 인해 수치는 참고용입니다.
+        </p>
+
+        <div id="result-metrics"></div>
+        <div id="result-feedback" class="result-feedback"></div>
+
+        <div style="text-align:center; margin-top:32px; display:flex; gap:12px; justify-content:center;">
+            <button class="btn btn-primary" onclick="location.href='/reading.html'">
+                다시 읽기
+            </button>
+            <button class="btn btn-warning" onclick="location.href='/calibration.html'">
+                재보정 후 다시 읽기
+            </button>
+        </div>
+    </div>
+
+    <script src="/static/gaze.js"></script>
+    <script>
+    // URL 파라미터에서 분석 결과 읽기
+    // 예: /result.html?time=45&focus=78&regressions=3&error=0
+    const params      = new URLSearchParams(location.search);
+    const totalSec    = parseInt(params.get('time')        ?? '0');
+    const focusRate   = parseInt(params.get('focus')       ?? '-1');
+    const regressions = parseInt(params.get('regressions') ?? '-1');
+    const isError     = params.get('error') === '1';
+
+    if (isError || focusRate === -1) {
+        // 데이터 부족
+        document.getElementById('result-metrics').innerHTML = `
+            <p style="text-align:center; color:#e74c3c; margin-bottom:24px;">
+                수집된 시선 데이터가 부족합니다.<br>
+                독서 중 얼굴이 카메라에 잘 보이는지 확인하고 다시 시도하세요.
+            </p>`;
+    } else {
+        // 등급 계산
+        const focusGrade = focusRate   >= 75 ? 'good' : focusRate   >= 50 ? 'avg' : 'bad';
+        const regGrade   = regressions <= 4  ? 'good' : regressions <= 12 ? 'avg' : 'bad';
+
+        const label = { good: '좋음', avg: '보통', bad: '개선 필요' };
+        const color = { good: '#27ae60', avg: '#f39c12', bad: '#e74c3c' };
+
+        document.getElementById('result-metrics').innerHTML = `
+            <div class="result-cards">
+                <div class="result-card">
+                    <div class="result-icon">⏱</div>
+                    <div class="result-label">총 독서 시간</div>
+                    <div class="result-value">${totalSec}초</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-icon">👁</div>
+                    <div class="result-label">집중도</div>
+                    <div class="result-value">${focusRate}%</div>
+                    <div class="result-badge" style="background:${color[focusGrade]}">${label[focusGrade]}</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-icon">↩</div>
+                    <div class="result-label">역행 횟수</div>
+                    <div class="result-value">${regressions}회</div>
+                    <div class="result-badge" style="background:${color[regGrade]}">${label[regGrade]}</div>
+                </div>
+            </div>`;
+
+        // 피드백 메시지
+        const feedbacks = [];
+        if      (focusGrade === 'good') feedbacks.push('텍스트에 잘 집중하며 읽었습니다.');
+        else if (focusGrade === 'avg')  feedbacks.push('가끔 시선이 텍스트 밖으로 벗어났습니다. 화면 중앙에 집중해보세요.');
+        else                            feedbacks.push('시선이 텍스트 영역을 자주 벗어났습니다. 독서 환경을 조용히 만들어보세요.');
+
+        if      (regGrade === 'good')   feedbacks.push('역행이 거의 없어 흐름이 좋습니다.');
+        else if (regGrade === 'avg')    feedbacks.push('역행이 다소 있었습니다. 읽기 전에 전체 구조를 파악하면 도움이 됩니다.');
+        else                            feedbacks.push('역행이 많았습니다. 한 번에 이해하려 집중하는 연습을 해보세요.');
+
+        document.getElementById('result-feedback').innerHTML = `
+            <h3>💬 피드백</h3>
+            ${feedbacks.map(f => `<p>${f}</p>`).join('')}`;
+    }
+    </script>
+</body>
+</html>
