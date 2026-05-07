@@ -68,7 +68,7 @@ def init_landmarker():
 LEFT_IRIS  = 468   # 왼쪽 홍채 중심 랜드마크 인덱스
 RIGHT_IRIS = 473   # 오른쪽 홍채 중심 랜드마크 인덱스
 
-SMOOTH_ALPHA = 0.35  # EMA 스무딩 강도 (낮을수록 부드럽고 느림)
+SMOOTH_ALPHA = 0.25  # EMA 스무딩 강도 (낮을수록 부드럽고 느림)
 
 
 def _draw_landmarks(frame, landmarks):

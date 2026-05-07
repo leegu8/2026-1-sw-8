@@ -15,6 +15,9 @@
         <div id="cal-header">
             <div id="cal-instruction">각 점을 바라보면서 5번씩 클릭하세요</div>
             <div id="cal-progress">0 / 9 완료</div>
+            <div id="cal-sample-progress">
+                <div id="cal-sample-bar"></div>
+            </div>
         </div>
         <!-- 9개 보정 점은 JS 에서 동적으로 생성 -->
     </div>
@@ -78,7 +81,38 @@
                 e.stopPropagation();
                 if (calCounts[i] >= CLICKS_NEEDED) return;
 
-                // UI 즉시 반응
+                // 수집 중 UI: 해당 점 강조 + 모든 점 클릭 차단
+                div.classList.add('collecting');
+                div.querySelector('span').textContent = '⬤';
+                document.querySelectorAll('.cal-point').forEach(p => p.style.pointerEvents = 'none');
+                document.getElementById('cal-instruction').textContent = '시선을 고정해 주세요... (0.5초)';
+
+                // 진행바 애니메이션 시작
+                const bar  = document.getElementById('cal-sample-bar');
+                const prog = document.getElementById('cal-sample-progress');
+                prog.style.display = 'block';
+                bar.classList.remove('running');
+                void bar.offsetWidth; // reflow 강제 → 애니메이션 재시작
+                bar.classList.add('running');
+
+                // 서버에 전송 → 서버가 500ms 동안 홍채 샘플링
+                const result = await addCalibrationPoint(e.clientX, e.clientY);
+
+                // 수집 완료: UI 복원
+                div.classList.remove('collecting');
+                prog.style.display = 'none';
+                bar.classList.remove('running');
+                document.querySelectorAll('.cal-point').forEach(p => p.style.pointerEvents = '');
+                document.getElementById('cal-instruction').textContent = '각 점을 바라보면서 5번씩 클릭하세요';
+
+                if (!result.success) {
+                    // 얼굴 미감지로 샘플 수집 실패 시 카운트 롤백
+                    div.querySelector('span').textContent = CLICKS_NEEDED - calCounts[i];
+                    document.getElementById('cal-instruction').textContent = '⚠ 얼굴이 감지되지 않았습니다. 다시 클릭하세요.';
+                    return;
+                }
+
+                // 성공: 카운트 증가
                 calCounts[i]++;
                 const remaining = CLICKS_NEEDED - calCounts[i];
                 div.querySelector('span').textContent = remaining === 0 ? '✓' : remaining;
@@ -87,19 +121,7 @@
                 const completed = calCounts.filter(c => c >= CLICKS_NEEDED).length;
                 document.getElementById('cal-progress').textContent = `${completed} / 9 완료`;
 
-                // 서버에 전송 → 서버가 200ms 동안 홍채 샘플링 후 평균 저장
-                // JS 딜레이 불필요: 서버가 직접 샘플링하므로
-                const result = await addCalibrationPoint(e.clientX, e.clientY);
-                if (!result.success) {
-                    // 얼굴 미감지로 샘플 수집 실패 시 카운트 롤백
-                    calCounts[i] = Math.max(0, calCounts[i] - 1);
-                    div.querySelector('span').textContent = CLICKS_NEEDED - calCounts[i];
-                    div.classList.remove('done');
-                    document.getElementById('cal-progress').textContent =
-                        `${calCounts.filter(c => c >= CLICKS_NEEDED).length} / 9 완료`;
-                }
-
-                if (completed === 9 && result.success) onCalComplete();
+                if (completed === 9) onCalComplete();
             });
 
             overlay.appendChild(div);

@@ -168,10 +168,50 @@ body {
 
 .cal-point:hover { transform: translate(-50%, -50%) scale(1.5); animation: none; }
 .cal-point.done  { background: #2ecc71; color: white; animation: none; }
+.cal-point.collecting {
+    background: #3498db;
+    color: white;
+    cursor: wait;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(1.35);
+    animation: cal-wave 0.5s ease-out infinite;
+}
 
 @keyframes cal-pulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
     50%       { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+}
+
+@keyframes cal-wave {
+    0%   { box-shadow: 0 0 0 0px rgba(52,152,219,0.8); }
+    100% { box-shadow: 0 0 0 18px rgba(52,152,219,0); }
+}
+
+/* 샘플 수집 진행바 */
+#cal-sample-progress {
+    width: 220px;
+    height: 5px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+    margin: 12px auto 0;
+    overflow: hidden;
+    display: none;
+}
+
+#cal-sample-bar {
+    height: 100%;
+    width: 0%;
+    background: #3498db;
+    border-radius: 3px;
+}
+
+#cal-sample-bar.running {
+    animation: sample-fill 0.5s linear forwards;
+}
+
+@keyframes sample-fill {
+    from { width: 0%; }
+    to   { width: 100%; }
 }
 
 /* 홈 페이지 */
