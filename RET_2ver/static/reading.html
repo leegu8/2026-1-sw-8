@@ -30,20 +30,20 @@
         <div class="reading-area">
             <h2>📖 오늘의 글</h2>
             <div class="reading-text">
-                <p>
-                    <span class="reading-line">사람이 글을 읽을 때, 눈은 결코 일정한 속도로 움직이지 않는다.</span>
-                    <span class="reading-line">눈은 짧은 순간 한 지점에 고정되었다가, 빠르게 다음 지점으로 이동하는 과정을 반복한다.</span>
-                    <span class="reading-line">이 고정 동작을 '고착'이라 하고, 빠른 이동을 '도약'이라 부른다.</span>
+                <p data-summary="사람의 눈은 고착과 도약을 반복하며 비일정한 속도로 읽습니다.">
+                    <span class="reading-chunk">사람이</span> <span class="reading-chunk">글을</span> <span class="reading-chunk">읽을 때,</span> <span class="reading-chunk">눈은</span> <span class="reading-chunk">결코</span> <span class="reading-chunk">일정한</span> <span class="reading-chunk">속도로</span> <span class="reading-chunk">움직이지</span> <span class="reading-chunk">않는다.</span>
+                    <span class="reading-chunk">눈은</span> <span class="reading-chunk">짧은 순간</span> <span class="reading-chunk">한 지점에</span> <span class="reading-chunk">고정되었다가,</span> <span class="reading-chunk">빠르게</span> <span class="reading-chunk">다음 지점으로</span> <span class="reading-chunk">이동하는</span> <span class="reading-chunk">과정을</span> <span class="reading-chunk">반복한다.</span>
+                    <span class="reading-chunk">이 고정 동작을 '고착'이라 하고,</span> <span class="reading-chunk">빠른 이동을 '도약'이라 부른다.</span>
                 </p>
-                <p>
-                    <span class="reading-line">능숙한 독자는 한 번의 고착으로 여러 단어를 인식하고, 불필요한 역방향 도약을 줄인다.</span>
-                    <span class="reading-line">반면 초보 독자는 한 단어씩 읽거나, 앞으로 되돌아가는 경향이 잦다.</span>
-                    <span class="reading-line">이러한 차이가 독서 속도와 이해도에 직접적인 영향을 미친다.</span>
+                <p data-summary="숙련도에 따라 고착 범위와 역행 빈도에서 차이가 발생합니다.">
+                    <span class="reading-chunk">능숙한 독자는</span> <span class="reading-chunk">한 번의 고착으로</span> <span class="reading-chunk">여러 단어를 인식하고,</span> <span class="reading-chunk">불필요한</span> <span class="reading-chunk">역방향 도약을</span> <span class="reading-chunk">줄인다.</span>
+                    <span class="reading-chunk">반면</span> <span class="reading-chunk">초보 독자는</span> <span class="reading-chunk">한 단어씩</span> <span class="reading-chunk">읽거나,</span> <span class="reading-chunk">앞으로</span> <span class="reading-chunk">되돌아가는</span> <span class="reading-chunk">경향이 잦다.</span>
+                    <span class="reading-chunk">이러한 차이가</span> <span class="reading-chunk">독서 속도와</span> <span class="reading-chunk">이해도에</span> <span class="reading-chunk">직접적인</span> <span class="reading-chunk">영향을 미친다.</span>
                 </p>
-                <p>
-                    <span class="reading-line">독서 능력은 훈련을 통해 개선될 수 있다.</span>
-                    <span class="reading-line">눈의 움직임 패턴을 인식하고, 의식적으로 넓은 범위를 한 번에 파악하는 연습을 반복하면,</span>
-                    <span class="reading-line">점차 효율적인 독서 습관이 형성된다.</span>
+                <p data-summary="의식적인 훈련을 통해 효율적인 독서 습관을 형성할 수 있습니다.">
+                    <span class="reading-chunk">독서 능력은</span> <span class="reading-chunk">훈련을 통해</span> <span class="reading-chunk">개선될 수 있다.</span>
+                    <span class="reading-chunk">눈의 움직임 패턴을 인식하고,</span> <span class="reading-chunk">의식적으로</span> <span class="reading-chunk">넓은 범위를</span> <span class="reading-chunk">한 번에</span> <span class="reading-chunk">파악하는</span> <span class="reading-chunk">연습을 반복하면,</span>
+                    <span class="reading-chunk">점차 효율적인</span> <span class="reading-chunk">독서 습관이</span> <span class="reading-chunk">형성된다.</span>
                 </p>
             </div>
         </div>
@@ -61,66 +61,163 @@
     const gazeData    = [];      // [{x, y, t}, ...] 형태로 누적
     const startTime   = Date.now();
     let   maxReadY    = 0;       // 시선이 도달한 최대 Y 좌표 (읽기 진행 위치)
+    
+    // 추가된 상태 변수들
+    let lastFixationPos = { x: -1000, y: -1000 };
+    let fixationTimer = null;
+    let currentParagraphIndex = -1;
+    let latestGazePos = { x: 0, y: 0 };
+
+    // 하드코딩된 단어 사전 (체류 시간 툴팁용)
+    const dictionary = {
+        "고착": "눈이 짧은 순간 한 지점에 머무는 현상",
+        "도약": "눈이 다음 지점으로 빠르게 이동하는 동작",
+        "능숙": "어떤 일에 익숙하고 숙달되어 뛰어남",
+        "인식": "사물을 분별하고 판단하여 앎",
+        "개선": "부족한 점, 잘못된 점 등을 고쳐서 더 좋게 만듦",
+        "효율적": "들인 노력과 시간에 비해 결과가 만족스러운 것"
+    };
 
     document.getElementById('reading-status').textContent = '👁 시선 추적 중';
+    document.querySelector('.reading-text').classList.add('is-focusing');
 
     // gaze.js 가 시선 데이터를 받을 때마다 호출하는 콜백
     function onGaze(x, y) {
+        latestGazePos = { x, y };
         // 데이터 수집 (100ms 간격으로 샘플링)
         const now = Date.now();
         if (gazeData.length === 0 || now - gazeData[gazeData.length - 1].t >= 100) {
             gazeData.push({ x, y, t: now });
         }
 
+        // 2. 체류 시간 감지 및 툴팁
+        handleFixation(x, y);
+
         // 실시간 피드백 업데이트
         updateReadingFeedback(x, y);
     }
 
+    function handleFixation(x, y) {
+        const dist = Math.sqrt(Math.pow(x - lastFixationPos.x, 2) + Math.pow(y - lastFixationPos.y, 2));
+        if (dist < 40) {
+            if (!fixationTimer) {
+                fixationTimer = setTimeout(() => {
+                    // 타이머가 실행되는 시점의 '최신' 시선 좌표를 사용합니다.
+                    const finalX = latestGazePos.x;
+                    const finalY = latestGazePos.y;
+
+                    // 해당 좌표가 여전히 고정 영역 내에 있는지 다시 확인합니다.
+                    const finalDist = Math.sqrt(Math.pow(finalX - lastFixationPos.x, 2) + Math.pow(finalY - lastFixationPos.y, 2));
+                    if (finalDist >= 40) return;
+
+                    // 화면 상의 실제 요소(chunk) 찾기
+                    const elements = document.elementsFromPoint(finalX, finalY);
+                    const chunk = elements.find(el => el.classList && el.classList.contains('reading-chunk'));
+                    
+                    if (chunk) {
+                        const chunkText = chunk.innerText;
+                        // dictionary의 키(정의된 단어)들을 순회
+                        for (const word in dictionary) {
+                            // 현재 청크의 텍스트에 해당 단어가 포함되어 있는지 확인
+                            if (chunkText.includes(word)) {
+                                // 포함되어 있다면 해당 단어의 뜻을 툴팁으로 보여주고 반복 중단
+                                const definition = dictionary[word];
+                                showTooltip(finalX, finalY, `${word}: ${definition}`);
+                                return; // 툴팁 하나만 띄우기 위해
+                            }
+                        }
+                    }
+                }, 1500);
+            }
+        } else {
+            clearTimeout(fixationTimer);
+            fixationTimer = null;
+            lastFixationPos = { x, y };
+            hideTooltip();
+        }
+    }
+
+    function showTooltip(x, y, text) {
+        let tip = document.getElementById('gaze-tip') || document.createElement('div');
+        tip.id = 'gaze-tip'; 
+        tip.className = 'gaze-tooltip';
+        tip.style.left = x + 'px'; 
+        tip.style.top = y + 'px';
+        tip.innerText = text;
+        if (!tip.parentElement) document.body.appendChild(tip);
+    }
+    
+    function hideTooltip() { 
+        document.getElementById('gaze-tip')?.remove(); 
+    }
+
     // ── 실시간 독서 피드백 ────────────────────────────────────
     function updateReadingFeedback(x, y) {
-        const lines = Array.from(document.querySelectorAll('.reading-line'));
-        if (!lines.length) return;
+        const chunks = Array.from(document.querySelectorAll('.reading-chunk'));
+        const paragraphs = Array.from(document.querySelectorAll('.reading-text p'));
 
-        // 읽기 진행 위치 갱신: 시선이 더 아래로 내려갈수록 maxReadY 증가
+        // 읽기 진행 위치 갱신
         if (y > maxReadY) maxReadY = y;
 
-        // ── 1. 현재 줄 하이라이트 ──────────────────────────
-        // 시선 Y 좌표와 가장 가까운 줄을 찾아 하이라이트
-        let bestLine = null, bestDist = Infinity;
-        lines.forEach(line => {
-            const r      = line.getBoundingClientRect();
-            const center = r.top + r.height / 2;
-            const dist   = Math.abs(y - center);
-            if (dist < bestDist) { bestDist = dist; bestLine = line; }
+        // 1. 의미 단위(Chunking) 하이라이트
+        let closestChunk = null;
+        let minDist = Infinity;
+        
+        chunks.forEach(c => {
+            const r = c.getBoundingClientRect();
+            // 청크의 중심점과 시선 사이의 거리 계산
+            const cx = r.left + r.width / 2;
+            const cy = r.top + r.height / 2;
+            const d = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
+            
+            if (d < minDist) { 
+                minDist = d; 
+                closestChunk = c; 
+            }
+            c.classList.remove('chunk-highlight');
         });
-
-        lines.forEach(line => line.classList.remove('line-highlight'));
-        // 시선이 줄 중심에서 80px 이내일 때만 하이라이트
-        if (bestLine && bestDist < 80) {
-            bestLine.classList.add('line-highlight');
+        
+        if (closestChunk && minDist < 100) {
+            closestChunk.classList.add('chunk-highlight');
         }
 
-        // ── 2. 역행 감지 → 블러 처리 ──────────────────────
-        // 시선이 읽기 진행 위치보다 120px 이상 위로 올라가면 역행으로 판단
-        const REGRESSION_THRESHOLD = 120;
-        const isRegressing = y < maxReadY - REGRESSION_THRESHOLD;
-
-        lines.forEach(line => {
-            const r = line.getBoundingClientRect();
-            // 역행 중이고, 현재 시선보다 위에 있는 줄을 블러 처리
-            if (isRegressing && r.bottom < y) {
-                line.classList.add('line-blur');
-            } else {
-                line.classList.remove('line-blur');
+        // 문단 전환 감지 및 요약 표시
+        paragraphs.forEach((p, idx) => {
+            const r = p.getBoundingClientRect();
+            if (y > r.top && y < r.bottom) {
+                if (currentParagraphIndex !== idx) {
+                    if (currentParagraphIndex !== -1) {
+                        finalizeParagraph(currentParagraphIndex);
+                    }
+                    currentParagraphIndex = idx;
+                }
             }
         });
     }
 
+    function finalizeParagraph(idx) {
+        const p = document.querySelectorAll('.reading-text p')[idx];
+        
+        // 요약 표시
+        if (!p.querySelector('.summary-widget')) {
+            const widget = document.createElement('div');
+            widget.className = 'summary-widget';
+            widget.innerText = "💡 요약: " + p.dataset.summary;
+            p.style.position = 'relative';
+            p.appendChild(widget);
+            // 부드럽게 나타나게 하기 위해 약간의 지연 후 opacity 변경
+            setTimeout(() => widget.style.opacity = '1', 50);
+        }
+    }
+
     // ── 독서 완료 → 분석 → 결과 페이지 ──────────────────────
     document.getElementById('done-btn').addEventListener('click', () => {
-        // 피드백 효과 초기화
-        document.querySelectorAll('.reading-line').forEach(line => {
-            line.classList.remove('line-highlight', 'line-blur');
+        if (currentParagraphIndex !== -1) {
+            finalizeParagraph(currentParagraphIndex);
+        }
+        
+        document.querySelectorAll('.reading-chunk').forEach(c => {
+            c.classList.remove('chunk-highlight');
         });
 
         const result = analyzeReading();
