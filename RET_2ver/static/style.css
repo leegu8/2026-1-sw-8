@@ -187,31 +187,71 @@ body {
     100% { box-shadow: 0 0 0 18px rgba(52,152,219,0); }
 }
 
-/* 샘플 수집 진행바 */
-#cal-sample-progress {
-    width: 220px;
-    height: 5px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 3px;
-    margin: 12px auto 0;
-    overflow: hidden;
-    display: none;
+/* 얼굴 감지 상태 (오버레이 헤더 내) */
+#cal-face-status {
+    font-size: 0.88rem;
+    margin-top: 8px;
+    min-height: 18px;
+    color: #2ecc71;
 }
 
-#cal-sample-bar {
+/* 샘플 수집 중 중앙 토스트 */
+#cal-sampling-toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(30, 80, 160, 0.95);
+    color: white;
+    padding: 28px 48px;
+    border-radius: 16px;
+    text-align: center;
+    display: none;
+    pointer-events: none;
+    z-index: 2;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+#cal-toast-icon {
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+    animation: toast-blink 0.5s ease-in-out infinite alternate;
+}
+
+#cal-toast-text {
+    font-size: 1.15rem;
+    font-weight: bold;
+    margin-bottom: 16px;
+}
+
+#cal-toast-bar-wrap {
+    width: 200px;
+    height: 7px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+#cal-toast-bar {
     height: 100%;
     width: 0%;
-    background: #3498db;
-    border-radius: 3px;
+    background: #74b9ff;
+    border-radius: 4px;
 }
 
-#cal-sample-bar.running {
+#cal-toast-bar.running {
     animation: sample-fill 0.5s linear forwards;
 }
 
 @keyframes sample-fill {
     from { width: 0%; }
     to   { width: 100%; }
+}
+
+@keyframes toast-blink {
+    from { opacity: 0.6; transform: scale(0.95); }
+    to   { opacity: 1;   transform: scale(1.05); }
 }
 
 /* 홈 페이지 */

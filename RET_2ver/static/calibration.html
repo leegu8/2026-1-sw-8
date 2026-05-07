@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>시선 보정 - 독서 아이트래킹</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
     <!-- 시선 점: gaze.js 가 로드되면 자동으로 제어됨 -->
@@ -15,10 +15,18 @@
         <div id="cal-header">
             <div id="cal-instruction">각 점을 바라보면서 5번씩 클릭하세요</div>
             <div id="cal-progress">0 / 9 완료</div>
-            <div id="cal-sample-progress">
-                <div id="cal-sample-bar"></div>
+            <div id="cal-face-status"></div>
+        </div>
+
+        <!-- 샘플 수집 중 표시되는 중앙 토스트 -->
+        <div id="cal-sampling-toast">
+            <div id="cal-toast-icon">👁</div>
+            <div id="cal-toast-text">시선을 고정해 주세요</div>
+            <div id="cal-toast-bar-wrap">
+                <div id="cal-toast-bar"></div>
             </div>
         </div>
+
         <!-- 9개 보정 점은 JS 에서 동적으로 생성 -->
     </div>
 
@@ -81,18 +89,17 @@
                 e.stopPropagation();
                 if (calCounts[i] >= CLICKS_NEEDED) return;
 
-                // 수집 중 UI: 해당 점 강조 + 모든 점 클릭 차단
+                // 수집 중 UI
                 div.classList.add('collecting');
-                div.querySelector('span').textContent = '⬤';
+                div.querySelector('span').textContent = '';
                 document.querySelectorAll('.cal-point').forEach(p => p.style.pointerEvents = 'none');
-                document.getElementById('cal-instruction').textContent = '시선을 고정해 주세요... (0.5초)';
 
-                // 진행바 애니메이션 시작
-                const bar  = document.getElementById('cal-sample-bar');
-                const prog = document.getElementById('cal-sample-progress');
-                prog.style.display = 'block';
+                // 중앙 토스트 + 진행바 표시
+                const toast = document.getElementById('cal-sampling-toast');
+                const bar   = document.getElementById('cal-toast-bar');
+                toast.style.display = 'block';
                 bar.classList.remove('running');
-                void bar.offsetWidth; // reflow 강제 → 애니메이션 재시작
+                void bar.offsetWidth;
                 bar.classList.add('running');
 
                 // 서버에 전송 → 서버가 500ms 동안 홍채 샘플링
@@ -100,15 +107,14 @@
 
                 // 수집 완료: UI 복원
                 div.classList.remove('collecting');
-                prog.style.display = 'none';
+                toast.style.display = 'none';
                 bar.classList.remove('running');
                 document.querySelectorAll('.cal-point').forEach(p => p.style.pointerEvents = '');
-                document.getElementById('cal-instruction').textContent = '각 점을 바라보면서 5번씩 클릭하세요';
 
                 if (!result.success) {
-                    // 얼굴 미감지로 샘플 수집 실패 시 카운트 롤백
                     div.querySelector('span').textContent = CLICKS_NEEDED - calCounts[i];
-                    document.getElementById('cal-instruction').textContent = '⚠ 얼굴이 감지되지 않았습니다. 다시 클릭하세요.';
+                    document.getElementById('cal-face-status').textContent = '⚠ 얼굴이 감지되지 않았습니다. 다시 클릭하세요.';
+                    document.getElementById('cal-face-status').style.color = '#e74c3c';
                     return;
                 }
 
@@ -148,15 +154,25 @@
         createCalPoints();
     });
 
-    // gaze.js 콜백: 얼굴이 감지되면 상태 메시지 표시
+    // gaze.js 콜백: 얼굴 감지 상태를 오버레이와 하단 모두에 표시
     function onFaceDetected() {
-        const s = document.getElementById('status');
-        if (s.textContent === '') s.textContent = '✅ 얼굴 감지됨. 보정을 시작하세요.';
+        const s  = document.getElementById('status');
+        const fs = document.getElementById('cal-face-status');
+        if (s.textContent  === '') s.textContent = '✅ 얼굴 감지됨. 보정을 시작하세요.';
+        if (fs && fs.dataset.error !== '1') {
+            fs.textContent = '✅ 얼굴 감지됨';
+            fs.style.color = '#2ecc71';
+        }
     }
 
     function onNoFace() {
-        const s = document.getElementById('status');
+        const s  = document.getElementById('status');
+        const fs = document.getElementById('cal-face-status');
         if (s.textContent.startsWith('✅')) s.textContent = '⚠ 얼굴이 감지되지 않습니다. 웹캠을 확인하세요.';
+        if (fs && fs.dataset.error !== '1') {
+            fs.textContent = '⚠ 얼굴 미감지 — 카메라를 확인하세요';
+            fs.style.color = '#e74c3c';
+        }
     }
     </script>
 </body>
