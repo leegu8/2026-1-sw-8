@@ -8,6 +8,7 @@
 
 (function () {
 
+// [DEV] ↓↓↓ 개발자 모드 코드 — 배포 전 제거 ↓↓↓
 const DEV_MODE = localStorage.getItem('devMode') === 'true';
 
 // ── 위젯 HTML 삽입 ─────────────────────────────────────────
@@ -205,6 +206,8 @@ if (DEV_MODE) {
         localStorage.removeItem('devMode');
         location.href = '/';
     });
+
+// [DEV] ↑↑↑ 개발자 모드 코드 끝 ↑↑↑
 
 // ── 일반 모드 전용 버튼 ────────────────────────────────────
 } else {

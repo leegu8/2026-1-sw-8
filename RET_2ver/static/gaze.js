@@ -20,11 +20,14 @@
 })();
 
 const gazeDot  = document.getElementById('gaze-dot');
+
+// [DEV] ↓↓↓ 개발자 모드 코드 — 배포 전 제거 ↓↓↓
 const DEV_MODE = localStorage.getItem('devMode') === 'true';
 
 // ─── 개발자 모드: 마우스를 시선으로 사용 ─────────────────────
 if (DEV_MODE) {
     let _tracking = true;
+    let _calCount = 0;
 
     document.addEventListener('mousemove', (e) => {
         if (!_tracking) return;
@@ -59,6 +62,22 @@ if (DEV_MODE) {
             }
         },
     };
+
+    // 캘리브레이션 API 목(mock): 웹캠 없이도 보정 단계를 통과할 수 있게
+    addCalibrationPoint = async (x, y) => {
+        _calCount++;
+        return { success: true, count: _calCount, calibrated: _calCount >= 4, samples_used: 10 };
+    };
+    clearCalibration = async () => {
+        _calCount = 0;
+        return { success: true };
+    };
+    getCalibrationStatus = async () => ({
+        count:      _calCount,
+        calibrated: _calCount >= 4,
+    });
+
+// [DEV] ↑↑↑ 개발자 모드 코드 끝 ↑↑↑
 
 // ─── 일반 모드: WebSocket 시선 추적 ───────────────────────────
 } else {

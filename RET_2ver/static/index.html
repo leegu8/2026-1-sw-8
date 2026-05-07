@@ -88,6 +88,7 @@
             <div id="consent-status" style="margin-top:14px; font-size:0.9rem; color:#666; text-align:center; min-height:20px;"></div>
         </div>
 
+        <!-- [DEV] ↓↓↓ 개발자 모드 — 배포 전 제거 ↓↓↓ -->
         <!-- 개발자 모드 (웹캠 없이 마우스로 테스트) -->
         <div style="text-align:center; margin-top:20px;">
             <button id="dev-mode-btn" style="
@@ -188,10 +189,10 @@
         document.getElementById('agree-btn').disabled = false;
     }
 
-    // ── 개발자 모드 ───────────────────────────────────────────
+    // [DEV] ↓↓↓ 개발자 모드 — 배포 전 제거 ↓↓↓
     document.getElementById('dev-mode-btn').addEventListener('click', () => {
         localStorage.setItem('devMode', 'true');
-        location.href = '/reading.html';
+        location.href = '/guide.html';
     });
 
     // ── STEP 2: 동의 및 시작 ─────────────────────────────────
