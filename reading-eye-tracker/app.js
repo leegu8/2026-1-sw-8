@@ -395,3 +395,12 @@ document.addEventListener('DOMContentLoaded', () => {
         restartCalibration();
     });
 });
+
+
+// 예시: http://localhost:3000/api/users 주소로 접속하면 DB 데이터 전송
+app.get('/api/users', (req, res) => {
+  connection.query('SELECT * FROM USER', (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results); // JSON 상자에 담아서 웹에 던짐!
+  });
+});
