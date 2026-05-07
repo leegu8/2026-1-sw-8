@@ -7,6 +7,9 @@
 //   3. 각 페이지에서 onGaze(x, y) 함수를 정의하면
 //      시선 데이터를 받을 때마다 호출됨
 //   4. widget.js 를 자동으로 로드해 플로팅 웹캠 위젯을 표시
+//
+// 개발자 모드 (localStorage.devMode === 'true'):
+//   웹캠/WebSocket 대신 마우스 커서를 시선으로 사용
 // =====================================================
 
 // widget.js 자동 로드 (gaze.js 를 포함하는 모든 페이지에 위젯이 뜸)
@@ -16,43 +19,85 @@
     document.head.appendChild(s);
 })();
 
-const ws = new WebSocket(`ws://${location.host}/ws`);
-const gazeDot = document.getElementById('gaze-dot');
+const gazeDot  = document.getElementById('gaze-dot');
+const DEV_MODE = localStorage.getItem('devMode') === 'true';
 
-ws.onopen = () => {
-    console.log('[gaze.js] 시선 추적 서버에 연결됨');
-};
+// ─── 개발자 모드: 마우스를 시선으로 사용 ─────────────────────
+if (DEV_MODE) {
+    let _tracking = true;
 
-ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+    document.addEventListener('mousemove', (e) => {
+        if (!_tracking) return;
+        const x = e.clientX;
+        const y = e.clientY;
 
-    if (data.type === 'gaze' && data.calibrated) {
         if (gazeDot) {
             gazeDot.style.display = 'block';
-            gazeDot.style.left    = `${data.x}px`;
-            gazeDot.style.top     = `${data.y}px`;
+            gazeDot.style.left    = `${x}px`;
+            gazeDot.style.top     = `${y}px`;
         }
-        if (typeof onGaze === 'function') onGaze(data.x, data.y);
+        if (typeof onGaze === 'function') onGaze(x, y);
+        if (typeof updateWidgetStatus === 'function') {
+            updateWidgetStatus({ type: 'gaze', calibrated: true, x, y });
+        }
+    });
 
-    } else if (data.type === 'gaze' && !data.calibrated) {
-        if (typeof onFaceDetected === 'function') onFaceDetected();
+    // 위젯에서 제어할 수 있도록 전역 노출
+    window.devGaze = {
+        isTracking: () => _tracking,
+        pause() {
+            _tracking = false;
+            if (gazeDot) gazeDot.style.display = 'none';
+            if (typeof updateWidgetStatus === 'function') {
+                updateWidgetStatus({ type: 'dev_paused' });
+            }
+        },
+        resume() {
+            _tracking = true;
+            if (typeof updateWidgetStatus === 'function') {
+                updateWidgetStatus({ type: 'dev_resumed' });
+            }
+        },
+    };
 
-    } else if (data.type === 'no_face') {
+// ─── 일반 모드: WebSocket 시선 추적 ───────────────────────────
+} else {
+    const ws = new WebSocket(`ws://${location.host}/ws`);
+
+    ws.onopen = () => {
+        console.log('[gaze.js] 시선 추적 서버에 연결됨');
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'gaze' && data.calibrated) {
+            if (gazeDot) {
+                gazeDot.style.display = 'block';
+                gazeDot.style.left    = `${data.x}px`;
+                gazeDot.style.top     = `${data.y}px`;
+            }
+            if (typeof onGaze === 'function') onGaze(data.x, data.y);
+
+        } else if (data.type === 'gaze' && !data.calibrated) {
+            if (typeof onFaceDetected === 'function') onFaceDetected();
+
+        } else if (data.type === 'no_face') {
+            if (gazeDot) gazeDot.style.display = 'none';
+            if (typeof onNoFace === 'function') onNoFace();
+        }
+
+        if (typeof updateWidgetStatus === 'function') updateWidgetStatus(data);
+    };
+
+    ws.onerror = () => {
+        console.error('[gaze.js] WebSocket 연결 실패. 서버가 실행 중인지 확인하세요.');
+    };
+
+    ws.onclose = () => {
         if (gazeDot) gazeDot.style.display = 'none';
-        if (typeof onNoFace === 'function') onNoFace();
-    }
-
-    // 위젯 상태 업데이트 (widget.js 가 로드된 경우)
-    if (typeof updateWidgetStatus === 'function') updateWidgetStatus(data);
-};
-
-ws.onerror = () => {
-    console.error('[gaze.js] WebSocket 연결 실패. 서버가 실행 중인지 확인하세요.');
-};
-
-ws.onclose = () => {
-    if (gazeDot) gazeDot.style.display = 'none';
-};
+    };
+}
 
 
 // ─── 보정 REST API 헬퍼 ────────────────────────────────────

@@ -87,6 +87,26 @@
 
             <div id="consent-status" style="margin-top:14px; font-size:0.9rem; color:#666; text-align:center; min-height:20px;"></div>
         </div>
+
+        <!-- 개발자 모드 (웹캠 없이 마우스로 테스트) -->
+        <div style="text-align:center; margin-top:20px;">
+            <button id="dev-mode-btn" style="
+                background: none;
+                border: 1px dashed #bbb;
+                color: #999;
+                padding: 7px 20px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 0.82rem;
+                transition: all 0.2s;
+            " onmouseover="this.style.borderColor='#888';this.style.color='#666';"
+               onmouseout="this.style.borderColor='#bbb';this.style.color='#999';">
+                🛠 개발자 모드
+            </button>
+            <p style="color:#ccc; font-size:0.76rem; margin-top:5px;">
+                웹캠 없이 마우스로 시선 추적 시뮬레이션
+            </p>
+        </div>
     </div>
 
     <script>
@@ -167,6 +187,12 @@
         });
         document.getElementById('agree-btn').disabled = false;
     }
+
+    // ── 개발자 모드 ───────────────────────────────────────────
+    document.getElementById('dev-mode-btn').addEventListener('click', () => {
+        localStorage.setItem('devMode', 'true');
+        location.href = '/reading.html';
+    });
 
     // ── STEP 2: 동의 및 시작 ─────────────────────────────────
     document.getElementById('agree-btn').addEventListener('click', async () => {
