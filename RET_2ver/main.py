@@ -68,7 +68,7 @@ def init_landmarker():
 LEFT_IRIS  = 468   # 왼쪽 홍채 중심 랜드마크 인덱스
 RIGHT_IRIS = 473   # 오른쪽 홍채 중심 랜드마크 인덱스
 
-SMOOTH_ALPHA = 0.2  # EMA 스무딩 강도 (낮을수록 부드럽고 느림)
+SMOOTH_ALPHA = 0.35  # EMA 스무딩 강도 (낮을수록 부드럽고 느림)
 
 
 def _draw_landmarks(frame, landmarks):
@@ -182,7 +182,38 @@ class GazeTracker:
                                screen_x: int, screen_y: int) -> None:
         """평균 홍채 좌표와 화면 좌표를 보정 데이터에 추가한다."""
         self.cal_data.append((iris_x, iris_y, screen_x, screen_y))
-        if len(self.cal_data) >= 4:
+        if len(self.cal_data) >= 6:
+            self._compute_matrix()
+
+    def add_calibration_samples(self, iris_samples: list,
+                                 screen_x: int, screen_y: int) -> None:
+        """
+        여러 홍채 샘플을 개별 데이터 포인트로 저장한다 (이상치 제거 후).
+
+        평균 1개만 저장하는 대신 각 샘플을 독립 데이터로 사용하면
+        최소제곱법 적합도가 크게 향상된다.
+        이상치 제거: 평균에서 2σ 이상 벗어난 샘플 제외.
+        """
+        if not iris_samples:
+            return
+
+        xs = np.array([s[0] for s in iris_samples])
+        ys = np.array([s[1] for s in iris_samples])
+        x_mean, x_std = xs.mean(), xs.std() + 1e-9
+        y_mean, y_std = ys.mean(), ys.std() + 1e-9
+
+        valid = [
+            s for s in iris_samples
+            if abs(s[0] - x_mean) <= 2 * x_std
+            and abs(s[1] - y_mean) <= 2 * y_std
+        ]
+        if not valid:
+            valid = iris_samples  # 모두 제거될 경우 폴백
+
+        for s in valid:
+            self.cal_data.append((s[0], s[1], screen_x, screen_y))
+
+        if len(self.cal_data) >= 6:
             self._compute_matrix()
 
     def clear_calibration(self):
@@ -193,16 +224,20 @@ class GazeTracker:
 
     def _compute_matrix(self):
         """
-        최소제곱법(Least Squares)으로 홍채 좌표 → 화면 좌표 변환 행렬을 계산한다.
+        2차 다항식 최소제곱법으로 홍채 좌표 → 화면 좌표 변환 행렬을 계산한다.
 
-        수식:  [screen_x, screen_y] ≈ [iris_x, iris_y, 1] @ matrix
-        matrix 의 shape 는 (3, 2).
+        선형 변환(affine)은 홍채-화면 간 비선형성을 표현하지 못한다.
+        2차 항(x², y², xy)을 추가하면 원근 왜곡·굴절 등 비선형 오차를 보정할 수 있다.
+
+        수식:  [sx, sy] ≈ [x, y, x², y², xy, 1] @ matrix
+        matrix 의 shape 는 (6, 2).
         """
         src = np.array([[d[0], d[1]] for d in self.cal_data], dtype=np.float64)
         dst = np.array([[d[2], d[3]] for d in self.cal_data], dtype=np.float64)
-        A   = np.column_stack([src, np.ones(len(src))])
+        x, y = src[:, 0], src[:, 1]
+        A = np.column_stack([x, y, x**2, y**2, x * y, np.ones(len(src))])
         result, _, _, _ = np.linalg.lstsq(A, dst, rcond=None)
-        self.cal_matrix = result   # shape (3, 2)
+        self.cal_matrix = result   # shape (6, 2)
 
     def get_screen_pos(self):
         """
@@ -212,7 +247,8 @@ class GazeTracker:
         if self.iris_pos is None or self.cal_matrix is None:
             return None
 
-        v      = np.array([self.iris_pos[0], self.iris_pos[1], 1.0])
+        px, py = self.iris_pos[0], self.iris_pos[1]
+        v      = np.array([px, py, px**2, py**2, px * py, 1.0])
         xy     = v @ self.cal_matrix
         raw_x, raw_y = float(xy[0]), float(xy[1])
 
@@ -262,8 +298,8 @@ class CalibrationPoint(BaseModel):
     x: int
     y: int
 
-SAMPLE_COUNT    = 10     # 샘플 수집 횟수
-SAMPLE_INTERVAL = 0.02   # 샘플 간격 (초) → 10회 × 20ms = 200ms 총 수집
+SAMPLE_COUNT    = 25     # 샘플 수집 횟수
+SAMPLE_INTERVAL = 0.02   # 샘플 간격 (초) → 25회 × 20ms = 500ms 총 수집
 
 @app.post("/api/calibrate")
 async def add_calibration(point: CalibrationPoint):
@@ -285,10 +321,7 @@ async def add_calibration(point: CalibrationPoint):
     if not samples:
         return {"success": False, "count": len(tracker.cal_data), "calibrated": False}
 
-    avg_x = sum(s[0] for s in samples) / len(samples)
-    avg_y = sum(s[1] for s in samples) / len(samples)
-
-    tracker.add_calibration_point(avg_x, avg_y, point.x, point.y)
+    tracker.add_calibration_samples(samples, point.x, point.y)
 
     return {
         "success":      True,
