@@ -59,6 +59,7 @@ def init_landmarker():
     options = mp_vision.FaceLandmarkerOptions(
         base_options=base_options,
         num_faces=1,
+        output_facial_transformation_matrixes=True,  # 고개 자세 행렬 출력
         min_face_detection_confidence=0.3,
         min_face_presence_confidence=0.3,
         min_tracking_confidence=0.3,
@@ -68,7 +69,56 @@ def init_landmarker():
 LEFT_IRIS  = 468   # 왼쪽 홍채 중심 랜드마크 인덱스
 RIGHT_IRIS = 473   # 오른쪽 홍채 중심 랜드마크 인덱스
 
+# 눈 윤곽 랜드마크 인덱스 (상대 홍채 위치 계산용)
+L_EYE_INNER  = 133
+L_EYE_OUTER  = 33
+L_EYE_TOP    = 159
+L_EYE_BOTTOM = 145
+R_EYE_INNER  = 362
+R_EYE_OUTER  = 263
+R_EYE_TOP    = 386
+R_EYE_BOTTOM = 374
+
 SMOOTH_ALPHA = 0.25  # EMA 스무딩 강도 (낮을수록 부드럽고 느림)
+
+
+def _extract_gaze_features(lm, transform_matrix):
+    """
+    얼굴 랜드마크와 변환 행렬에서 4차원 시선 특징 벡터를 추출한다.
+
+    반환값: (rel_iris_x, rel_iris_y, yaw_feat, pitch_feat)
+      - rel_iris_x/y : 눈 크기 기준 정규화된 홍채 위치
+                       카메라 거리·위치가 달라져도 값이 유지됨
+      - yaw_feat     : 변환 행렬 회전 성분 m[0][2] (좌우 고개 회전 포착)
+      - pitch_feat   : 변환 행렬 회전 성분 m[1][2] (상하 고개 회전 포착)
+    """
+    # 왼쪽 눈 기준 상대 홍채 위치
+    l_cx = (lm[L_EYE_INNER].x + lm[L_EYE_OUTER].x) / 2
+    l_cy = (lm[L_EYE_TOP].y   + lm[L_EYE_BOTTOM].y) / 2
+    l_w  = abs(lm[L_EYE_OUTER].x - lm[L_EYE_INNER].x) + 1e-6
+    l_h  = abs(lm[L_EYE_BOTTOM].y - lm[L_EYE_TOP].y)  + 1e-6
+    rel_lx = (lm[LEFT_IRIS].x  - l_cx) / l_w
+    rel_ly = (lm[LEFT_IRIS].y  - l_cy) / l_h
+
+    # 오른쪽 눈 기준 상대 홍채 위치
+    r_cx = (lm[R_EYE_INNER].x + lm[R_EYE_OUTER].x) / 2
+    r_cy = (lm[R_EYE_TOP].y   + lm[R_EYE_BOTTOM].y) / 2
+    r_w  = abs(lm[R_EYE_OUTER].x - lm[R_EYE_INNER].x) + 1e-6
+    r_h  = abs(lm[R_EYE_BOTTOM].y - lm[R_EYE_TOP].y)  + 1e-6
+    rel_rx = (lm[RIGHT_IRIS].x - r_cx) / r_w
+    rel_ry = (lm[RIGHT_IRIS].y - r_cy) / r_h
+
+    rel_iris_x = (rel_lx + rel_rx) / 2
+    rel_iris_y = (rel_ly + rel_ry) / 2
+
+    # 변환 행렬의 회전 성분으로 고개 방향 추출
+    # m[0][2]: 얼굴-정면 벡터의 x 성분 → 좌우 회전에 민감
+    # m[1][2]: 얼굴-정면 벡터의 y 성분 → 상하 회전에 민감
+    m = np.array(transform_matrix.data).reshape(4, 4)
+    yaw_feat   = float(m[0][2])
+    pitch_feat = float(m[1][2])
+
+    return (rel_iris_x, rel_iris_y, yaw_feat, pitch_feat)
 
 
 def _draw_landmarks(frame, landmarks):
@@ -102,9 +152,9 @@ class GazeTracker:
     """
 
     def __init__(self):
-        self.iris_pos     = None   # 현재 홍채 정규화 좌표 (0~1, 이미지 기준)
-        self.cal_data     = []     # [(iris_x, iris_y, screen_x, screen_y), ...]
-        self.cal_matrix   = None   # 최소제곱법으로 계산된 변환 행렬 (3×2)
+        self.iris_pos     = None   # 현재 시선 특징 벡터 (rel_iris_x, rel_iris_y, yaw_feat, pitch_feat)
+        self.cal_data     = []     # [(rx, ry, yaw, pitch, screen_x, screen_y), ...]
+        self.cal_matrix   = None   # 최소제곱법으로 계산된 변환 행렬 (12×2)
         self.latest_frame = None   # 위젯 미리보기용 최신 프레임
         self._smooth_x    = None
         self._smooth_y    = None
@@ -153,11 +203,13 @@ class GazeTracker:
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
                 result   = _landmarker.detect(mp_image)
 
-                if result.face_landmarks:
+                has_face   = bool(result.face_landmarks)
+                has_matrix = bool(result.facial_transformation_matrixes)
+
+                if has_face and has_matrix:
                     lm = result.face_landmarks[0]
-                    self.iris_pos = (
-                        (lm[LEFT_IRIS].x + lm[RIGHT_IRIS].x) / 2,
-                        (lm[LEFT_IRIS].y + lm[RIGHT_IRIS].y) / 2,
+                    self.iris_pos = _extract_gaze_features(
+                        lm, result.facial_transformation_matrixes[0]
                     )
                     if frame_count <= 3:
                         print(f'✅ 얼굴 감지됨: iris_pos={self.iris_pos}')
@@ -167,7 +219,7 @@ class GazeTracker:
                     self.latest_frame = cv2.flip(annotated, 1)
                 else:
                     self.iris_pos = None
-                    self.latest_frame = cv2.flip(frame, 1)   # 감지 안 되면 원본만 반전
+                    self.latest_frame = cv2.flip(frame, 1)
                     if frame_count % 60 == 0:
                         print(f'⚠ 얼굴 미감지 (frame={frame_count})')
 
@@ -178,42 +230,30 @@ class GazeTracker:
                 break   # 반복 에러 방지
 
     # ── 보정 ─────────────────────────────────────────────────
-    def add_calibration_point(self, iris_x: float, iris_y: float,
-                               screen_x: int, screen_y: int) -> None:
-        """평균 홍채 좌표와 화면 좌표를 보정 데이터에 추가한다."""
-        self.cal_data.append((iris_x, iris_y, screen_x, screen_y))
-        if len(self.cal_data) >= 6:
-            self._compute_matrix()
-
     def add_calibration_samples(self, iris_samples: list,
                                  screen_x: int, screen_y: int) -> None:
         """
-        여러 홍채 샘플을 개별 데이터 포인트로 저장한다 (이상치 제거 후).
+        4차원 시선 특징 샘플들을 개별 데이터 포인트로 저장한다 (이상치 제거 후).
 
-        평균 1개만 저장하는 대신 각 샘플을 독립 데이터로 사용하면
-        최소제곱법 적합도가 크게 향상된다.
-        이상치 제거: 평균에서 2σ 이상 벗어난 샘플 제외.
+        각 샘플은 (rel_iris_x, rel_iris_y, yaw_feat, pitch_feat) 튜플.
+        이상치 제거: 각 특징 차원에서 평균 ± 2σ 밖의 샘플을 제외.
         """
         if not iris_samples:
             return
 
-        xs = np.array([s[0] for s in iris_samples])
-        ys = np.array([s[1] for s in iris_samples])
-        x_mean, x_std = xs.mean(), xs.std() + 1e-9
-        y_mean, y_std = ys.mean(), ys.std() + 1e-9
+        arr = np.array(iris_samples, dtype=np.float64)   # (N, 4)
+        mean = arr.mean(axis=0)
+        std  = arr.std(axis=0) + 1e-9
 
-        valid = [
-            s for s in iris_samples
-            if abs(s[0] - x_mean) <= 2 * x_std
-            and abs(s[1] - y_mean) <= 2 * y_std
-        ]
+        valid = [s for s in iris_samples
+                 if np.all(np.abs(np.array(s) - mean) <= 2 * std)]
         if not valid:
-            valid = iris_samples  # 모두 제거될 경우 폴백
+            valid = iris_samples
 
         for s in valid:
-            self.cal_data.append((s[0], s[1], screen_x, screen_y))
+            self.cal_data.append((*s, screen_x, screen_y))  # (rx,ry,yaw,pitch,sx,sy)
 
-        if len(self.cal_data) >= 6:
+        if len(self.cal_data) >= 12:   # 다항식 특징 12개 → 최소 12포인트 필요
             self._compute_matrix()
 
     def clear_calibration(self):
@@ -224,20 +264,26 @@ class GazeTracker:
 
     def _compute_matrix(self):
         """
-        2차 다항식 최소제곱법으로 홍채 좌표 → 화면 좌표 변환 행렬을 계산한다.
+        4차원 입력(상대 홍채 + 고개 방향)에 대한 2차 다항식 최소제곱 회귀.
 
-        선형 변환(affine)은 홍채-화면 간 비선형성을 표현하지 못한다.
-        2차 항(x², y², xy)을 추가하면 원근 왜곡·굴절 등 비선형 오차를 보정할 수 있다.
+        특징 벡터 (12항):
+          [rx, ry, yaw, pitch, rx², ry², yaw², pitch², rx*yaw, ry*pitch, rx*ry, 1]
 
-        수식:  [sx, sy] ≈ [x, y, x², y², xy, 1] @ matrix
-        matrix 의 shape 는 (6, 2).
+        고개·카메라 위치 변화를 yaw/pitch가 흡수하므로
+        동일한 화면 위치를 볼 때 특징 벡터가 안정적으로 유지된다.
+        matrix shape: (12, 2)
         """
-        src = np.array([[d[0], d[1]] for d in self.cal_data], dtype=np.float64)
-        dst = np.array([[d[2], d[3]] for d in self.cal_data], dtype=np.float64)
-        x, y = src[:, 0], src[:, 1]
-        A = np.column_stack([x, y, x**2, y**2, x * y, np.ones(len(src))])
+        arr = np.array(self.cal_data, dtype=np.float64)
+        rx, ry, yaw, pitch = arr[:,0], arr[:,1], arr[:,2], arr[:,3]
+        dst = arr[:, 4:6]
+        A = np.column_stack([
+            rx, ry, yaw, pitch,
+            rx**2, ry**2, yaw**2, pitch**2,
+            rx * yaw, ry * pitch, rx * ry,
+            np.ones(len(arr))
+        ])
         result, _, _, _ = np.linalg.lstsq(A, dst, rcond=None)
-        self.cal_matrix = result   # shape (6, 2)
+        self.cal_matrix = result   # shape (12, 2)
 
     def get_screen_pos(self):
         """
@@ -247,9 +293,14 @@ class GazeTracker:
         if self.iris_pos is None or self.cal_matrix is None:
             return None
 
-        px, py = self.iris_pos[0], self.iris_pos[1]
-        v      = np.array([px, py, px**2, py**2, px * py, 1.0])
-        xy     = v @ self.cal_matrix
+        rx, ry, yaw, pitch = self.iris_pos
+        v = np.array([
+            rx, ry, yaw, pitch,
+            rx**2, ry**2, yaw**2, pitch**2,
+            rx * yaw, ry * pitch, rx * ry,
+            1.0
+        ])
+        xy = v @ self.cal_matrix
         raw_x, raw_y = float(xy[0]), float(xy[1])
 
         if self._smooth_x is None:
