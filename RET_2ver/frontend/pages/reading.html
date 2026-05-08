@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서하기 - 독서 아이트래킹</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="gaze-dot"></div>
+
+    <header class="page-header">
+        <div class="logo">👁 독서 아이트래킹</div>
+        <div class="progress-bar">
+            <div class="progress-step done">
+                <div class="circle">✓</div> 시선 보정
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step done">
+                <div class="circle">✓</div> 사용 안내
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step active">
+                <div class="circle">3</div> 독서하기
+            </div>
+        </div>
+    </header>
+
+    <div class="page-content">
+        <div class="reading-area">
+            <h2>📖 오늘의 글</h2>
+            <div class="reading-text">
+                <p>
+                    <span class="reading-line">사람이 글을 읽을 때, 눈은 결코 일정한 속도로 움직이지 않는다.</span>
+                    <span class="reading-line">눈은 짧은 순간 한 지점에 고정되었다가, 빠르게 다음 지점으로 이동하는 과정을 반복한다.</span>
+                    <span class="reading-line">이 고정 동작을 '고착'이라 하고, 빠른 이동을 '도약'이라 부른다.</span>
+                </p>
+                <p>
+                    <span class="reading-line">능숙한 독자는 한 번의 고착으로 여러 단어를 인식하고, 불필요한 역방향 도약을 줄인다.</span>
+                    <span class="reading-line">반면 초보 독자는 한 단어씩 읽거나, 앞으로 되돌아가는 경향이 잦다.</span>
+                    <span class="reading-line">이러한 차이가 독서 속도와 이해도에 직접적인 영향을 미친다.</span>
+                </p>
+                <p>
+                    <span class="reading-line">독서 능력은 훈련을 통해 개선될 수 있다.</span>
+                    <span class="reading-line">눈의 움직임 패턴을 인식하고, 의식적으로 넓은 범위를 한 번에 파악하는 연습을 반복하면,</span>
+                    <span class="reading-line">점차 효율적인 독서 습관이 형성된다.</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="reading-controls">
+            <button id="done-btn"  class="btn btn-success">다 읽었어요 →</button>
+            <button id="recal-btn" class="btn btn-warning">재보정</button>
+            <div id="reading-status" style="color:#666; font-size:0.95rem;"></div>
+        </div>
+    </div>
+
+    <script type="module" src="/static/js/gaze.js"></script>
+    <script>
+    const gazeData  = [];
+    const startTime = Date.now();
+    let   maxReadY  = 0;
+
+    document.getElementById('reading-status').textContent = '👁 시선 추적 중';
+
+    window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
+        const now = Date.now();
+        if (gazeData.length === 0 || now - gazeData[gazeData.length - 1].t >= 100) {
+            gazeData.push({ x, y, t: now });
+        }
+        updateReadingFeedback(x, y);
+    });
+
+    function updateReadingFeedback(x, y) {
+        const lines = Array.from(document.querySelectorAll('.reading-line'));
+        if (!lines.length) return;
+
+        if (y > maxReadY) maxReadY = y;
+
+        let bestLine = null, bestDist = Infinity;
+        lines.forEach(line => {
+            const r    = line.getBoundingClientRect();
+            const dist = Math.abs(y - (r.top + r.height / 2));
+            if (dist < bestDist) { bestDist = dist; bestLine = line; }
+        });
+        lines.forEach(line => line.classList.remove('line-highlight'));
+        if (bestLine && bestDist < 80) bestLine.classList.add('line-highlight');
+
+        const isRegressing = y < maxReadY - 120;
+        lines.forEach(line => {
+            const r = line.getBoundingClientRect();
+            isRegressing && r.bottom < y
+                ? line.classList.add('line-blur')
+                : line.classList.remove('line-blur');
+        });
+    }
+
+    document.getElementById('done-btn').addEventListener('click', () => {
+        document.querySelectorAll('.reading-line').forEach(l => {
+            l.classList.remove('line-highlight', 'line-blur');
+        });
+        const result = analyzeReading();
+        const params = new URLSearchParams({
+            time:        result.totalSec,
+            focus:       result.focusRate   ?? -1,
+            regressions: result.regressions ?? -1,
+            error:       result.error ? '1' : '0',
+        });
+        window.location.href = `/result.html?${params}`;
+    });
+
+    document.getElementById('recal-btn').addEventListener('click', () => {
+        window.location.href = '/calibration.html';
+    });
+
+    function analyzeReading() {
+        const totalSec = Math.round((Date.now() - startTime) / 1000);
+        if (gazeData.length < 10) return { error: true, totalSec };
+
+        const rect   = document.querySelector('.reading-text').getBoundingClientRect();
+        const inArea = gazeData.filter(p =>
+            p.x >= rect.left - 20 && p.x <= rect.right  + 20 &&
+            p.y >= rect.top  - 20 && p.y <= rect.bottom + 20
+        ).length;
+        const focusRate = Math.round(inArea / gazeData.length * 100);
+
+        let regressions = 0;
+        for (let i = 1; i < gazeData.length; i++) {
+            const dx = gazeData[i].x - gazeData[i - 1].x;
+            const dy = Math.abs(gazeData[i].y - gazeData[i - 1].y);
+            if (dx < -200 && dy < 120) regressions++;
+        }
+        return { totalSec, focusRate, regressions, error: false };
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사용 안내 - 독서 아이트래킹</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="gaze-dot"></div>
+
+    <header class="page-header">
+        <div class="logo">👁 독서 아이트래킹</div>
+        <div class="progress-bar">
+            <div class="progress-step done">
+                <div class="circle">✓</div> 시선 보정
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step active">
+                <div class="circle">2</div> 사용 안내
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step">
+                <div class="circle">3</div> 독서하기
+            </div>
+        </div>
+    </header>
+
+    <div class="page-content">
+        <h2 style="font-size:1.6rem; margin-bottom:8px;">사용 안내</h2>
+        <p style="color:#666; margin-bottom:28px;">독서를 시작하기 전에 아래 내용을 확인해 주세요.</p>
+
+        <div class="guide-notice">
+            💡 시선 추적이 활성화되어 있습니다. 빨간 점이 시선을 따라다니는지 확인하세요.
+            정확도가 낮다면 <a href="/calibration.html" style="color:#3498db;">재보정</a>을 진행하세요.
+        </div>
+
+        <div class="guide-list">
+            <div class="guide-item">
+                <div class="num">1</div>
+                <div>
+                    <h3>올바른 자세 유지</h3>
+                    <p>화면과 40~60cm 거리를 유지하고, 정면을 바라보세요.</p>
+                </div>
+            </div>
+            <div class="guide-item">
+                <div class="num">2</div>
+                <div>
+                    <h3>밝은 환경에서 사용</h3>
+                    <p>얼굴에 충분한 빛이 닿아야 합니다. 역광이나 어두운 환경은 피해 주세요.</p>
+                </div>
+            </div>
+            <div class="guide-item">
+                <div class="num">3</div>
+                <div>
+                    <h3>역행 시 블러 처리</h3>
+                    <p>이미 읽은 부분으로 시선이 역행하면 해당 줄이 흐려집니다. 앞으로 읽는 연습을 해보세요.</p>
+                </div>
+            </div>
+            <div class="guide-item">
+                <div class="num">4</div>
+                <div>
+                    <h3>현재 읽는 줄 하이라이트</h3>
+                    <p>현재 시선이 향하는 줄이 파란색으로 강조됩니다. 한 줄씩 집중해서 읽어보세요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align:center;">
+            <button class="btn btn-success" onclick="location.href='/reading.html'">
+                독서 시작하기 →
+            </button>
+        </div>
+    </div>
+
+    <script type="module" src="/static/js/gaze.js"></script>
+</body>
+</html>
