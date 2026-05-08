@@ -59,7 +59,6 @@ def init_landmarker():
     options = mp_vision.FaceLandmarkerOptions(
         base_options=base_options,
         num_faces=1,
-        output_facial_transformation_matrixes=True,  # 고개 자세 행렬 출력
         min_face_detection_confidence=0.3,
         min_face_presence_confidence=0.3,
         min_tracking_confidence=0.3,
@@ -79,46 +78,47 @@ R_EYE_OUTER  = 263
 R_EYE_TOP    = 386
 R_EYE_BOTTOM = 374
 
-SMOOTH_ALPHA = 0.25  # EMA 스무딩 강도 (낮을수록 부드럽고 느림)
+SMOOTH_ALPHA = 0.10  # EMA 스무딩 강도 (낮을수록 부드럽고 느림)
+DEADZONE_PX  = 6    # 이 픽셀 이내 움직임은 떨림으로 간주해 무시
+Y_GAIN       = 1.5  # Y축 기울기 증폭 (수직 홍채 이동 범위가 수평보다 좁아서 보정)
+
+# 얼굴 주요 부위 랜드마크 인덱스 그룹 (MediaPipe 478-point 모델 기준)
+_OVAL  = [10,338,297,332,284,251,389,356,454,323,361,288,
+          397,365,379,378,400,377,152,148,176,149,150,136,
+          172,58,132,93,234,127,162,21,54,103,67,109,10]
+_L_EYE = [362,382,381,380,374,373,390,249,263,466,388,387,386,385,384,398,362]
+_R_EYE = [33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246,33]
+_L_BROW = [276,283,282,295,285,300,293,334,296,336]
+_R_BROW = [46,53,52,65,55,70,63,105,66,107]
+_NOSE   = [168,6,197,195,5,4,1,19,94]
+_LIPS   = [61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,146,61]
 
 
-def _extract_gaze_features(lm, transform_matrix):
+def _extract_gaze_features(lm):
     """
-    얼굴 랜드마크와 변환 행렬에서 4차원 시선 특징 벡터를 추출한다.
+    얼굴 랜드마크에서 고개 방향 불변 시선 특징을 추출한다.
 
-    반환값: (rel_iris_x, rel_iris_y, yaw_feat, pitch_feat)
-      - rel_iris_x/y : 눈 크기 기준 정규화된 홍채 위치
-                       카메라 거리·위치가 달라져도 값이 유지됨
-      - yaw_feat     : 변환 행렬 회전 성분 m[0][2] (좌우 고개 회전 포착)
-      - pitch_feat   : 변환 행렬 회전 성분 m[1][2] (상하 고개 회전 포착)
+    반환값: (rel_iris_x, rel_iris_y)
+      - 홍채 위치를 눈 크기(가로·세로)로 정규화한 값
+      - 고개를 돌려도 눈 안에서 홍채의 상대 위치는 유지되므로
+        yaw/pitch를 특징에 포함하지 않는다.
+        (yaw/pitch를 포함하면 보정 시 학습된 고개-화면 상관관계가
+         시선 고정 상태에서도 점을 움직이는 원인이 됨)
     """
-    # 왼쪽 눈 기준 상대 홍채 위치
     l_cx = (lm[L_EYE_INNER].x + lm[L_EYE_OUTER].x) / 2
     l_cy = (lm[L_EYE_TOP].y   + lm[L_EYE_BOTTOM].y) / 2
     l_w  = abs(lm[L_EYE_OUTER].x - lm[L_EYE_INNER].x) + 1e-6
     l_h  = abs(lm[L_EYE_BOTTOM].y - lm[L_EYE_TOP].y)  + 1e-6
-    rel_lx = (lm[LEFT_IRIS].x  - l_cx) / l_w
-    rel_ly = (lm[LEFT_IRIS].y  - l_cy) / l_h
 
-    # 오른쪽 눈 기준 상대 홍채 위치
     r_cx = (lm[R_EYE_INNER].x + lm[R_EYE_OUTER].x) / 2
     r_cy = (lm[R_EYE_TOP].y   + lm[R_EYE_BOTTOM].y) / 2
     r_w  = abs(lm[R_EYE_OUTER].x - lm[R_EYE_INNER].x) + 1e-6
     r_h  = abs(lm[R_EYE_BOTTOM].y - lm[R_EYE_TOP].y)  + 1e-6
-    rel_rx = (lm[RIGHT_IRIS].x - r_cx) / r_w
-    rel_ry = (lm[RIGHT_IRIS].y - r_cy) / r_h
 
-    rel_iris_x = (rel_lx + rel_rx) / 2
-    rel_iris_y = (rel_ly + rel_ry) / 2
+    rel_iris_x = ((lm[LEFT_IRIS].x - l_cx) / l_w + (lm[RIGHT_IRIS].x - r_cx) / r_w) / 2
+    rel_iris_y = ((lm[LEFT_IRIS].y - l_cy) / l_h + (lm[RIGHT_IRIS].y - r_cy) / r_h) / 2
 
-    # 변환 행렬의 회전 성분으로 고개 방향 추출
-    # m[0][2]: 얼굴-정면 벡터의 x 성분 → 좌우 회전에 민감
-    # m[1][2]: 얼굴-정면 벡터의 y 성분 → 상하 회전에 민감
-    m = np.array(transform_matrix.data).reshape(4, 4)
-    yaw_feat   = float(m[0][2])
-    pitch_feat = float(m[1][2])
-
-    return (rel_iris_x, rel_iris_y, yaw_feat, pitch_feat)
+    return (rel_iris_x, rel_iris_y)
 
 
 def _draw_landmarks(frame, landmarks):
@@ -129,17 +129,28 @@ def _draw_landmarks(frame, landmarks):
     """
     h, w = frame.shape[:2]
 
-    # 모든 랜드마크를 1px 초록 점으로 표시 → 얼굴 메시처럼 보임
-    for lm in landmarks:
-        px, py = int(lm.x * w), int(lm.y * h)
-        cv2.circle(frame, (px, py), 1, (0, 200, 80), -1)
+    def pts(indices):
+        return np.array([[int(landmarks[i].x * w), int(landmarks[i].y * h)]
+                         for i in indices], dtype=np.int32)
 
-    # 홍채 중심: 원 + 십자선
-    for idx, color in [(LEFT_IRIS, (0, 255, 80)), (RIGHT_IRIS, (0, 220, 255))]:
-        cx, cy = int(landmarks[idx].x * w), int(landmarks[idx].y * h)
-        cv2.circle(frame, (cx, cy), 7, color, 2)          # 원
-        cv2.line(frame, (cx - 11, cy), (cx + 11, cy), color, 1)  # 가로선
-        cv2.line(frame, (cx, cy - 11), (cx, cy + 11), color, 1)  # 세로선
+    # 얼굴 윤곽 (밝은 청록)
+    cv2.polylines(frame, [pts(_OVAL)],   False, (0, 230, 140), 1)
+    # 눈 윤곽 (하늘색)
+    cv2.polylines(frame, [pts(_L_EYE)],  False, (0, 220, 255), 1)
+    cv2.polylines(frame, [pts(_R_EYE)],  False, (0, 220, 255), 1)
+    # 눈썹·코·입술 (연한 청록)
+    cv2.polylines(frame, [pts(_L_BROW)], False, (0, 180, 110), 1)
+    cv2.polylines(frame, [pts(_R_BROW)], False, (0, 180, 110), 1)
+    cv2.polylines(frame, [pts(_NOSE)],   False, (0, 180, 110), 1)
+    cv2.polylines(frame, [pts(_LIPS)],   False, (0, 180, 110), 1)
+
+    # 홍채 중심 원 + 십자선
+    for idx, color in [(LEFT_IRIS, (0, 255, 100)), (RIGHT_IRIS, (0, 200, 255))]:
+        cx = int(landmarks[idx].x * w)
+        cy = int(landmarks[idx].y * h)
+        cv2.circle(frame, (cx, cy), 7, color, 2)
+        cv2.line(frame, (cx - 11, cy), (cx + 11, cy), color, 1)
+        cv2.line(frame, (cx, cy - 11), (cx, cy + 11), color, 1)
 
     return frame
 
@@ -158,6 +169,8 @@ class GazeTracker:
         self.latest_frame = None   # 위젯 미리보기용 최신 프레임
         self._smooth_x    = None
         self._smooth_y    = None
+        self._out_x       = None   # 데드존 적용 후 최종 출력 좌표
+        self._out_y       = None
         self._cap         = None
         self._running     = False
 
@@ -203,14 +216,11 @@ class GazeTracker:
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
                 result   = _landmarker.detect(mp_image)
 
-                has_face   = bool(result.face_landmarks)
-                has_matrix = bool(result.facial_transformation_matrixes)
+                has_face = bool(result.face_landmarks)
 
-                if has_face and has_matrix:
+                if has_face:
                     lm = result.face_landmarks[0]
-                    self.iris_pos = _extract_gaze_features(
-                        lm, result.facial_transformation_matrixes[0]
-                    )
+                    self.iris_pos = _extract_gaze_features(lm)
                     if frame_count <= 3:
                         print(f'✅ 얼굴 감지됨: iris_pos={self.iris_pos}')
 
@@ -241,7 +251,7 @@ class GazeTracker:
         if not iris_samples:
             return
 
-        arr = np.array(iris_samples, dtype=np.float64)   # (N, 4)
+        arr = np.array(iris_samples, dtype=np.float64)   # (N, 2)
         mean = arr.mean(axis=0)
         std  = arr.std(axis=0) + 1e-9
 
@@ -251,9 +261,9 @@ class GazeTracker:
             valid = iris_samples
 
         for s in valid:
-            self.cal_data.append((*s, screen_x, screen_y))  # (rx,ry,yaw,pitch,sx,sy)
+            self.cal_data.append((*s, screen_x, screen_y))  # (rx, ry, sx, sy)
 
-        if len(self.cal_data) >= 12:   # 다항식 특징 12개 → 최소 12포인트 필요
+        if len(self.cal_data) >= 6:    # 모델당 특징 6개 → 최소 6포인트 필요
             self._compute_matrix()
 
     def clear_calibration(self):
@@ -261,29 +271,32 @@ class GazeTracker:
         self.cal_matrix = None
         self._smooth_x  = None
         self._smooth_y  = None
+        self._out_x     = None
+        self._out_y     = None
 
     def _compute_matrix(self):
         """
-        4차원 입력(상대 홍채 + 고개 방향)에 대한 2차 다항식 최소제곱 회귀.
+        X·Y 독립 2차 다항식 회귀. 특징은 상대 홍채 위치만 사용.
 
-        특징 벡터 (12항):
-          [rx, ry, yaw, pitch, rx², ry², yaw², pitch², rx*yaw, ry*pitch, rx*ry, 1]
+        screen_x ← [rx, rx², 1]
+        screen_y ← [ry, ry², 1]
 
-        고개·카메라 위치 변화를 yaw/pitch가 흡수하므로
-        동일한 화면 위치를 볼 때 특징 벡터가 안정적으로 유지된다.
-        matrix shape: (12, 2)
+        yaw/pitch를 제거한 이유:
+          보정 중 사용자가 특정 방향을 볼 때 고개도 자연히 약간 돌아가므로,
+          yaw/pitch를 특징에 포함하면 '고개 방향 → 화면 위치'를 학습하게 됨.
+          그 결과 시선은 고정해도 고개를 돌리면 점이 따라 움직인다.
         """
         arr = np.array(self.cal_data, dtype=np.float64)
-        rx, ry, yaw, pitch = arr[:,0], arr[:,1], arr[:,2], arr[:,3]
-        dst = arr[:, 4:6]
-        A = np.column_stack([
-            rx, ry, yaw, pitch,
-            rx**2, ry**2, yaw**2, pitch**2,
-            rx * yaw, ry * pitch, rx * ry,
-            np.ones(len(arr))
-        ])
-        result, _, _, _ = np.linalg.lstsq(A, dst, rcond=None)
-        self.cal_matrix = result   # shape (12, 2)
+        rx, ry = arr[:,0], arr[:,1]
+        sx, sy = arr[:,2], arr[:,3]
+
+        Ax = np.column_stack([rx, np.ones(len(arr))])
+        Ay = np.column_stack([ry, np.ones(len(arr))])
+
+        cx, _, _, _ = np.linalg.lstsq(Ax, sx, rcond=None)
+        cy, _, _, _ = np.linalg.lstsq(Ay, sy, rcond=None)
+        cy[0] *= Y_GAIN  # 수직 홍채 이동 범위가 좁으므로 기울기를 증폭
+        self.cal_matrix = (cx, cy)
 
     def get_screen_pos(self):
         """
@@ -293,15 +306,11 @@ class GazeTracker:
         if self.iris_pos is None or self.cal_matrix is None:
             return None
 
-        rx, ry, yaw, pitch = self.iris_pos
-        v = np.array([
-            rx, ry, yaw, pitch,
-            rx**2, ry**2, yaw**2, pitch**2,
-            rx * yaw, ry * pitch, rx * ry,
-            1.0
-        ])
-        xy = v @ self.cal_matrix
-        raw_x, raw_y = float(xy[0]), float(xy[1])
+        rx, ry = self.iris_pos
+        cx, cy = self.cal_matrix
+
+        raw_x = float(np.array([rx, 1.0]) @ cx)
+        raw_y = float(np.array([ry, 1.0]) @ cy)
 
         if self._smooth_x is None:
             self._smooth_x, self._smooth_y = raw_x, raw_y
@@ -309,7 +318,15 @@ class GazeTracker:
             self._smooth_x = SMOOTH_ALPHA * raw_x + (1 - SMOOTH_ALPHA) * self._smooth_x
             self._smooth_y = SMOOTH_ALPHA * raw_y + (1 - SMOOTH_ALPHA) * self._smooth_y
 
-        return int(self._smooth_x), int(self._smooth_y)
+        new_x, new_y = int(self._smooth_x), int(self._smooth_y)
+
+        # 데드존: 직전 출력과 차이가 작으면 떨림으로 간주해 이전 값 유지
+        if self._out_x is not None:
+            if abs(new_x - self._out_x) < DEADZONE_PX and abs(new_y - self._out_y) < DEADZONE_PX:
+                return self._out_x, self._out_y
+
+        self._out_x, self._out_y = new_x, new_y
+        return new_x, new_y
 
 
 # ─── 전역 트래커 인스턴스 ─────────────────────────────────────
@@ -439,7 +456,7 @@ async def webcam_preview():
             if frame is None:
                 await asyncio.sleep(0.1)
                 continue
-            _, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 55])
+            _, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 72])
             yield (
                 b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + buf.tobytes() + b'\r\n'

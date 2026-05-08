@@ -121,6 +121,7 @@ body {
     box-shadow: 0 0 8px rgba(231,76,60,0.5);
     display: none;
     transform: translate(-50%, -50%);
+    transition: left 60ms linear, top 60ms linear;
 }
 
 /* 보정 오버레이 */
