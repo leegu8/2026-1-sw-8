@@ -3,3 +3,5 @@ uvicorn[standard]
 mediapipe>=0.10.13
 opencv-python
 numpy
+sqlalchemy
+aiosqlite

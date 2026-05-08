@@ -14,5 +14,8 @@ env/
 # 디버그 이미지 (임시 파일)
 debug_*.jpg
 
+# SQLite DB (런타임 생성)
+*.db
+
 # Claude Code
 .claude/

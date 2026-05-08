@@ -2,14 +2,22 @@ import os
 import urllib.request
 from mediapipe.tasks import python as mp_python
 from mediapipe.tasks.python import vision as mp_vision
-from .config import MODEL_PATH, MODEL_URL
+from .config import MODEL_PATH, MODEL_PATH_LEGACY, MODEL_URL
 
 
 def ensure_model() -> None:
-    if not os.path.exists(MODEL_PATH):
-        print("face_landmarker.task 모델 다운로드 중... (첫 실행 시 한 번만, 약 30MB)")
-        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
-        print("다운로드 완료")
+    if os.path.exists(MODEL_PATH):
+        return
+    # 기존 레거시 경로(한국어 포함)에 파일이 있으면 복사
+    if os.path.exists(MODEL_PATH_LEGACY):
+        import shutil
+        print("모델 파일을 ASCII 경로로 복사 중...")
+        shutil.copy2(MODEL_PATH_LEGACY, MODEL_PATH)
+        print("복사 완료")
+        return
+    print("face_landmarker.task 모델 다운로드 중... (첫 실행 시 한 번만, 약 30MB)")
+    urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+    print("다운로드 완료")
 
 
 def create_landmarker():

@@ -10,7 +10,8 @@ from .domain.gaze.feature_extractor import GazeFeatureExtractor
 from .domain.gaze.calibration import CalibrationModel
 from .domain.gaze.visualizer import FaceMeshVisualizer
 from .domain.gaze.tracker import GazeTracker
-from .api.routers import calibration, webcam, gaze_ws
+from .domain.database.database import init_db
+from .api.routers import calibration, webcam, gaze_ws, database
 
 _ROOT        = Path(__file__).parent.parent.parent
 _FRONTEND    = _ROOT / "frontend"
@@ -18,6 +19,7 @@ _FRONTEND    = _ROOT / "frontend"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await init_db()
     ensure_model()
     app.state.tracker = GazeTracker(
         landmarker  = create_landmarker(),
@@ -33,9 +35,10 @@ app = FastAPI(lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory=str(_FRONTEND / "static")), name="static")
 
-app.include_router(calibration.router)
-app.include_router(webcam.router)
-app.include_router(gaze_ws.router)
+app.include_router(calibration)
+app.include_router(webcam)
+app.include_router(gaze_ws)
+app.include_router(database)
 
 
 @app.get("/api/status")
