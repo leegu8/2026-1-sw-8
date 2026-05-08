@@ -1,4 +1,4 @@
-# 독서 아이트래킹 (Reading Eye Tracker v2)
+# 독서 아이트래킹
 
 웹캠과 MediaPipe를 이용해 실시간으로 시선을 추적하고 독서 습관을 분석·교정하는 웹 서비스입니다.
 
@@ -56,25 +56,8 @@ http://localhost:8000
 5. 결과 확인     → 집중도·역행 횟수·독서 시간 분석
 ```
 
-## 파일 구조
-
-```
-RET_2ver/
-├── main.py              # FastAPI 서버 (MediaPipe + WebSocket)
-├── requirements.txt     # 패키지 목록
-└── static/
-    ├── index.html       # 홈 (웹캠 동의)
-    ├── calibration.html # 시선 보정
-    ├── guide.html       # 사용 안내
-    ├── reading.html     # 독서 페이지
-    ├── result.html      # 결과 페이지
-    ├── style.css        # 공통 스타일
-    ├── gaze.js          # WebSocket 클라이언트 (공통)
-    └── widget.js        # 플로팅 웹캠 위젯 (공통)
-```
-
 ## 기술 스택
 
-- **Backend**: Python, FastAPI, MediaPipe, OpenCV
+- **Backend**: Python, FastAPI, MediaPipe, OpenCV, MySQL
 - **Frontend**: HTML / CSS / JavaScript (Vanilla)
 - **통신**: WebSocket (실시간 시선 스트리밍), REST API (보정)
