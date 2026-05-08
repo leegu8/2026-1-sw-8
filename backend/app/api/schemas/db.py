@@ -1,19 +1,10 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Optional, List, Any, Dict
 from datetime import datetime
-from ..domain.database.models import (
+from typing import Optional, List, Any, Dict
+from pydantic import BaseModel, ConfigDict
+from ...db.models import (
     UserRole, ReadingStatus, EventType, Difficulty,
     ReadingPattern, TriggerReason, InterventionType,
 )
-
-
-class CalibrationPoint(BaseModel):
-    x: int
-    y: int
-
-
-class WebcamStartRequest(BaseModel):
-    camera_index: int = 0
 
 
 # ── User ──────────────────────────────────────────────────────────────────────

@@ -19,3 +19,4 @@ debug_*.jpg
 
 # Claude Code
 .claude/
+.DS_Store

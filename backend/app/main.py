@@ -10,7 +10,7 @@ from .domain.gaze.feature_extractor import GazeFeatureExtractor
 from .domain.gaze.calibration import CalibrationModel
 from .domain.gaze.visualizer import FaceMeshVisualizer
 from .domain.gaze.tracker import GazeTracker
-from .domain.database.database import init_db
+from .db.session import init_db
 from .api.routers import calibration, webcam, gaze_ws, database
 
 _ROOT        = Path(__file__).parent.parent.parent
