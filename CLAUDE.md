@@ -135,6 +135,7 @@ uvicorn main:app --reload
 - **상태 공유**: `app.state.tracker`로 FastAPI 앱 전역 공유 (싱글턴)
 - **비동기**: 보정 샘플링은 `asyncio.sleep`으로 처리, 캡처 루프는 별도 데몬 스레드
 - **언어**: 주석·로그 한국어, 코드·변수명 영어
+- **커밋 메시지**: 한국어로 작성
 - **DB 계층 분리**: DB 모델·세션은 `app/db/`에 위치 (도메인 로직과 분리)
 - **라우터 분리**: DB CRUD는 `api/routers/db/` 하위에 리소스별 1파일로 관리
 - **스키마 분리**: 시선 추적용(`schemas/gaze.py`)과 DB용(`schemas/db.py`) 분리
