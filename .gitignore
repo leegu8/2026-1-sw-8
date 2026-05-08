@@ -13,3 +13,6 @@ env/
 
 # 디버그 이미지 (임시 파일)
 debug_*.jpg
+
+# Claude Code
+.claude/
