@@ -47,7 +47,6 @@ async def system_status(request: Request):
     return {
         "webcam_open":   tracker._cap is not None and tracker._cap.isOpened(),
         "iris_detected": tracker.iris_pos is not None,
-        "iris_pos":      tracker.iris_pos,
         "calibrated":    tracker.calibration.is_ready,
         "cal_count":     tracker.calibration.point_count,
     }

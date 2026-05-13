@@ -72,8 +72,7 @@ class GazeTracker:
         if self.iris_pos is None or not self._calibration.is_ready:
             return None
 
-        rx, ry       = self.iris_pos
-        raw_x, raw_y = self._calibration.predict(rx, ry)
+        raw_x, raw_y = self._calibration.predict(self.iris_pos)
 
         if self._smooth_x is None:
             self._smooth_x, self._smooth_y = raw_x, raw_y
@@ -111,11 +110,11 @@ class GazeTracker:
 
                 if result.face_landmarks:
                     lm            = result.face_landmarks[0]
-                    self.iris_pos = self._extractor.extract(lm)
+                    self.iris_pos = self._extractor.extract(lm, frame)
                     annotated     = self._visualizer.draw(frame.copy(), lm)
                     self.latest_frame = cv2.flip(annotated, 1)
                     if frame_count <= 3:
-                        print(f"✅ 얼굴 감지됨: iris_pos={self.iris_pos}")
+                        print(f"✅ 얼굴 감지됨: features={self.iris_pos.shape}")
                 else:
                     self.iris_pos     = None
                     self.latest_frame = cv2.flip(frame, 1)

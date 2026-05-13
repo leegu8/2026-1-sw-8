@@ -22,7 +22,7 @@ async def gaze_websocket(websocket: WebSocket):
 
             if pos:
                 await websocket.send_json({"type": "gaze", "x": pos[0], "y": pos[1], "calibrated": True})
-            elif iris:
+            elif iris is not None:
                 await websocket.send_json({"type": "gaze", "calibrated": False})
             else:
                 await websocket.send_json({"type": "no_face"})

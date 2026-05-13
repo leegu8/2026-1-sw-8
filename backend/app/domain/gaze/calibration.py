@@ -1,64 +1,77 @@
 import numpy as np
-from ...core.config import Y_GAIN
+
+RIDGE_ALPHA = 1.0  # 정규화 강도 (클수록 과적합 방지)
+_MIN_POINTS = 6    # 최소 캘리브레이션 포인트 수
 
 
 class CalibrationModel:
     """
-    홍채 상대 좌표 → 화면 픽셀 좌표 선형 회귀 모델.
+    120차원 눈 패치 특징 벡터 → 화면 픽셀 좌표 Ridge Regression 모델.
 
-    X/Y 를 독립적으로 피팅하고, Y 기울기에 Y_GAIN 을 곱해
-    수직 이동 범위가 수평보다 좁은 문제를 보정한다.
+    선형회귀 대비 과적합이 적고, 적은 캘리브레이션 포인트에서도 안정적이다.
+    X/Y 축을 독립적으로 학습한다.
     """
 
-    _MIN_POINTS = 6
-
-    def __init__(self, y_gain: float = Y_GAIN) -> None:
-        self._y_gain = y_gain
-        self._data: list[tuple] = []
-        self._cx = None
-        self._cy = None
+    def __init__(self) -> None:
+        self._features:    list[np.ndarray] = []
+        self._screen_x:    list[float]      = []
+        self._screen_y:    list[float]      = []
+        self._wx:          np.ndarray | None = None
+        self._wy:          np.ndarray | None = None
+        self._point_count: int              = 0
 
     @property
     def is_ready(self) -> bool:
-        return self._cx is not None
+        return self._wx is not None
 
     @property
     def point_count(self) -> int:
-        return len(self._data)
+        return self._point_count
 
-    def add_samples(self, samples: list, screen_x: int, screen_y: int) -> None:
+    def add_samples(self, samples: list[np.ndarray],
+                    screen_x: int, screen_y: int) -> None:
         if not samples:
             return
-        arr  = np.array(samples, dtype=np.float64)
+
+        arr  = np.array(samples, dtype=np.float64)   # (n, 120)
         mean = arr.mean(axis=0)
-        std  = arr.std(axis=0) + 1e-9
-        valid = [s for s in samples
-                 if np.all(np.abs(np.array(s) - mean) <= 2 * std)]
-        if not valid:
-            valid = samples
-        for s in valid:
-            self._data.append((*s, screen_x, screen_y))
-        if len(self._data) >= self._MIN_POINTS:
+        dists = np.linalg.norm(arr - mean, axis=1)   # L2 거리로 이상치 제거
+        threshold = dists.mean() + 2 * dists.std() if dists.std() > 0 else np.inf
+        valid = arr[dists <= threshold]
+        if len(valid) == 0:
+            valid = arr
+
+        for feat in valid:
+            self._features.append(feat)
+            self._screen_x.append(float(screen_x))
+            self._screen_y.append(float(screen_y))
+
+        self._point_count += 1
+        if self._point_count >= _MIN_POINTS:
             self._fit()
 
-    def predict(self, rx: float, ry: float) -> tuple[float, float]:
-        raw_x = float(np.array([rx, 1.0]) @ self._cx)
-        raw_y = float(np.array([ry, 1.0]) @ self._cy)
-        return raw_x, raw_y
+    def predict(self, features: np.ndarray) -> tuple[float, float]:
+        feat_b = np.append(features, 1.0)             # bias 항 추가
+        return float(feat_b @ self._wx), float(feat_b @ self._wy)
 
     def clear(self) -> None:
-        self._data = []
-        self._cx   = None
-        self._cy   = None
+        self._features    = []
+        self._screen_x    = []
+        self._screen_y    = []
+        self._wx          = None
+        self._wy          = None
+        self._point_count = 0
 
     def _fit(self) -> None:
-        arr = np.array(self._data, dtype=np.float64)
-        rx, ry = arr[:, 0], arr[:, 1]
-        sx, sy = arr[:, 2], arr[:, 3]
+        X   = np.array(self._features, dtype=np.float64)    # (n, 120)
+        X_b = np.column_stack([X, np.ones(len(X))])         # (n, 121) bias 포함
+        sx  = np.array(self._screen_x)
+        sy  = np.array(self._screen_y)
 
-        Ax = np.column_stack([rx, np.ones(len(arr))])
-        Ay = np.column_stack([ry, np.ones(len(arr))])
+        n   = X_b.shape[1]
+        reg = RIDGE_ALPHA * np.eye(n)
+        reg[-1, -1] = 0                                      # bias 항은 정규화 제외
 
-        self._cx, *_ = np.linalg.lstsq(Ax, sx, rcond=None)
-        self._cy, *_ = np.linalg.lstsq(Ay, sy, rcond=None)
-        self._cy[0] *= self._y_gain
+        A        = X_b.T @ X_b + reg
+        self._wx = np.linalg.solve(A, X_b.T @ sx)
+        self._wy = np.linalg.solve(A, X_b.T @ sy)
