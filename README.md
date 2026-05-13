@@ -35,7 +35,7 @@ pip install -r requirements.txt
 ### 3. 서버 실행
 
 ```bash
-uvicorn main:app --reload
+uvicorn backend.app.main:app --reload
 ```
 
 > 첫 실행 시 `face_landmarker.task` 모델 파일이 자동으로 다운로드됩니다 (약 30MB, 한 번만).
