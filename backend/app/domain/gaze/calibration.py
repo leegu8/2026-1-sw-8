@@ -1,7 +1,7 @@
 import numpy as np
 
-RIDGE_ALPHA  = 1.0
-_MIN_SAMPLES = 150   # 120D 특징에 Ridge Regression이 의미있게 학습되는 최소 샘플 수
+RIDGE_ALPHA = 1.0
+_MIN_POINTS = 4     # 최소 4개 보정점 이상이면 즉시 학습
 
 
 class CalibrationModel:
@@ -53,7 +53,7 @@ class CalibrationModel:
             self._screen_y.append(float(screen_y))
 
         self._point_count += 1
-        if len(self._features) >= _MIN_SAMPLES:
+        if self._point_count >= _MIN_POINTS:
             self._fit()
 
     def predict(self, features: np.ndarray) -> tuple[float, float]:

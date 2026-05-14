@@ -50,7 +50,7 @@ class _GazeKalmanFilter:
         K   = P_p @ self._H.T @ np.linalg.inv(S)
         self._x = x_p + K @ (z - self._H @ x_p)
         self._P = (np.eye(4) - K @ self._H) @ P_p
-        return float(self._x[0]), float(self._x[1])
+        return float(self._x[0, 0]), float(self._x[1, 0])
 
     def reset(self) -> None:
         self._x = None

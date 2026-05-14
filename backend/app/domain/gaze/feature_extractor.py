@@ -35,10 +35,16 @@ class GazeFeatureExtractor:
             r_patch = self._eye_patch(gray, lm, R_EYE_OUTER, R_EYE_INNER,
                                       R_EYE_TOP, R_EYE_BOTTOM, w, h)
 
-            return np.concatenate([l_patch.flatten(), r_patch.flatten()]) / 255.0
+            l_flat = l_patch.flatten().astype(np.float64)
+            r_flat = r_patch.flatten().astype(np.float64)
+            return np.concatenate([self._normalize(l_flat), self._normalize(r_flat)])
         except Exception as e:
             print(f"❌ feature_extractor 오류: {e}")
             return np.zeros(PATCH_H * PATCH_W * 2, dtype=np.float64)
+
+    def _normalize(self, v: np.ndarray) -> np.ndarray:
+        m, s = v.mean(), v.std()
+        return (v - m) / (s + 1e-6)
 
     def _eye_patch(self, gray, lm, outer, inner, top, bottom,
                    fw, fh) -> np.ndarray:
