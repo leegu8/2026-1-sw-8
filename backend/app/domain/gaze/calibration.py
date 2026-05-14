@@ -1,15 +1,15 @@
 import numpy as np
 
-RIDGE_ALPHA = 1.0  # 정규화 강도 (클수록 과적합 방지)
-_MIN_POINTS = 6    # 최소 캘리브레이션 포인트 수
+RIDGE_ALPHA  = 1.0
+_MIN_SAMPLES = 150   # 120D 특징에 Ridge Regression이 의미있게 학습되는 최소 샘플 수
 
 
 class CalibrationModel:
     """
     120차원 눈 패치 특징 벡터 → 화면 픽셀 좌표 Ridge Regression 모델.
 
-    선형회귀 대비 과적합이 적고, 적은 캘리브레이션 포인트에서도 안정적이다.
-    X/Y 축을 독립적으로 학습한다.
+    마우스 이동(정지) + 클릭 데이터를 통해 누적 학습한다.
+    샘플 수가 _MIN_SAMPLES(150) 이상이 되면 학습을 시작한다.
     """
 
     def __init__(self) -> None:
@@ -28,30 +28,36 @@ class CalibrationModel:
     def point_count(self) -> int:
         return self._point_count
 
+    @property
+    def sample_count(self) -> int:
+        return len(self._features)
+
     def add_samples(self, samples: list[np.ndarray],
                     screen_x: int, screen_y: int) -> None:
         if not samples:
             return
 
-        arr  = np.array(samples, dtype=np.float64)   # (n, 120)
-        mean = arr.mean(axis=0)
-        dists = np.linalg.norm(arr - mean, axis=1)   # L2 거리로 이상치 제거
+        arr   = np.array(samples, dtype=np.float64)
+        mean  = arr.mean(axis=0)
+        dists = np.linalg.norm(arr - mean, axis=1)
         threshold = dists.mean() + 2 * dists.std() if dists.std() > 0 else np.inf
         valid = arr[dists <= threshold]
         if len(valid) == 0:
             valid = arr
 
         for feat in valid:
+            if not np.any(feat):  # 특징 추출 실패 샘플(zeros) 제외
+                continue
             self._features.append(feat)
             self._screen_x.append(float(screen_x))
             self._screen_y.append(float(screen_y))
 
         self._point_count += 1
-        if self._point_count >= _MIN_POINTS:
+        if len(self._features) >= _MIN_SAMPLES:
             self._fit()
 
     def predict(self, features: np.ndarray) -> tuple[float, float]:
-        feat_b = np.append(features, 1.0)             # bias 항 추가
+        feat_b = np.append(features, 1.0)
         return float(feat_b @ self._wx), float(feat_b @ self._wy)
 
     def clear(self) -> None:
@@ -63,14 +69,14 @@ class CalibrationModel:
         self._point_count = 0
 
     def _fit(self) -> None:
-        X   = np.array(self._features, dtype=np.float64)    # (n, 120)
-        X_b = np.column_stack([X, np.ones(len(X))])         # (n, 121) bias 포함
+        X   = np.array(self._features, dtype=np.float64)
+        X_b = np.column_stack([X, np.ones(len(X))])
         sx  = np.array(self._screen_x)
         sy  = np.array(self._screen_y)
 
         n   = X_b.shape[1]
         reg = RIDGE_ALPHA * np.eye(n)
-        reg[-1, -1] = 0                                      # bias 항은 정규화 제외
+        reg[-1, -1] = 0
 
         A        = X_b.T @ X_b + reg
         self._wx = np.linalg.solve(A, X_b.T @ sx)

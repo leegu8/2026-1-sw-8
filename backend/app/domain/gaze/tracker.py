@@ -120,9 +120,16 @@ class GazeTracker:
         if self.iris_pos is None or not self._calibration.is_ready:
             return None
 
-        raw_x, raw_y   = self._calibration.predict(self.iris_pos)
-        smooth_x, smooth_y = self._kalman.update(raw_x, raw_y)
-        new_x, new_y   = int(smooth_x), int(smooth_y)
+        try:
+            raw_x, raw_y = self._calibration.predict(self.iris_pos)
+            if not (np.isfinite(raw_x) and np.isfinite(raw_y)):
+                print(f"⚠ 비정상 예측값: raw_x={raw_x}, raw_y={raw_y}")
+                return None
+            smooth_x, smooth_y = self._kalman.update(raw_x, raw_y)
+            new_x, new_y = int(smooth_x), int(smooth_y)
+        except Exception as e:
+            print(f"⚠ get_screen_pos 예외: {type(e).__name__}: {e}")
+            return None
 
         if self._out_x is not None:
             if (abs(new_x - self._out_x) < DEADZONE_PX

@@ -17,15 +17,20 @@ async def gaze_websocket(websocket: WebSocket):
     tracker = websocket.app.state.tracker
     try:
         while True:
-            pos  = tracker.get_screen_pos()
-            iris = tracker.iris_pos
+            try:
+                pos  = tracker.get_screen_pos()
+                iris = tracker.iris_pos
 
-            if pos:
-                await websocket.send_json({"type": "gaze", "x": pos[0], "y": pos[1], "calibrated": True})
-            elif iris is not None:
-                await websocket.send_json({"type": "gaze", "calibrated": False})
-            else:
-                await websocket.send_json({"type": "no_face"})
+                if pos:
+                    await websocket.send_json({"type": "gaze", "x": pos[0], "y": pos[1], "calibrated": True})
+                elif iris is not None:
+                    await websocket.send_json({"type": "gaze", "calibrated": False})
+                else:
+                    await websocket.send_json({"type": "no_face"})
+            except WebSocketDisconnect:
+                raise
+            except Exception as e:
+                print(f"⚠ WebSocket 내부 오류: {e}")
 
             await asyncio.sleep(0.033)
 
