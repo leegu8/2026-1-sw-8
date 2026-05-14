@@ -1,11 +1,60 @@
 import cv2
 import mediapipe as mp
 import threading
+import numpy as np
 
 from .feature_extractor import GazeFeatureExtractor
 from .calibration import CalibrationModel
 from .visualizer import FaceMeshVisualizer
-from ...core.config import SMOOTH_ALPHA, DEADZONE_PX
+from ...core.config import DEADZONE_PX
+
+# 칼만 필터 파라미터 (값이 클수록 해당 노이즈를 크게 가정)
+_PROCESS_NOISE     = 50.0   # 상태 변화 노이즈 (클수록 빠른 움직임에 민감)
+_MEASUREMENT_NOISE = 200.0  # 측정 노이즈 (클수록 측정값을 덜 신뢰)
+_DT                = 1 / 30 # 프레임 간격 (30fps 기준)
+
+
+class _GazeKalmanFilter:
+    """
+    2D 시선 좌표용 칼만 필터.
+    상태: [x, y, vx, vy] — 위치 + 속도
+    측정: [x, y]          — 위치만 관측
+    등속 운동 모델로 다음 위치를 예측한 뒤 측정값으로 보정한다.
+    """
+
+    def __init__(self) -> None:
+        dt = _DT
+        # 상태 전이 행렬 (등속 운동)
+        self._F = np.array([[1, 0, dt, 0],
+                            [0, 1, 0, dt],
+                            [0, 0, 1,  0],
+                            [0, 0, 0,  1]], dtype=np.float64)
+        # 관측 행렬 (위치만 관측)
+        self._H = np.array([[1, 0, 0, 0],
+                            [0, 1, 0, 0]], dtype=np.float64)
+        self._Q = np.eye(4) * _PROCESS_NOISE
+        self._R = np.eye(2) * _MEASUREMENT_NOISE
+        self._x: np.ndarray | None = None   # 상태 벡터 [x, y, vx, vy]
+        self._P = np.eye(4) * 1000.0        # 초기 오차 공분산
+
+    def update(self, mx: float, my: float) -> tuple[float, float]:
+        z = np.array([[mx], [my]])
+        if self._x is None:
+            self._x = np.array([[mx], [my], [0.0], [0.0]])
+            return mx, my
+        # 예측
+        x_p = self._F @ self._x
+        P_p = self._F @ self._P @ self._F.T + self._Q
+        # 업데이트
+        S   = self._H @ P_p @ self._H.T + self._R
+        K   = P_p @ self._H.T @ np.linalg.inv(S)
+        self._x = x_p + K @ (z - self._H @ x_p)
+        self._P = (np.eye(4) - K @ self._H) @ P_p
+        return float(self._x[0]), float(self._x[1])
+
+    def reset(self) -> None:
+        self._x = None
+        self._P = np.eye(4) * 1000.0
 
 
 class GazeTracker:
@@ -30,8 +79,7 @@ class GazeTracker:
 
         self.iris_pos:     tuple | None = None
         self.latest_frame               = None
-        self._smooth_x:    float | None = None
-        self._smooth_y:    float | None = None
+        self._kalman                    = _GazeKalmanFilter()
         self._out_x:       int   | None = None
         self._out_y:       int   | None = None
         self._cap                       = None
@@ -63,8 +111,8 @@ class GazeTracker:
 
     def clear_calibration(self) -> None:
         self._calibration.clear()
-        self._smooth_x = self._smooth_y = None
-        self._out_x    = self._out_y    = None
+        self._kalman.reset()
+        self._out_x = self._out_y = None
 
     # ── 화면 좌표 반환 ────────────────────────────────────────
 
@@ -72,15 +120,9 @@ class GazeTracker:
         if self.iris_pos is None or not self._calibration.is_ready:
             return None
 
-        raw_x, raw_y = self._calibration.predict(self.iris_pos)
-
-        if self._smooth_x is None:
-            self._smooth_x, self._smooth_y = raw_x, raw_y
-        else:
-            self._smooth_x = SMOOTH_ALPHA * raw_x + (1 - SMOOTH_ALPHA) * self._smooth_x
-            self._smooth_y = SMOOTH_ALPHA * raw_y + (1 - SMOOTH_ALPHA) * self._smooth_y
-
-        new_x, new_y = int(self._smooth_x), int(self._smooth_y)
+        raw_x, raw_y   = self._calibration.predict(self.iris_pos)
+        smooth_x, smooth_y = self._kalman.update(raw_x, raw_y)
+        new_x, new_y   = int(smooth_x), int(smooth_y)
 
         if self._out_x is not None:
             if (abs(new_x - self._out_x) < DEADZONE_PX
