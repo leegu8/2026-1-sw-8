@@ -55,11 +55,68 @@
         </div>
     </div>
 
+    <!-- 개발자 모드 배지 -->
+    <div id="dev-mode-badge" style="
+        display: none;
+        position: fixed;
+        top: 68px;
+        right: 20px;
+        background: #8e44ad;
+        color: white;
+        padding: 8px 18px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        z-index: 9999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        pointer-events: none;
+    ">🖱 개발자 모드 &nbsp;|&nbsp; D 로 해제</div>
+
     <script type="module" src="/static/js/gaze.js"></script>
     <script>
     const gazeData  = [];
     const startTime = Date.now();
     let   maxReadY  = 0;
+
+    // ── 개발자 모드 (D 키) ──────────────────────────────────
+    let devMode = false;
+    const devBadge = document.getElementById('dev-mode-badge');
+    const gazeDot  = document.getElementById('gaze-dot');
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'd' && e.key !== 'D') return;
+        devMode = !devMode;
+        devBadge.style.display        = devMode ? 'block' : 'none';
+        document.body.style.cursor    = devMode ? 'none' : '';
+        document.getElementById('reading-status').textContent =
+            devMode ? '🖱 개발자 모드 (마우스 = 시선)' : '👁 시선 추적 중';
+    });
+
+    let lastDevX = 0, lastDevY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+        if (!devMode) return;
+        lastDevX = e.clientX;
+        lastDevY = e.clientY;
+        gazeDot.style.display = 'block';
+        gazeDot.style.left    = e.clientX + 'px';
+        gazeDot.style.top     = e.clientY + 'px';
+        window.dispatchEvent(new CustomEvent('gaze:tracking', {
+            detail: { x: e.clientX, y: e.clientY }
+        }));
+    });
+
+    // dev 모드일 때 gaze:lost 가 dot을 숨기지 못하게 막음
+    // gaze.js 모듈 리스너가 나중에 실행되어 hide()를 덮어쓰므로 rAF로 한 프레임 뒤에 복원
+    window.addEventListener('gaze:lost', () => {
+        if (!devMode) return;
+        requestAnimationFrame(() => {
+            gazeDot.style.display = 'block';
+            gazeDot.style.left    = lastDevX + 'px';
+            gazeDot.style.top     = lastDevY + 'px';
+        });
+    });
+    // ───────────────────────────────────────────────────────
 
     document.getElementById('reading-status').textContent = '👁 시선 추적 중';
 
