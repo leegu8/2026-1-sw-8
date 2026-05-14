@@ -74,5 +74,81 @@
     </div>
 
     <script type="module" src="/static/js/gaze.js"></script>
+
+    <!-- Q키 마우스 보정 모드 -->
+    <div id="cal-mode-badge" style="
+        display: none;
+        position: fixed;
+        top: 68px;
+        right: 20px;
+        background: #e74c3c;
+        color: white;
+        padding: 8px 18px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        z-index: 9999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        pointer-events: none;
+    ">🖱 마우스 보정 모드 &nbsp;|&nbsp; Q 로 해제</div>
+
+    <script type="module">
+    import { addCalibrationPoint } from '/static/js/api/gazeApi.js';
+
+    const DWELL_MS    = 250;  // 마우스 정지 판정 시간(ms)
+    const DWELL_COUNT = 3;    // 정지 시 수집 샘플 수
+    const CLICK_COUNT = 20;   // 클릭 시 수집 샘플 수 (더 높은 가중치)
+    const MOVE_THR    = 8;    // 이동 감지 최소 픽셀
+    const COOLDOWN_MS = 400;  // 연속 수집 최소 간격(ms)
+
+    let calMode     = false;
+    let sending     = false;
+    let dwellTimer  = null;
+    let lastSampleAt = 0;
+    let lastMx = -999, lastMy = -999;
+    const badge = document.getElementById('cal-mode-badge');
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'q' && e.key !== 'Q') return;
+        calMode = !calMode;
+        badge.style.display        = calMode ? 'block' : 'none';
+        document.body.style.cursor = calMode ? 'crosshair' : '';
+        if (!calMode) clearTimeout(dwellTimer);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!calMode) return;
+        const dx = e.clientX - lastMx;
+        const dy = e.clientY - lastMy;
+        if (Math.hypot(dx, dy) < MOVE_THR) return;
+        lastMx = e.clientX;
+        lastMy = e.clientY;
+
+        clearTimeout(dwellTimer);
+        dwellTimer = setTimeout(() => {
+            const now = Date.now();
+            if (sending || now - lastSampleAt < COOLDOWN_MS) return;
+            lastSampleAt = now;
+            collect(lastMx, lastMy, DWELL_COUNT);
+        }, DWELL_MS);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!calMode) return;
+        clearTimeout(dwellTimer);
+        lastSampleAt = Date.now();
+        collect(e.clientX, e.clientY, CLICK_COUNT);
+    });
+
+    async function collect(x, y, count) {
+        if (sending) return;
+        sending = true;
+        try {
+            await addCalibrationPoint(x, y, count);
+        } finally {
+            sending = false;
+        }
+    }
+    </script>
 </body>
 </html>
