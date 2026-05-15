@@ -1,3 +1,4 @@
+import re
 from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,9 +10,22 @@ from ....db.models import TextContent
 router = APIRouter()
 
 
+def _count_paragraphs(text: str) -> int:
+    return len([p for p in text.split('\n\n') if p.strip()])
+
+
+def _count_sentences(text: str) -> int:
+    return len([s for s in re.split(r'[.?!。]\s*', text) if s.strip()])
+
+
 @router.post("/texts", response_model=TextContentResponse, status_code=201)
 async def create_text(body: TextContentCreate, db: AsyncSession = Depends(get_db)):
-    text = TextContent(**body.model_dump())
+    data = body.model_dump()
+    if data.get('total_paragraphs') is None:
+        data['total_paragraphs'] = _count_paragraphs(data['body'])
+    if data.get('total_sentences') is None:
+        data['total_sentences'] = _count_sentences(data['body'])
+    text = TextContent(**data)
     db.add(text)
     await db.commit()
     await db.refresh(text)
