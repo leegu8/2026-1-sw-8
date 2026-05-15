@@ -26,6 +26,27 @@ class UserResponse(BaseModel):
     updated_at: datetime
 
 
+# ── Auth ───────────────────────────────────────────────────────────────────────
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    nickname: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    email: str
+    nickname: str
+    role: UserRole
+
+
 # ── Calibration ───────────────────────────────────────────────────────────────
 
 class CalibrationCreate(BaseModel):

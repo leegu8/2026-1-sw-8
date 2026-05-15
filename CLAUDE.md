@@ -82,6 +82,16 @@ uvicorn main:app --reload
 
 ## API 엔드포인트
 
+### 인증 (`/api/auth/...`)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `POST` | `/api/auth/register` | 회원가입 (`{email, password, nickname}`) |
+| `POST` | `/api/auth/login` | 로그인 (`{email, password}`) → `{id, email, nickname, role}` |
+
+- 비밀번호는 `bcrypt`로 해싱하여 저장
+- 로그인 실패 시 401, 이메일 중복 시 409 반환
+
 ### 시선 추적
 
 | 메서드 | 경로 | 설명 |
