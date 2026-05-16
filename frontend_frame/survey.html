@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서 아이트래킹 — 레벨 설문</title>
+    <link rel="stylesheet" href="static/css/common.css">
+    <link rel="stylesheet" href="static/css/survey.css">
+</head>
+<body>
+
+    <!-- 내비게이션 바 -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-logo">👁 독서 아이트래킹</a>
+    </nav>
+
+    <!-- 설문 화면 -->
+    <div class="survey-wrap" id="survey-screen">
+
+        <!-- 상단 진행 바 -->
+        <div class="survey-progress">
+            <div class="survey-progress-bar">
+                <div class="survey-progress-fill" id="progress-fill"></div>
+            </div>
+            <span class="survey-progress-text" id="progress-text">1 / 5</span>
+        </div>
+
+        <!-- 질문 카드 -->
+        <div class="survey-card" id="survey-card">
+            <div class="survey-q-num" id="q-num">질문 1</div>
+            <h2 class="survey-question" id="question-text"></h2>
+            <div class="survey-options" id="options-wrap"></div>
+        </div>
+
+        <!-- 이전 / 다음 버튼 -->
+        <div class="survey-nav">
+            <button id="prev-btn" class="btn-survey btn-survey--prev" disabled>← 이전</button>
+            <button id="next-btn" class="btn-survey btn-survey--next" disabled>다음 →</button>
+        </div>
+    </div>
+
+    <!-- 결과 화면 (초기 숨김) -->
+    <div class="result-wrap" id="result-screen" style="display:none">
+        <div class="result-card">
+            <div class="result-icon" id="result-icon"></div>
+            <h2 class="result-title">레벨 측정 완료!</h2>
+            <div class="result-level-badge" id="result-badge"></div>
+            <p class="result-desc" id="result-desc"></p>
+            <div class="result-bar-wrap">
+                <div class="result-bar-fill" id="result-bar-fill"></div>
+            </div>
+            <p class="result-score" id="result-score"></p>
+            <button class="btn-result" onclick="location.href='reading-list.html'">
+                독서 목록으로 →
+            </button>
+        </div>
+    </div>
+
+    <script src="static/js/survey.js"></script>
+</body>
+</html>
