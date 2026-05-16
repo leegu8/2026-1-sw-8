@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서 아이트래킹 — 시선 보정</title>
+    <link rel="stylesheet" href="static/css/common.css">
+    <link rel="stylesheet" href="static/css/setup.css">
+</head>
+<body>
+
+    <!-- 내비게이션 바 -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-logo">👁 독서 아이트래킹</a>
+        <span class="navbar-user" id="navbar-user"><!-- [TODO] 로그인 유저 닉네임 --></span>
+    </nav>
+
+    <!-- 단계 진행바 -->
+    <div class="step-bar">
+        <div class="step-item done">
+            <div class="step-circle">✓</div>
+            <span>카메라 선택</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item active">
+            <div class="step-circle">2</div>
+            <span>시선 보정</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item">
+            <div class="step-circle">3</div>
+            <span>설문</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item">
+            <div class="step-circle">4</div>
+            <span>독서 시작</span>
+        </div>
+    </div>
+
+    <!-- 본문 -->
+    <div class="setup-wrap">
+        <h2 class="setup-title">🎯 시선 보정</h2>
+        <p class="setup-sub">9개의 점을 순서대로 바라보고 클릭하면 시선 보정이 완료됩니다.</p>
+
+        <div class="intro-card">
+            <h3>📌 보정 방법</h3>
+            <ul>
+                <li>버튼을 누르면 화면이 어두워지면서 <strong>빛나는 점</strong>이 하나씩 나타납니다.</li>
+                <li>해당 점을 <strong>눈으로 바라보면서</strong> 클릭하세요.</li>
+                <li>9개 점을 모두 클릭하면 보정이 자동으로 완료됩니다.</li>
+                <li>보정 중에는 <strong>얼굴이 카메라 정면에 오도록</strong> 유지해주세요.</li>
+            </ul>
+            <p class="face-hint" id="face-hint">웹캠 연결 상태를 확인하는 중...</p>
+        </div>
+
+        <button id="start-btn" class="btn-setup btn-setup--cal">보정 시작하기</button>
+        <p class="status-msg" id="status-msg"></p>
+    </div>
+
+    <!-- ── 보정 오버레이 (전체화면) ── -->
+    <div id="cal-overlay">
+        <div id="cal-tip">빛나는 점을 바라보고 클릭하세요</div>
+
+        <!-- 9개 보정 점은 calibration.js가 동적으로 생성 -->
+
+        <div id="cal-bottom">
+            <div id="cal-face-status">얼굴 감지 대기 중...</div>
+            <div class="cal-bar-wrap">
+                <div id="cal-bar-fill"></div>
+            </div>
+            <div id="cal-progress-text">0 / 9 완료</div>
+            <button id="cal-next-btn" onclick="location.href='survey.html'">
+                다음: 설문하기 →
+            </button>
+        </div>
+    </div>
+
+    <script src="static/js/calibration.js"></script>
+</body>
+</html>
