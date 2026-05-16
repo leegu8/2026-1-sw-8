@@ -72,11 +72,22 @@
         pointer-events: none;
     ">🖱 개발자 모드 &nbsp;|&nbsp; D 로 해제</div>
 
+    <!-- 피로 감지 토스트 -->
+    <div id="fatigue-toast" class="fatigue-toast">😴 독서 속도가 느려졌어요. 잠깐 쉬었다 읽는 건 어떨까요?</div>
+
     <script type="module" src="/static/js/gaze.js"></script>
     <script>
     const gazeData  = [];
     const startTime = Date.now();
     let   maxReadY  = 0;
+
+    // ── 실시간 회귀 감지 변수 ────────────────────────────────
+    let realtimeRegressions = 0;
+    let regressionCooldown  = false;
+
+    // ── 피로 감지 변수 ───────────────────────────────────────
+    let baselineVelocity = null;
+    let fatigueToastCount = 0;
 
     // ── 개발자 모드 (D 키) ──────────────────────────────────
     let devMode = false;
@@ -126,6 +137,7 @@
             gazeData.push({ x, y, t: now });
         }
         updateReadingFeedback(x, y);
+        detectRegression(x, y);
     });
 
     function updateReadingFeedback(x, y) {
@@ -157,11 +169,43 @@
             l.classList.remove('line-highlight', 'line-blur');
         });
         const result = analyzeReading();
+
+        // WPM: 공백 분리 단어 수 ÷ 독서 시간(분)
+        const wordCount = document.querySelector('.reading-text').innerText
+            .trim().split(/\s+/).filter(w => w.length > 0).length;
+        const wpm = result.totalSec > 0
+            ? Math.round(wordCount / (result.totalSec / 60)) : 0;
+
+        // 역행률: 분당 역행 횟수로 정규화 (절대 횟수 대신 사용)
+        const regPerMin = result.totalSec > 0
+            ? +(realtimeRegressions / (result.totalSec / 60)).toFixed(2) : 0;
+
+        // 완독률: 각 reading-line에 실제 시선이 닿은 줄 수 / 전체 줄 수
+        const lineEls = document.querySelectorAll('.reading-line');
+        const totalLines   = lineEls.length;
+        const visitedLines = Array.from(lineEls).filter(el => {
+            const r = el.getBoundingClientRect();
+            return gazeData.some(p =>
+                p.x >= r.left - 20 && p.x <= r.right  + 20 &&
+                p.y >= r.top  - 10 && p.y <= r.bottom + 10
+            );
+        }).length;
+
+        // 피로도: 기준 velocity 대비 마지막 30초 velocity 감소율
+        const endVel  = calcRecentVelocity(30000) ?? 0;
+        const baseVel = baselineVelocity ?? 0;
+
         const params = new URLSearchParams({
             time:        result.totalSec,
             focus:       result.focusRate   ?? -1,
             regressions: result.regressions ?? -1,
             error:       result.error ? '1' : '0',
+            wpm,
+            regpermin:   regPerMin,
+            linesdone:   visitedLines,
+            totallines:  totalLines,
+            endvel:      endVel.toFixed(4),
+            basevel:     baseVel.toFixed(4),
         });
         window.location.href = `/result.html?${params}`;
     });
@@ -189,6 +233,84 @@
         }
         return { totalSec, focusRate, regressions, error: false };
     }
+
+    // ── 실시간 역행(회귀) 감지 ───────────────────────────────
+    // 직전 5개 gazeData 이동 평균 대비 현재 x가 같은 줄 안에서 150px 이상 왼쪽이면 역행
+    function detectRegression(x, y) {
+        if (gazeData.length < 5) return;
+
+        const recent = gazeData.slice(-5);
+        const avgX = recent.reduce((sum, p) => sum + p.x, 0) / recent.length;
+        const avgY = recent.reduce((sum, p) => sum + p.y, 0) / recent.length;
+        const dy   = Math.abs(y - avgY);
+
+        const statusEl = document.getElementById('reading-status');
+
+        if (x < avgX - 150 && dy < 40) {
+            // 쿨다운 중이 아닐 때만 새 역행 이벤트로 카운트
+            if (!regressionCooldown) {
+                realtimeRegressions++;
+                regressionCooldown = true;
+
+                statusEl.textContent = '↩ 역행 감지! 앞으로 읽어보세요';
+                statusEl.style.color = '#e74c3c';
+
+                // 0.8초 후 경고 해제, 누적 횟수 복원
+                setTimeout(() => {
+                    statusEl.textContent = `👁 시선 추적 중 | 역행 ${realtimeRegressions}회`;
+                    statusEl.style.color = '#666';
+                }, 800);
+
+                // 1초 쿨다운 후 다음 역행 감지 허용
+                setTimeout(() => { regressionCooldown = false; }, 1000);
+            }
+        } else if (!regressionCooldown) {
+            // 역행도 쿨다운도 아닐 때: 현재 역행 누적 횟수 표시
+            statusEl.textContent = `👁 시선 추적 중 | 역행 ${realtimeRegressions}회`;
+            statusEl.style.color = '#666';
+        }
+    }
+
+    // ── 피로 감지 ─────────────────────────────────────────────
+    // windowMs 구간의 연속 포인트 간 이동 속도 평균 (px/ms) 반환
+    function calcRecentVelocity(windowMs) {
+        const cutoff  = Date.now() - windowMs;
+        const segment = gazeData.filter(p => p.t >= cutoff);
+        if (segment.length < 2) return null;
+
+        let total = 0, count = 0;
+        for (let i = 1; i < segment.length; i++) {
+            const dx = segment[i].x - segment[i - 1].x;
+            const dy = segment[i].y - segment[i - 1].y;
+            const dt = segment[i].t - segment[i - 1].t;
+            if (dt > 0) {
+                total += Math.sqrt(dx * dx + dy * dy) / dt;
+                count++;
+            }
+        }
+        return count > 0 ? total / count : null;
+    }
+
+    // 피로 경고 토스트를 3초간 표시 (세션당 최대 2회)
+    function showFatigueToast() {
+        fatigueToastCount++;
+        const toast = document.getElementById('fatigue-toast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // 독서 시작 60초 후 기준선 설정 → 이후 30초마다 피로 감지
+    setTimeout(() => {
+        baselineVelocity = calcRecentVelocity(60000);
+
+        setInterval(() => {
+            if (baselineVelocity === null || fatigueToastCount >= 2) return;
+            const recent = calcRecentVelocity(30000);
+            if (recent !== null && recent <= baselineVelocity * 0.5) {
+                showFatigueToast();
+            }
+        }, 30000);
+    }, 60000);
     </script>
 </body>
 </html>

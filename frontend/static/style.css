@@ -431,3 +431,24 @@ body {
 }
 
 .result-feedback h3 { color: #2c3e50; margin-bottom: 12px; }
+
+/* 피로 감지 토스트 */
+.fatigue-toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: #2c3e50;
+    color: white;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.fatigue-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
