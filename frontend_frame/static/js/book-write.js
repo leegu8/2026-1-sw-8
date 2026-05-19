@@ -20,7 +20,7 @@ form.addEventListener('submit', async (e) => {
 
     const title      = document.getElementById('title').value.trim();
     const difficulty = document.getElementById('difficulty').value;
-    const genre      = document.getElementById('genre').value || null;
+    const genre      = document.getElementById('genre').value;
     const content    = contentEl.value.trim();
 
     if (!title || !difficulty || !content) {
@@ -32,10 +32,10 @@ form.addEventListener('submit', async (e) => {
     submitBtn.textContent = '등록 중...';
 
     try {
-        const res = await fetch('/api/db/books', {
+        const res = await fetch('/api/db/texts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, difficulty, genre, content }),
+            body: JSON.stringify({ title, difficulty, genre, body: content }),
         });
 
         if (!res.ok) {

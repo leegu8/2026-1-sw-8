@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, List, Any, Dict
 from pydantic import BaseModel, ConfigDict
 from ...db.models import (
-    UserRole, ReadingStatus, EventType, Difficulty,
+    UserRole, ReadingStatus, EventType, Difficulty, Genre,
     ReadingPattern, TriggerReason, InterventionType,
 )
 
@@ -72,6 +72,7 @@ class TextContentCreate(BaseModel):
     total_sentences: Optional[int] = None
     total_paragraphs: Optional[int] = None
     difficulty: Optional[Difficulty] = None
+    genre: Optional[Genre] = Genre.NONE
 
 
 class TextContentResponse(BaseModel):
@@ -82,6 +83,7 @@ class TextContentResponse(BaseModel):
     total_sentences: Optional[int]
     total_paragraphs: Optional[int]
     difficulty: Optional[Difficulty]
+    genre: Optional[Genre]
     created_at: datetime
 
 

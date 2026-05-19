@@ -30,9 +30,16 @@ class EventType(enum.Enum):
 
 
 class Difficulty(enum.Enum):
-    EASY = "easy"
-    MEDIUM = "medium"
-    HARD = "hard"
+    ELEMENTARY = "초등"
+    MIDDLE = "중등"
+    HIGH = "고등"
+
+
+class Genre(enum.Enum):
+    NONE = "없음"
+    NOVEL = "소설"
+    ESSAY = "에세이"
+    NON_FICTION = "비문학"
 
 
 class ReadingPattern(enum.Enum):
@@ -87,6 +94,7 @@ class TextContent(Base):
     total_sentences = Column(Integer)
     total_paragraphs = Column(Integer)
     difficulty = Column(Enum(Difficulty))
+    genre = Column(Enum(Genre), default=Genre.NONE)
     created_at = Column(DateTime, default=_now)
 
     reading_sessions = relationship("ReadingSession", back_populates="text_content")
