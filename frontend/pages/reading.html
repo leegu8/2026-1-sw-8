@@ -5,6 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>독서하기 - 독서 아이트래킹</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .reading-area   { position: relative; }
+        #line-highlight-bar {
+            position: absolute; left: 0; right: 0;
+            background: rgba(52, 152, 219, 0.13);
+            border-left: 3px solid rgba(52, 152, 219, 0.55);
+            border-radius: 0 4px 4px 0;
+            pointer-events: none;
+            display: none;
+            transition: top 0.08s ease;
+            z-index: 0;
+        }
+        #book-title     { font-size: 1.9rem; }
+        .reading-text   { position: relative; z-index: 1; font-size: 1.12rem; line-height: 2; }
+        .reading-text p { margin: 0 0 1.2em; }
+        .word           { display: inline; transition: filter 0.25s; }
+        .word-blur      { filter: blur(3.5px); user-select: none; }
+    </style>
 </head>
 <body>
     <div id="gaze-dot"></div>
@@ -28,24 +46,9 @@
 
     <div class="page-content">
         <div class="reading-area">
-            <h2>📖 오늘의 글</h2>
-            <div class="reading-text">
-                <p>
-                    <span class="reading-line">사람이 글을 읽을 때, 눈은 결코 일정한 속도로 움직이지 않는다.</span>
-                    <span class="reading-line">눈은 짧은 순간 한 지점에 고정되었다가, 빠르게 다음 지점으로 이동하는 과정을 반복한다.</span>
-                    <span class="reading-line">이 고정 동작을 '고착'이라 하고, 빠른 이동을 '도약'이라 부른다.</span>
-                </p>
-                <p>
-                    <span class="reading-line">능숙한 독자는 한 번의 고착으로 여러 단어를 인식하고, 불필요한 역방향 도약을 줄인다.</span>
-                    <span class="reading-line">반면 초보 독자는 한 단어씩 읽거나, 앞으로 되돌아가는 경향이 잦다.</span>
-                    <span class="reading-line">이러한 차이가 독서 속도와 이해도에 직접적인 영향을 미친다.</span>
-                </p>
-                <p>
-                    <span class="reading-line">독서 능력은 훈련을 통해 개선될 수 있다.</span>
-                    <span class="reading-line">눈의 움직임 패턴을 인식하고, 의식적으로 넓은 범위를 한 번에 파악하는 연습을 반복하면,</span>
-                    <span class="reading-line">점차 효율적인 독서 습관이 형성된다.</span>
-                </p>
-            </div>
+            <div id="line-highlight-bar"></div>
+            <h2 id="book-title">📖 불러오는 중...</h2>
+            <div class="reading-text"></div>
         </div>
 
         <div class="reading-controls">
@@ -70,13 +73,34 @@
         z-index: 9999;
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         pointer-events: none;
-    ">🖱 개발자 모드 &nbsp;|&nbsp; D 로 해제</div>
+    ">🖱 개발자 모드</div>
 
     <!-- 피로 감지 토스트 -->
     <div id="fatigue-toast" class="fatigue-toast">😴 독서 속도가 느려졌어요. 잠깐 쉬었다 읽는 건 어떨까요?</div>
 
-    <script type="module" src="/static/js/gaze.js"></script>
     <script>
+    (async () => {
+        const bookId = +new URLSearchParams(location.search).get('book_id');
+        if (!bookId) return;
+        const books = await fetch('/static/textdate/books.json').then(r => r.json());
+        const book  = books.find(b => b.id === bookId);
+        if (!book) return;
+        document.getElementById('book-title').textContent = `📖 ${book.title}`;
+        document.title = `${book.title} - 독서 아이트래킹`;
+        const paras = book.content.split(/\n+/).map(s => s.trim()).filter(Boolean);
+        document.querySelector('.reading-text').innerHTML = paras.map(para =>
+            `<p>${para.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`
+        ).join('');
+    })();
+    </script>
+
+    <script type="module">
+        if (!new URLSearchParams(location.search).has('dev')) {
+            import('/static/js/gaze.js');
+        }
+    </script>
+    <script>
+    const DEV_MODE  = new URLSearchParams(location.search).has('dev');
     const gazeData  = [];
     const startTime = Date.now();
     let   maxReadY  = 0;
@@ -89,47 +113,25 @@
     let baselineVelocity = null;
     let fatigueToastCount = 0;
 
-    // ── 개발자 모드 (D 키) ──────────────────────────────────
-    let devMode = false;
-    const devBadge = document.getElementById('dev-mode-badge');
-    const gazeDot  = document.getElementById('gaze-dot');
+    const gazeDot = document.getElementById('gaze-dot');
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key !== 'd' && e.key !== 'D') return;
-        devMode = !devMode;
-        devBadge.style.display        = devMode ? 'block' : 'none';
-        document.body.style.cursor    = devMode ? 'none' : '';
-        document.getElementById('reading-status').textContent =
-            devMode ? '🖱 개발자 모드 (마우스 = 시선)' : '👁 시선 추적 중';
-    });
+    if (DEV_MODE) {
+        document.getElementById('dev-mode-badge').style.display = 'block';
+        document.getElementById('recal-btn').style.display      = 'none';
+        document.body.style.cursor = 'none';
+        document.getElementById('reading-status').textContent   = '🖱 개발자 모드 (마우스 = 시선)';
 
-    let lastDevX = 0, lastDevY = 0;
-
-    document.addEventListener('mousemove', (e) => {
-        if (!devMode) return;
-        lastDevX = e.clientX;
-        lastDevY = e.clientY;
-        gazeDot.style.display = 'block';
-        gazeDot.style.left    = e.clientX + 'px';
-        gazeDot.style.top     = e.clientY + 'px';
-        window.dispatchEvent(new CustomEvent('gaze:tracking', {
-            detail: { x: e.clientX, y: e.clientY }
-        }));
-    });
-
-    // dev 모드일 때 gaze:lost 가 dot을 숨기지 못하게 막음
-    // gaze.js 모듈 리스너가 나중에 실행되어 hide()를 덮어쓰므로 rAF로 한 프레임 뒤에 복원
-    window.addEventListener('gaze:lost', () => {
-        if (!devMode) return;
-        requestAnimationFrame(() => {
+        document.addEventListener('mousemove', (e) => {
             gazeDot.style.display = 'block';
-            gazeDot.style.left    = lastDevX + 'px';
-            gazeDot.style.top     = lastDevY + 'px';
+            gazeDot.style.left    = e.clientX + 'px';
+            gazeDot.style.top     = e.clientY + 'px';
+            window.dispatchEvent(new CustomEvent('gaze:tracking', {
+                detail: { x: e.clientX, y: e.clientY }
+            }));
         });
-    });
-    // ───────────────────────────────────────────────────────
-
-    document.getElementById('reading-status').textContent = '👁 시선 추적 중';
+    } else {
+        document.getElementById('reading-status').textContent = '👁 시선 추적 중';
+    }
 
     window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
         const now = Date.now();
@@ -141,33 +143,46 @@
     });
 
     function updateReadingFeedback(x, y) {
-        const lines = Array.from(document.querySelectorAll('.reading-line'));
-        if (!lines.length) return;
+        const words = Array.from(document.querySelectorAll('.word'));
+        if (!words.length) return;
 
         if (y > maxReadY) maxReadY = y;
 
-        let bestLine = null, bestDist = Infinity;
-        lines.forEach(line => {
-            const r    = line.getBoundingClientRect();
-            const dist = Math.abs(y - (r.top + r.height / 2));
-            if (dist < bestDist) { bestDist = dist; bestLine = line; }
+        // 시선 Y에 가장 가까운 단어로 현재 시각적 줄 파악
+        let bestWord = null, bestDist = Infinity;
+        words.forEach(w => {
+            const r   = w.getBoundingClientRect();
+            const mid = r.top + r.height / 2;
+            const d   = Math.abs(y - mid);
+            if (d < bestDist) { bestDist = d; bestWord = w; }
         });
-        lines.forEach(line => line.classList.remove('line-highlight'));
-        if (bestLine && bestDist < 80) bestLine.classList.add('line-highlight');
 
-        const isRegressing = y < maxReadY - 120;
-        lines.forEach(line => {
-            const r = line.getBoundingClientRect();
-            isRegressing && r.bottom < y
-                ? line.classList.add('line-blur')
-                : line.classList.remove('line-blur');
-        });
+        const bar = document.getElementById('line-highlight-bar');
+        if (bestWord && bestDist < 60) {
+            const wr = bestWord.getBoundingClientRect();
+            const ar = document.querySelector('.reading-area').getBoundingClientRect();
+            bar.style.display = 'block';
+            bar.style.top     = (wr.top - ar.top) + 'px';
+            bar.style.height  = wr.height + 'px';
+
+            // 역행 시: 현재 줄보다 위에 있는 단어들에 blur
+            const isRegressing = y < maxReadY - 120;
+            words.forEach(w => {
+                const r = w.getBoundingClientRect();
+                if (isRegressing && r.bottom < y - 10) {
+                    w.classList.add('word-blur');
+                } else {
+                    w.classList.remove('word-blur');
+                }
+            });
+        } else {
+            bar.style.display = 'none';
+        }
     }
 
     document.getElementById('done-btn').addEventListener('click', () => {
-        document.querySelectorAll('.reading-line').forEach(l => {
-            l.classList.remove('line-highlight', 'line-blur');
-        });
+        document.getElementById('line-highlight-bar').style.display = 'none';
+        document.querySelectorAll('.word').forEach(w => w.classList.remove('word-blur'));
         const result = analyzeReading();
 
         // WPM: 공백 분리 단어 수 ÷ 독서 시간(분)
@@ -180,16 +195,19 @@
         const regPerMin = result.totalSec > 0
             ? +(realtimeRegressions / (result.totalSec / 60)).toFixed(2) : 0;
 
-        // 완독률: 각 reading-line에 실제 시선이 닿은 줄 수 / 전체 줄 수
-        const lineEls = document.querySelectorAll('.reading-line');
-        const totalLines   = lineEls.length;
-        const visitedLines = Array.from(lineEls).filter(el => {
-            const r = el.getBoundingClientRect();
-            return gazeData.some(p =>
-                p.x >= r.left - 20 && p.x <= r.right  + 20 &&
-                p.y >= r.top  - 10 && p.y <= r.bottom + 10
-            );
-        }).length;
+        // 완독률: 시각적 줄(단어 top 기준 그룹) 단위로 시선 도달 여부 판정
+        const lineMap = {};
+        document.querySelectorAll('.word').forEach(w => {
+            const r   = w.getBoundingClientRect();
+            const key = Math.round(r.top);
+            if (!lineMap[key]) lineMap[key] = { top: r.top, bottom: r.bottom };
+            else lineMap[key].bottom = Math.max(lineMap[key].bottom, r.bottom);
+        });
+        const visualLines  = Object.values(lineMap);
+        const totalLines   = visualLines.length;
+        const visitedLines = visualLines.filter(line =>
+            gazeData.some(p => p.y >= line.top - 10 && p.y <= line.bottom + 10)
+        ).length;
 
         // 피로도: 기준 velocity 대비 마지막 30초 velocity 감소율
         const endVel  = calcRecentVelocity(30000) ?? 0;
