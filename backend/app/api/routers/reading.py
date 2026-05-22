@@ -41,6 +41,7 @@ class ReadingLogRequest(BaseModel):
 
 class ReadingEndRequest(BaseModel):
     session_id: int
+    ended_at: Optional[datetime] = None
     reading_logs: List[ReadingLogItem] = []
     correction_events: List[CorrectionEventItem] = []
 
@@ -239,7 +240,7 @@ async def reading_end(body: ReadingEndRequest, db: AsyncSession = Depends(get_db
     )
     summaries = result.scalars().all()
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = body.ended_at or datetime.now(timezone.utc).replace(tzinfo=None)
     total_duration_sec = max(int((now - session.started_at).total_seconds()), 1)
 
     if summaries:

@@ -110,6 +110,7 @@ class CompletedBookItem(BaseModel):
 class ReadingSessionCreate(BaseModel):
     user_id: int
     book_id: int
+    started_at: Optional[datetime] = None
     total_lines: Optional[int] = None
     x_min: Optional[float] = None
     x_max: Optional[float] = None

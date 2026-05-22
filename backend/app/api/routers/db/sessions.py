@@ -12,7 +12,10 @@ router = APIRouter()
 
 @router.post("/sessions", response_model=ReadingSessionResponse, status_code=201)
 async def create_session(body: ReadingSessionCreate, db: AsyncSession = Depends(get_db)):
-    session = ReadingSession(**body.model_dump())
+    data = body.model_dump()
+    if data.get("started_at") is None:
+        data["started_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
+    session = ReadingSession(**data)
     db.add(session)
     await db.commit()
     await db.refresh(session)
