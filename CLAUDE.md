@@ -125,7 +125,7 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 | `POST/GET` | `/api/db/books` | 도서 생성·목록 (목록은 content 제외) |
 | `GET/DELETE` | `/api/db/books/{id}` | 도서 상세 조회·삭제 |
 | `GET` | `/api/db/users/{id}/completed-books` | 완독한 도서 ID 목록 |
-| `POST/GET` | `/api/db/sessions` | 세션 생성 `{user_id, book_id, total_lines}`·목록 |
+| `POST/GET` | `/api/db/sessions` | 세션 생성 `{user_id, book_id, total_lines, x_min, x_max}`·목록 |
 | `GET/PATCH` | `/api/db/sessions/{id}` | 세션 조회·업데이트 |
 | `POST` | `/api/db/sessions/{id}/end` | 세션 종료 (duration 자동 계산) |
 | `POST` | `/api/db/correction-events` | 교정 이벤트 저장 |
