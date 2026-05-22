@@ -33,25 +33,61 @@ function buildLineList() {
     });
     lineList = [...map.entries()].sort((a, b) => a[0] - b[0]).map(([, v]) => v);
 
-    // 단어별 줄 인덱스 태깅 (data-line 속성)
-    const topToIdx = new Map(lineList.map((l, i) => [l.top, i]));
+    // 단어 태깅용 원본 top 저장 (확장 전)
+    const rawTops = lineList.map(l => l.top);
+
+    // 인접 줄 간 gap을 공평하게 분할 — 각 줄의 top/bottom을 중간점까지 확장
+    for (let i = 0; i < lineList.length; i++) {
+        if (i > 0) {
+            const mid = Math.round((lineList[i - 1].bottom + lineList[i].top) / 2);
+            lineList[i - 1].bottom = mid;
+            lineList[i].top = mid + 1;
+        }
+    }
+
+    // 단어별 줄 인덱스 태깅 — 확장 전 원본 top 기준으로 매칭
+    const topToIdx = new Map(rawTops.map((t, i) => [t, i]));
     document.querySelectorAll('.word').forEach(w => {
         const top = Math.round(w.getBoundingClientRect().top + window.scrollY);
         w.dataset.line = topToIdx.get(top) ?? -1;
     });
 }
 
-// 뷰포트 y → 줄 인덱스 (전체 텍스트 범위 벗어나면 -1)
+// 뷰포트 y → 줄 인덱스 — 확장된 경계 기반, gap 없음
 function getLineIndex(y) {
     if (!lineList.length) return -1;
     const docY = y + window.scrollY;
-    if (docY < lineList[0].top - 20 || docY > lineList[lineList.length - 1].bottom + 20) return -1;
-    let closest = 0, minDist = Infinity;
-    lineList.forEach((l, i) => {
-        const d = Math.abs(docY - l.top);
-        if (d < minDist) { minDist = d; closest = i; }
-    });
-    return closest;
+    for (let i = 0; i < lineList.length; i++) {
+        if (docY >= lineList[i].top && docY <= lineList[i].bottom) return i;
+    }
+    return -1;
+}
+
+// ── 패턴 분류 ─────────────────────────────────────────────
+// 연속 두 포인트 간 전환을 5가지 패턴으로 분류
+// forward  : 같은 줄, x 전진 (줄너비 3% 이상)
+// wrap     : 줄+1 이동 (정상 줄바꿈)
+// regress  : 줄 감소 OR 같은 줄 x 급후퇴 (줄너비 8% 이상)
+// still    : 거의 안 움직임 (fixation 후보)
+// oob      : 텍스트 범위 이탈
+function classifyTransition(prev, curr) {
+    if (curr.line < 0 || prev.line < 0) return 'oob';
+
+    const l = lineList[curr.line];
+    const lineWidth = l ? l.xMax - l.xMin : 0;
+    if (lineWidth <= 0) return 'still';
+
+    const dLine = curr.line - prev.line;
+    const dx    = curr.x   - prev.x;
+
+    if (dLine < 0)               return 'regress';
+    if (dLine === 1)              return 'wrap';
+    if (dLine > 1)                return 'oob';
+
+    // 같은 줄
+    if (dx >  lineWidth * 0.03)  return 'forward';
+    if (dx < -lineWidth * 0.08)  return 'regress';
+    return 'still';
 }
 
 // 줄 내 세그먼트 인덱스 (0~4) — x가 [xMin, xMax] 밖이면 -1
@@ -72,7 +108,8 @@ if (!DEV_MODE) {
 }
 
 // ── 상태 변수 ────────────────────────────────────────────
-const gazeData = [];
+const gazeData    = [];
+const patternData = []; // [{type, t, line, x}] — gazeData 전환별 패턴
 let   startTime      = null;
 let   lastValidLine  = -1;   // line >= 0 인 최신 줄 인덱스
 let   blurActive     = false; // 역행 블러 활성 상태
@@ -105,6 +142,7 @@ if (DEV_MODE) {
         { key: 'focus',      label: '③ 집중도'   },
         { key: 'regression', label: '④ 역행비율' },
         { key: 'wpm',        label: '⑤ WPM'      },
+        { key: 'pattern',    label: '⑥ 현재패턴' },
     ];
 
     function getFeatureValue(key) {
@@ -129,6 +167,12 @@ if (DEV_MODE) {
                     .trim().split(/\s+/).filter(w => w.length > 0).length;
                 return `${elapsed > 0 ? Math.round(wc / (elapsed / 60)) : 0}`;
             }
+            case 'pattern': {
+                if (!patternData.length) return '--';
+                const t = patternData[patternData.length - 1].type;
+                const map = { forward: '▶ 전진', wrap: '↩ 줄변경', regress: '◀ 역행', still: '⏸ 정지', oob: '⊗ 이탈' };
+                return map[t] || t;
+            }
             default: return '--';
         }
     }
@@ -151,19 +195,32 @@ if (DEV_MODE) {
         <div class="dev-feature-row" id="dev-status-focus">
             <span class="dev-feature-label">🧠 집중</span>
             <span class="dev-feature-val" style="color:#4ade80">집중 중</span>
+        </div>
+        <div style="border-top:1px solid rgba(139,92,246,0.25);margin:8px 0 6px;"></div>
+        <div class="dev-feature-row">
+            <span class="dev-feature-label" style="font-size:0.75rem;color:#9ca3af">최근패턴</span>
+            <span id="dev-pattern-hist" style="font-size:1.05rem;letter-spacing:3px;color:#9ca3af;min-width:80px;text-align:right">--</span>
         </div>`;
     document.body.appendChild(panel);
+
+    const PATTERN_COLORS = { forward: '#4ade80', wrap: '#60a5fa', regress: '#f87171', still: '#facc15', oob: '#f97316' };
+    const PATTERN_ICONS  = { forward: '▶', wrap: '↩', regress: '◀', still: '⏸', oob: '⊗' };
 
     setInterval(() => {
         panel.querySelectorAll('.dev-feature-row').forEach((row, i) => {
             if (i < devFeatures.length) {
-                row.querySelector('.dev-feature-val').textContent = getFeatureValue(devFeatures[i].key);
+                const valEl = row.querySelector('.dev-feature-val');
+                valEl.textContent = getFeatureValue(devFeatures[i].key);
+                // ⑥ 현재패턴 행: 패턴 유형에 맞는 색상
+                if (devFeatures[i].key === 'pattern' && patternData.length) {
+                    valEl.style.color = PATTERN_COLORS[patternData[patternData.length - 1].type] || '#9ca3af';
+                }
             }
         });
 
-        // 역행 상태: 최근 40포인트(~4초) 안에 역행 패턴(전진→후퇴→재독) 감지 여부
+        // 역행 상태: 최근 40패턴(~4초) 안에 역행 감지 여부
         const regEl = document.getElementById('dev-status-regression').querySelector('.dev-feature-val');
-        const isReg = startTime && countRegressions(gazeData.slice(-40)) > 0;
+        const isReg = startTime && countRegressions(patternData.slice(-40)) > 0;
         regEl.textContent = isReg ? '⚠ 역행 감지' : '정상';
         regEl.style.color = isReg ? '#f87171' : '#6b7280';
 
@@ -172,6 +229,15 @@ if (DEV_MODE) {
         const isLost = startTime && isLostFocus();
         focusEl.textContent = isLost ? '⚠ 집중 이탈' : '집중 중';
         focusEl.style.color = isLost ? '#f87171' : '#4ade80';
+
+        // 최근 10 패턴 기록 (아이콘 나열, 가장 오래된 → 최신 순)
+        const histEl = document.getElementById('dev-pattern-hist');
+        if (patternData.length) {
+            const recent = patternData.slice(-10);
+            histEl.innerHTML = recent.map(p =>
+                `<span style="color:${PATTERN_COLORS[p.type] || '#9ca3af'}">${PATTERN_ICONS[p.type] || '?'}</span>`
+            ).join('');
+        }
     }, 1000);
 
 } else {
@@ -199,7 +265,12 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
 
     const now = Date.now();
     if (gazeData.length === 0 || now - gazeData[gazeData.length - 1].t >= 100) {
-        gazeData.push({ x, line, t: now });
+        const curr = { x, line, t: now };
+        if (gazeData.length > 0) {
+            const type = classifyTransition(gazeData[gazeData.length - 1], curr);
+            patternData.push({ type, t: now, line, x });
+        }
+        gazeData.push(curr);
         if (line >= 0) {
             lastValidLine = line;
             oobSince = null;
@@ -311,157 +382,126 @@ function calcCompletion() {
     };
 }
 
+// ── 역행 / 집중도 공통 분석 ──────────────────────────────
+// regress 후 forward가 나오면 역행(재독) 1회
+// regress 후 forward가 안 나오면 집중 이탈 구간으로 표시
+// 반환: { regressionCount, distractedByRegress[] }
+function analyzePatterns(patterns) {
+    let regressionCount = 0;
+    const distractedByRegress = new Array(patterns.length).fill(false);
+
+    let i = 0;
+    while (i < patterns.length) {
+        if (patterns[i].type !== 'regress') { i++; continue; }
+
+        // regress + still 구간 범위 탐색
+        const start = i;
+        while (i < patterns.length && (patterns[i].type === 'regress' || patterns[i].type === 'still')) i++;
+
+        if (i < patterns.length && patterns[i].type === 'forward') {
+            // 역행 후 재독 확인 → 역행(재독) 1회
+            regressionCount++;
+        } else {
+            // 역행 후 재독 없음 → 집중 이탈
+            for (let k = start; k < i; k++) distractedByRegress[k] = true;
+        }
+    }
+
+    return { regressionCount, distractedByRegress };
+}
+
 // ── 집중도 ────────────────────────────────────────────────
-// 집중(%) = (총 독서 시간 - 집중 못한 시간) / 총 독서 시간 × 100
 // 집중 못한 시간:
-//   Case 1) 시선 정체 ≥ 1500ms — x가 기준점에서 줄 너비 8%(최소 30px) 이상
-//           이동하지 않으면 멍때리기로 간주 (정상 독서는 매 초 수십 px 이상 전진)
-//   Case 2) 텍스트 범위 이탈 연속 ≥ 100ms
-//           - line < 0 (y 범위 이탈)
-//           - x < xMin-20 or x > xMax+20 (x 범위 이탈)
+//   Case 1) oob 연속 ≥ 100ms
+//   Case 2) still 연속 ≥ 1500ms (장기 멍때리기)
+//   Case 3) regress 후 forward 없음 (집중 이탈 재독)
 function calcFocusRate(totalSec) {
-    if (!gazeData.length || totalSec <= 0) return 0;
+    if (!patternData.length || totalSec <= 0) return 0;
+
+    const distracted = new Array(patternData.length).fill(false);
+
+    // Case 1, 2: oob/still 연속 구간
+    function markRun(type, minMs) {
+        let runStart = null;
+        for (let i = 0; i < patternData.length; i++) {
+            if (patternData[i].type === type) {
+                if (runStart === null) runStart = i;
+            } else {
+                if (runStart !== null) {
+                    const dur = patternData[i].t - patternData[runStart].t;
+                    if (dur >= minMs)
+                        for (let k = runStart; k < i; k++) distracted[k] = true;
+                    runStart = null;
+                }
+            }
+        }
+        if (runStart !== null) {
+            const dur = patternData[patternData.length - 1].t - patternData[runStart].t;
+            if (dur >= minMs)
+                for (let k = runStart; k < patternData.length; k++) distracted[k] = true;
+        }
+    }
+    markRun('oob',   100);
+    markRun('still', 1500);
+
+    // Case 3: regress 후 forward 없는 구간
+    const { distractedByRegress } = analyzePatterns(patternData);
+    distractedByRegress.forEach((v, i) => { if (v) distracted[i] = true; });
 
     let unfocusedMs = 0;
-
-    // Case 1: 시선 정체 ≥ 1500ms
-    let frozenStart = 0;
-    let frozenRefX  = gazeData[0].x;
-    for (let i = 1; i < gazeData.length; i++) {
-        const p = gazeData[i];
-        const l = p.line >= 0 ? lineList[p.line] : null;
-        const threshold = l ? Math.max(30, (l.xMax - l.xMin) * 0.08) : 30;
-        if (Math.abs(p.x - frozenRefX) > threshold) {
-            const dur = gazeData[i].t - gazeData[frozenStart].t;
-            if (getSegIdx(gazeData[frozenStart]) >= 0 && dur >= 1500) unfocusedMs += dur;
-            frozenStart = i;
-            frozenRefX  = p.x;
+    for (let i = 0; i < patternData.length; i++) {
+        if (distracted[i]) {
+            const next = patternData[i + 1];
+            unfocusedMs += next ? next.t - patternData[i].t : 100;
         }
     }
-    {
-        const dur = gazeData[gazeData.length - 1].t - gazeData[frozenStart].t;
-        if (getSegIdx(gazeData[frozenStart]) >= 0 && dur >= 1500) unfocusedMs += dur;
-    }
 
-    // Case 2: 텍스트 범위 이탈 연속 ≥ 100ms
-    function isOOB(i) {
-        const p = gazeData[i];
-        if (p.line < 0) return true;
-        const l = lineList[p.line];
-        return p.x < l.xMin - 20 || p.x > l.xMax + 20;
-    }
-
-    let oobStart = null;
-    for (let i = 0; i < gazeData.length; i++) {
-        if (isOOB(i)) {
-            if (oobStart === null) oobStart = i;
-        } else if (oobStart !== null) {
-            const dur = gazeData[i].t - gazeData[oobStart].t;
-            if (dur >= 100) unfocusedMs += dur;
-            oobStart = null;
-        }
-    }
-    if (oobStart !== null) {
-        const dur = gazeData[gazeData.length - 1].t - gazeData[oobStart].t;
-        if (dur >= 100) unfocusedMs += dur;
-    }
-
-    // 분모를 벽시계(elapsed)가 아닌 gazeData 실측 범위로 사용
-    // — 마우스 정지 시 elapsed만 증가해 집중도가 올라가는 허점 차단
     const gazeSpanMs = gazeData[gazeData.length - 1].t - gazeData[0].t;
     if (gazeSpanMs <= 0) return 100;
     return Math.round(Math.max(0, (gazeSpanMs - unfocusedMs) / gazeSpanMs * 100));
 }
 
-// ── 역행 비율 ─────────────────────────────────────────────
-// 0.1초 간격 좌표 벡터(dx, dLine)로 방향을 분류한 뒤
-// [오른쪽(전진)] → [왼쪽 or 위(후퇴)] → [오른쪽(재독)] 패턴을 역행 1회로 집계
-function countRegressions(data) {
-    if (data.length < 3) return 0;
-
-    // 연속 두 포인트 간 방향 분류
-    // right: 전진 읽기 | left: 같은 줄 역행 | up: 위 줄로 역행
-    // wrap: 정상 줄바꿈(아래 줄 이동) | still: 정지/소폭 이동
-    const dirs = [];
-    for (let i = 1; i < data.length; i++) {
-        const curr = data[i], prev = data[i - 1];
-        if (curr.line < 0 || prev.line < 0) { dirs.push('oob'); continue; }
-        const dLine = curr.line - prev.line;
-        const dx    = curr.x   - prev.x;
-        if      (dLine < 0)   dirs.push('up');
-        else if (dLine > 0)   dirs.push('wrap');
-        else if (dx >  10)    dirs.push('right');
-        else if (dx < -20)    dirs.push('left');
-        else                  dirs.push('still');
-    }
-
-    let count = 0;
-    let i = 0;
-    while (i < dirs.length) {
-        // ① 전진 구간 시작 확인
-        if (dirs[i] !== 'right') { i++; continue; }
-
-        // ② 전진이 끝나는 지점 탐색
-        let j = i + 1;
-        while (j < dirs.length && (dirs[j] === 'right' || dirs[j] === 'still')) j++;
-        if (j >= dirs.length) break;
-
-        // ③ 후퇴(left or up) 확인
-        if (dirs[j] !== 'left' && dirs[j] !== 'up') { i = j + 1; continue; }
-
-        // ④ 후퇴 직후 오른쪽 재독 확인
-        let k = j + 1;
-        while (k < dirs.length && dirs[k] === 'still') k++;
-        if (k < dirs.length && dirs[k] === 'right') {
-            count++;
-            i = k + 1; // 겹침 방지: 재독 시작점 이후부터 다시 탐색
-        } else {
-            i = j + 1;
-        }
-    }
-    return count;
+// ── 역행 분석 ─────────────────────────────────────────────
+function countRegressions(patterns) {
+    return analyzePatterns(patterns).regressionCount;
 }
 
 function calcRegressions(totalSec = 0) {
-    const regressionCount = countRegressions(gazeData);
+    const regressionCount = countRegressions(patternData);
 
-    // regRate: 최근 20초 시간 기반 윈도우 — 디스플레이·결과 페이지용 (안정적 수치)
-    const cutoff     = Date.now() - 20000;
-    const windowData = gazeData.filter(p => p.t >= cutoff);
-    const windowTrans = windowData.length - 1;
-    const regRate    = windowTrans > 0
-        ? Math.round(countRegressions(windowData) / windowTrans * 100)
+    // regRate: 최근 20초 윈도우 — 결과 페이지용 안정적 수치
+    const cutoff = Date.now() - 20000;
+    const window = patternData.filter(p => p.t >= cutoff);
+    const regRate = window.length > 0
+        ? Math.round(countRegressions(window) / window.length * 100)
         : 0;
 
     return { regressionCount, regRate };
 }
 
-// 블러 트리거 전용: 최근 N 포인트 기반 역행비율
-// 10포인트 = ~1초, 2회 역행 → 20% → 블러 활성 임계치 정확히 도달
+// 블러 트리거 전용: 최근 N 패턴 기반 역행비율
 function getRealtimeRegRate(windowPoints = 10) {
-    const data = gazeData.slice(-windowPoints);
-    const transitions = data.length - 1;
-    return transitions > 0 ? Math.round(countRegressions(data) / transitions * 100) : 0;
+    const recent = patternData.slice(-windowPoints);
+    return recent.length > 0
+        ? Math.round(countRegressions(recent) / recent.length * 100)
+        : 0;
 }
 
-// ── 하이라이트 · 줄 박스 헬퍼 ────────────────────────────
-// 최근 windowMs 동안 시선이 줄 너비 8%(최소 30px) 이상 이동 안 하면 true
-function isRecentlyFrozen(windowMs = 2000) {
-    if (gazeData.length < 3) return false;
-    const cutoff = Date.now() - windowMs;
-    const recent = gazeData.filter(p => p.t >= cutoff && p.line >= 0);
-    if (recent.length < 3) return false;
-    const xSpan = Math.max(...recent.map(p => p.x)) - Math.min(...recent.map(p => p.x));
-    const l = lineList[recent[0].line];
-    const threshold = l ? Math.max(30, (l.xMax - l.xMin) * 0.08) : 30;
-    return xSpan < threshold;
-}
-
-// 집중 이탈 판정 — 멍때리기 2초+ 또는 시선 텍스트 이탈 2초+
+// ── 집중 이탈 판정 (실시간) ──────────────────────────────
+// 최근 2초 기준:
+//   1) 전부 oob/still → 멍때리기
+//   2) regress가 있는데 forward가 없음 → 재독 없는 역행
 function isLostFocus() {
-    const frozen    = isRecentlyFrozen(2000);
-    const dispersed = oobSince !== null && (Date.now() - oobSince) >= 2000;
-    return frozen || dispersed;
+    if (!startTime || patternData.length < 3) return false;
+    const cutoff = Date.now() - 2000;
+    const recent = patternData.filter(p => p.t >= cutoff);
+    if (recent.length < 3) return false;
+
+    const allPassive = recent.every(p => p.type === 'oob' || p.type === 'still');
+    const hasRegress = recent.some(p => p.type === 'regress');
+    const hasForward = recent.some(p => p.type === 'forward');
+
+    return allPassive || (hasRegress && !hasForward);
 }
 
 // 오버레이 페이드 인/아웃 헬퍼
