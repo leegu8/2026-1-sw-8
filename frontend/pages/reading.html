@@ -116,6 +116,18 @@
             transition: opacity 0.4s ease;
             z-index: 2;
         }
+
+        /* 현재 읽는 줄 가벼운 하이라이트 */
+        #current-line-highlight {
+            position: absolute; left: 0; right: 0;
+            background: rgba(255, 210, 80, 0.13);
+            border-left: 3px solid rgba(255, 190, 50, 0.55);
+            border-radius: 0 4px 4px 0;
+            pointer-events: none;
+            display: none;
+            transition: top 0.08s ease;
+            z-index: 0;
+        }
     </style>
 </head>
 <body>
@@ -140,6 +152,7 @@
 
     <div class="page-content">
         <div class="reading-area">
+            <div id="current-line-highlight"></div>
             <div id="line-highlight-bar"></div>
             <div id="line-box"></div>
             <h2 id="book-title">📖 불러오는 중...</h2>

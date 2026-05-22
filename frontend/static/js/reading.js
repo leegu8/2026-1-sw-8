@@ -100,11 +100,11 @@ if (DEV_MODE) {
 
     // ── 분석 항목 모니터 패널 ─────────────────────────────
     const devFeatures = [
-        { key: 'totalSec',   label: '① 독서시간', enabled: true  },
-        { key: 'completion', label: '② 완독률',   enabled: false },
-        { key: 'focus',      label: '③ 집중도',   enabled: false },
-        { key: 'regression', label: '④ 역행비율', enabled: false },
-        { key: 'wpm',        label: '⑤ WPM',      enabled: false },
+        { key: 'totalSec',   label: '① 독서시간' },
+        { key: 'completion', label: '② 완독률'   },
+        { key: 'focus',      label: '③ 집중도'   },
+        { key: 'regression', label: '④ 역행비율' },
+        { key: 'wpm',        label: '⑤ WPM'      },
     ];
 
     function getFeatureValue(key) {
@@ -140,36 +140,38 @@ if (DEV_MODE) {
         devFeatures.map(f =>
             `<div class="dev-feature-row">
                 <span class="dev-feature-label">${f.label}</span>
-                <button class="dev-toggle ${f.enabled ? 'on' : 'off'}">${f.enabled ? 'ON' : 'OFF'}</button>
-                <span class="dev-feature-val" style="color:${f.enabled ? '#4ade80' : '#6b7280'}">--</span>
+                <span class="dev-feature-val" style="color:#4ade80">--</span>
             </div>`
-        ).join('');
+        ).join('') +
+        `<div style="border-top:1px solid rgba(139,92,246,0.25);margin:8px 0 6px;"></div>
+        <div class="dev-feature-row" id="dev-status-regression">
+            <span class="dev-feature-label">⏪ 역행</span>
+            <span class="dev-feature-val" style="color:#6b7280">정상</span>
+        </div>
+        <div class="dev-feature-row" id="dev-status-focus">
+            <span class="dev-feature-label">🧠 집중</span>
+            <span class="dev-feature-val" style="color:#4ade80">집중 중</span>
+        </div>`;
     document.body.appendChild(panel);
-
-    panel.querySelectorAll('.dev-toggle').forEach((btn, i) => {
-        btn.addEventListener('click', () => {
-            devFeatures[i].enabled = !devFeatures[i].enabled;
-            btn.textContent = devFeatures[i].enabled ? 'ON' : 'OFF';
-            btn.className   = 'dev-toggle ' + (devFeatures[i].enabled ? 'on' : 'off');
-            if (!devFeatures[i].enabled) {
-                const valEl = btn.closest('.dev-feature-row').querySelector('.dev-feature-val');
-                valEl.textContent = '--';
-                valEl.style.color = '#6b7280';
-            }
-        });
-    });
 
     setInterval(() => {
         panel.querySelectorAll('.dev-feature-row').forEach((row, i) => {
-            const valEl = row.querySelector('.dev-feature-val');
-            if (devFeatures[i].enabled) {
-                valEl.textContent = getFeatureValue(devFeatures[i].key);
-                valEl.style.color = '#4ade80';
-            } else {
-                valEl.textContent = '--';
-                valEl.style.color = '#6b7280';
+            if (i < devFeatures.length) {
+                row.querySelector('.dev-feature-val').textContent = getFeatureValue(devFeatures[i].key);
             }
         });
+
+        // 역행 상태: 최근 40포인트(~4초) 안에 역행 패턴(전진→후퇴→재독) 감지 여부
+        const regEl = document.getElementById('dev-status-regression').querySelector('.dev-feature-val');
+        const isReg = startTime && countRegressions(gazeData.slice(-40)) > 0;
+        regEl.textContent = isReg ? '⚠ 역행 감지' : '정상';
+        regEl.style.color = isReg ? '#f87171' : '#6b7280';
+
+        // 집중 상태
+        const focusEl = document.getElementById('dev-status-focus').querySelector('.dev-feature-val');
+        const isLost = startTime && isLostFocus();
+        focusEl.textContent = isLost ? '⚠ 집중 이탈' : '집중 중';
+        focusEl.style.color = isLost ? '#f87171' : '#4ade80';
     }, 1000);
 
 } else {
@@ -189,11 +191,14 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
     if (!startTime && isNearFirstWord(y)) {
         startTime = Date.now();
     }
+
+    updateCurrentLineHighlight(y);
+    const line = getLineIndex(y);
+
     if (!startTime) return;
 
     const now = Date.now();
     if (gazeData.length === 0 || now - gazeData[gazeData.length - 1].t >= 100) {
-        const line = getLineIndex(y);
         gazeData.push({ x, line, t: now });
         if (line >= 0) {
             lastValidLine = line;
@@ -369,26 +374,49 @@ function calcFocusRate(totalSec) {
 }
 
 // ── 역행 비율 ─────────────────────────────────────────────
-// 역행: 위 줄로 이동(line 감소) 또는 같은 줄 내 좌측 이동 ≥ 15% 줄 너비
-// regRate(%) = 역행 횟수 / 전이 수 × 100  (Rayner 1998: 정상 독자 10-15%)
-// regRate는 최근 10포인트 슬라이딩 윈도우 기준 (실시간 민감도)
-// regressionCount는 전체 세션 누적 (결과 페이지용)
+// 0.1초 간격 좌표 벡터(dx, dLine)로 방향을 분류한 뒤
+// [오른쪽(전진)] → [왼쪽 or 위(후퇴)] → [오른쪽(재독)] 패턴을 역행 1회로 집계
 function countRegressions(data) {
-    let count = 0;
+    if (data.length < 3) return 0;
+
+    // 연속 두 포인트 간 방향 분류
+    // right: 전진 읽기 | left: 같은 줄 역행 | up: 위 줄로 역행
+    // wrap: 정상 줄바꿈(아래 줄 이동) | still: 정지/소폭 이동
+    const dirs = [];
     for (let i = 1; i < data.length; i++) {
-        const curr  = data[i];
-        const prev  = data[i - 1];
+        const curr = data[i], prev = data[i - 1];
+        if (curr.line < 0 || prev.line < 0) { dirs.push('oob'); continue; }
         const dLine = curr.line - prev.line;
-        const dx    = curr.x - prev.x;
-        if (dLine < 0) {
+        const dx    = curr.x   - prev.x;
+        if      (dLine < 0)   dirs.push('up');
+        else if (dLine > 0)   dirs.push('wrap');
+        else if (dx >  10)    dirs.push('right');
+        else if (dx < -20)    dirs.push('left');
+        else                  dirs.push('still');
+    }
+
+    let count = 0;
+    let i = 0;
+    while (i < dirs.length) {
+        // ① 전진 구간 시작 확인
+        if (dirs[i] !== 'right') { i++; continue; }
+
+        // ② 전진이 끝나는 지점 탐색
+        let j = i + 1;
+        while (j < dirs.length && (dirs[j] === 'right' || dirs[j] === 'still')) j++;
+        if (j >= dirs.length) break;
+
+        // ③ 후퇴(left or up) 확인
+        if (dirs[j] !== 'left' && dirs[j] !== 'up') { i = j + 1; continue; }
+
+        // ④ 후퇴 직후 오른쪽 재독 확인
+        let k = j + 1;
+        while (k < dirs.length && dirs[k] === 'still') k++;
+        if (k < dirs.length && dirs[k] === 'right') {
             count++;
-        } else if (dLine === 0 && curr.line >= 0) {
-            const l = lineList[curr.line];
-            const lineWidth = l.xMax - l.xMin;
-            if (lineWidth > 0 && -dx > lineWidth * 0.15) {
-                const isReturnSweep = data.slice(i + 1, i + 4).some(pt => pt.line > curr.line);
-                if (!isReturnSweep) count++;
-            }
+            i = k + 1; // 겹침 방지: 재독 시작점 이후부터 다시 탐색
+        } else {
+            i = j + 1;
         }
     }
     return count;
@@ -444,6 +472,28 @@ function showOverlay(el) {
 function hideOverlay(el) {
     el.style.opacity = '0';
     setTimeout(() => { if (el.style.opacity === '0') el.style.display = 'none'; }, 450);
+}
+
+// Y가 줄 top~bottom 안에 정확히 있을 때만 인덱스 반환 (하이라이트 전용)
+function getLineIndexStrict(y) {
+    if (!lineList.length) return -1;
+    const docY = y + window.scrollY;
+    for (let i = 0; i < lineList.length; i++) {
+        if (docY >= lineList[i].top && docY <= lineList[i].bottom) return i;
+    }
+    return -1;
+}
+
+// 현재 읽는 줄 가벼운 하이라이트
+function updateCurrentLineHighlight(y) {
+    const bar = document.getElementById('current-line-highlight');
+    const lineIdx = getLineIndexStrict(y);
+    if (lineIdx < 0) { bar.style.display = 'none'; return; }
+    const areaTop = document.querySelector('.reading-area').getBoundingClientRect().top + window.scrollY;
+    const ln = lineList[lineIdx];
+    bar.style.top    = (ln.top - areaTop) + 'px';
+    bar.style.height = (ln.bottom - ln.top + 4) + 'px';
+    bar.style.display = 'block';
 }
 
 // lineIdx 줄에 하이라이트 바 위치 지정
