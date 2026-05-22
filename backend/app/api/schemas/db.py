@@ -111,6 +111,8 @@ class ReadingSessionCreate(BaseModel):
     user_id: int
     book_id: int
     total_lines: Optional[int] = None
+    x_min: Optional[float] = None
+    x_max: Optional[float] = None
 
 
 class ReadingSessionUpdate(BaseModel):
@@ -133,6 +135,8 @@ class ReadingSessionResponse(BaseModel):
     started_at: datetime
     ended_at: Optional[datetime]
     total_duration_sec: Optional[int]
+    x_min: Optional[float]
+    x_max: Optional[float]
     wpm: Optional[float]
     concentration_score: Optional[float]
     base_vel: Optional[float]

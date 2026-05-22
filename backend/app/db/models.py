@@ -1,5 +1,5 @@
 from datetime import datetime, date, timezone
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ForeignKey, JSON
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -63,6 +63,8 @@ class ReadingSession(Base):
     started_at = Column(DateTime, default=_now)
     ended_at = Column(DateTime)
     total_duration_sec = Column(Integer)
+    x_min = Column(Float)
+    x_max = Column(Float)
     wpm = Column(Float)
     concentration_score = Column(Float)
     base_vel = Column(Float)
@@ -99,6 +101,8 @@ class GazeSummary(Base):
     focus_rate = Column(Float, nullable=False)
     regression_count = Column(Integer, nullable=False)
     avg_gaze_speed = Column(Float)
+    non_concentrated_ms = Column(Integer, default=0)
+    visited_line_indices = Column(JSON, default=list)
     created_at = Column(DateTime, default=_now)
 
     session = relationship("ReadingSession", back_populates="gaze_summaries")
