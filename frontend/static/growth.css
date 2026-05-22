@@ -1,0 +1,199 @@
+.growth-wrap {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 24px 60px;
+}
+
+.growth-header {
+    margin-bottom: 28px;
+}
+
+/* ── 출석 카드 ── */
+.attendance-card {
+    background: white;
+    border-radius: 14px;
+    border: 1px solid #e8ecef;
+    padding: 20px 28px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.attendance-streak {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.streak-fire { font-size: 1.8rem; }
+
+.streak-num {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #e67e22;
+    line-height: 1;
+}
+
+.streak-label {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    white-space: nowrap;
+}
+
+.attendance-total {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    white-space: nowrap;
+}
+
+.attendance-total strong { color: #2c3e50; }
+
+.attendance-dots {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.attendance-dot-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.attendance-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #ecf0f1;
+    border: 2px solid #dce1e7;
+}
+
+.attendance-dot.checked {
+    background: #f39c12;
+    border-color: #e67e22;
+}
+
+.dot-label {
+    font-size: 0.68rem;
+    color: #95a5a6;
+}
+
+.growth-header h2 {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0 0 6px;
+}
+
+.growth-header p {
+    color: #7f8c8d;
+    margin: 0;
+}
+
+/* 세션 요약 카드 리스트 */
+.session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 36px;
+}
+
+.session-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e8ecef;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.session-card-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.session-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #3498db;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.session-info h5 {
+    margin: 0 0 3px;
+    font-size: 0.97rem;
+    color: #2c3e50;
+}
+
+.session-info p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: #95a5a6;
+}
+
+.session-stats {
+    display: flex;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-item .val {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.stat-item .lbl {
+    font-size: 0.72rem;
+    color: #95a5a6;
+}
+
+/* 차트 그리드 */
+.chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 14px;
+    border: 1px solid #e8ecef;
+    padding: 20px 24px;
+}
+
+.chart-card h4 {
+    margin: 0 0 16px;
+    font-size: 0.95rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #95a5a6;
+    font-size: 1rem;
+    line-height: 1.8;
+}
+
+@media (max-width: 640px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    .session-stats { display: none; }
+}

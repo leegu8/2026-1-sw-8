@@ -1,4 +1,5 @@
-const USER_LEVEL = localStorage.getItem('user_level') || '중등';
+const USER_LEVEL  = localStorage.getItem('user_level') || '중등';
+const READ_BOOKS  = JSON.parse(localStorage.getItem('read_books') || '[]');
 
 let BOOKS = [];
 
@@ -8,6 +9,7 @@ async function loadBooks() {
     setupBanner();
     renderCurriculum();
     renderAllBooks('all');
+    renderReadBooks();
     setupTabs();
     setupFilters();
 }
@@ -60,18 +62,30 @@ function renderAllBooks(level) {
     bindStartButtons(grid);
 }
 
-function bookCardHTML(book, num, isCurriculum) {
-    const numTag = num ? `<span class="book-num">${num}번째</span>` : '';
+function renderReadBooks() {
+    const grid  = document.getElementById('read-grid');
+    const books = BOOKS.filter(b => READ_BOOKS.includes(b.id));
+    grid.innerHTML = books.length
+        ? books.map(b => bookCardHTML(b, null, false, true)).join('')
+        : '<div class="empty-state">아직 완독한 도서가 없습니다.</div>';
+    bindStartButtons(grid);
+}
+
+function bookCardHTML(book, num, isCurriculum, isRead = false) {
+    const numTag  = num    ? `<span class="book-num">${num}번째</span>` : '';
+    const readTag = isRead ? `<span class="book-read-badge">✅ 완독</span>` : '';
     return `
-        <div class="book-card ${isCurriculum ? 'curriculum' : ''}">
+        <div class="book-card ${isCurriculum ? 'curriculum' : ''} ${isRead ? 'read' : ''}">
             <div class="book-card-top">
                 ${numTag}
+                ${readTag}
                 <span class="book-level lv-${book.difficulty}">${book.difficulty}</span>
             </div>
             <div class="book-title">${book.title}</div>
             <div class="book-genre">${book.genre || ''}</div>
             <button class="book-card-btn" data-id="${book.id}">독서 시작 →</button>
             <button class="book-card-btn-dev" data-id="${book.id}">🖱 개발자 모드로 시작</button>
+            <button class="book-card-btn-del" data-id="${book.id}">🗑 삭제</button>
         </div>
     `;
 }
@@ -85,6 +99,18 @@ function bindStartButtons(container) {
     container.querySelectorAll('.book-card-btn-dev').forEach(btn => {
         btn.addEventListener('click', () => {
             location.href = `/reading.html?book_id=${btn.dataset.id}&dev=true`;
+        });
+    });
+    container.querySelectorAll('.book-card-btn-del').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            try {
+                const res = await fetch(`/api/db/texts/${btn.dataset.id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error();
+                await loadBooks();
+            } catch {
+                alert('삭제 중 오류가 발생했습니다.');
+            }
         });
     });
 }
