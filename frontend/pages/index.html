@@ -3,175 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>독서 아이트래킹</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <style>
-        .camera-option {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 14px; border: 2px solid #e0e0e0;
-            border-radius: 8px; margin-bottom: 8px;
-            cursor: pointer; transition: border-color 0.2s;
-        }
-        .camera-option:hover    { border-color: #3498db; }
-        .camera-option.selected { border-color: #3498db; background: #eaf4fd; }
-        .camera-option input    { margin: 0; }
-        .camera-option .cam-label { font-size: 0.95rem; flex: 1; }
-        .camera-option .cam-badge {
-            font-size: 0.78rem; padding: 2px 8px;
-            border-radius: 10px; font-weight: bold;
-        }
-        .badge-warn { background: #ffeaa7; color: #d35400; }
-        .badge-ok   { background: #d5f5e3; color: #1e8449; }
-    </style>
+    <title>독서 아이트래킹 — 홈</title>
+    <link rel="stylesheet" href="/static/common.css">
+    <link rel="stylesheet" href="/static/index.css">
 </head>
 <body>
-    <header class="page-header">
-        <div class="logo">👁 독서 아이트래킹</div>
-    </header>
 
-    <div class="page-content">
-        <div class="hero" style="padding-bottom: 32px;">
-            <h1>눈으로 읽는 습관,<br>AI가 함께 교정합니다</h1>
-            <p>
-                웹캠과 시선 추적 기술을 이용해<br>
-                당신의 독서 습관을 실시간으로 분석합니다.
-            </p>
+    <nav class="navbar">
+        <a href="/" class="navbar-logo">👁 독서 아이트래킹</a>
+        <div class="navbar-right">
+            <a href="/login.html"  class="btn btn-outline">로그인</a>
+            <a href="/signup.html" class="btn btn-blue">회원가입</a>
         </div>
+    </nav>
 
-        <div style="
-            background: white; border-radius: 14px; padding: 36px;
-            max-width: 520px; margin: 0 auto;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-            border-top: 4px solid #3498db;
-        ">
-            <div style="text-align:center; margin-bottom: 24px;">
-                <div style="font-size: 2.5rem; margin-bottom: 12px;">🎥</div>
-                <h2 style="font-size: 1.3rem; margin-bottom: 10px;">웹캠 사용 동의</h2>
-                <p style="color:#555; line-height:1.8; font-size:0.95rem;">
-                    이 서비스는 시선 추적을 위해 <strong>웹캠을 사용</strong>합니다.<br>
-                    촬영 영상은 서버에 저장되지 않으며 시선 좌표 계산에만 사용됩니다.
-                </p>
+    <section class="hero">
+        <div class="hero-badge">AI 기반 실시간 독서 분석</div>
+        <h1>눈으로 읽는 습관,<br><span>AI가 함께 교정합니다</span></h1>
+        <p>
+            웹캠과 시선 추적 기술로 독서 중 집중도·퇴행을 실시간 분석하고<br>
+            더 나은 독서 습관을 만들어 드립니다.
+        </p>
+        <div class="hero-actions">
+            <a href="/login.html" class="btn-hero-primary">무료로 시작하기 →</a>
+            <a href="/guide.html" class="btn-hero-secondary">서비스 소개</a>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2 class="section-title">주요 기능</h2>
+        <p class="section-sub">시선 데이터로 독서 습관의 모든 것을 분석합니다</p>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="icon">📷</div>
+                <h3>실시간 시선 추적</h3>
+                <p>웹캠 하나로 30fps 시선 좌표를 추출해<br>어디를 보는지 실시간으로 파악합니다.</p>
             </div>
-
-            <div id="step-scan">
-                <button id="scan-btn" class="btn btn-primary" style="width:100%;">
-                    🔍 카메라 스캔하기
-                </button>
-                <p style="color:#aaa; font-size:0.82rem; text-align:center; margin-top:8px;">
-                    사용 가능한 카메라 목록을 자동으로 찾습니다
-                </p>
+            <div class="feature-card">
+                <div class="icon">🔄</div>
+                <h3>퇴행 감지 & 교정</h3>
+                <p>역방향 시선 이동을 감지하면<br>해당 줄을 블러 처리해 재독 습관을 줄여줍니다.</p>
             </div>
+            <div class="feature-card">
+                <div class="icon">📊</div>
+                <h3>독서 리포트</h3>
+                <p>집중도, 퇴행 비율, 읽기 패턴을<br>세션이 끝난 뒤 한눈에 확인할 수 있습니다.</p>
+            </div>
+        </div>
+    </section>
 
-            <div id="step-select" style="display:none;">
-                <p style="font-size:0.9rem; color:#444; margin-bottom:10px; font-weight:bold;">
-                    사용할 카메라를 선택하세요:
-                </p>
-                <div id="camera-list"></div>
-                <div style="display:flex; gap:10px; margin-top:16px;">
-                    <button id="agree-btn" class="btn btn-success" style="flex:1;" disabled>
-                        동의하고 시작하기 →
-                    </button>
-                    <button class="btn btn-danger" onclick="history.back()">거부</button>
+    <section class="flow-section">
+        <div class="flow-inner">
+            <h2 class="section-title">이렇게 사용해요</h2>
+            <p class="section-sub">단 3단계로 시선 기반 독서 분석을 시작하세요</p>
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <div class="step-circle">🎥</div>
+                    <h4>웹캠 연결</h4>
+                    <p>카메라를 허용하고 사용할 웹캠을 선택합니다.</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="step-circle">🎯</div>
+                    <h4>캘리브레이션</h4>
+                    <p>화면의 점들을 순서대로 바라보며 보정합니다.</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="step-circle">📖</div>
+                    <h4>독서 시작</h4>
+                    <p>지문을 읽으면 시선이 실시간으로 추적됩니다.</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="step-circle">📈</div>
+                    <h4>결과 확인</h4>
+                    <p>집중도·퇴행 횟수 등 분석 리포트를 확인합니다.</p>
                 </div>
             </div>
-
-            <div id="consent-status"
-                 style="margin-top:14px; font-size:0.9rem; color:#666; text-align:center; min-height:20px;">
-            </div>
         </div>
-    </div>
+    </section>
 
-    <script type="module">
-    import { scanWebcams, startWebcam } from '/static/js/api/gazeApi.js';
+    <section class="cta-section">
+        <h2>지금 바로 시작해보세요</h2>
+        <p>웹캠만 있으면 충분합니다.</p>
+        <a href="/login.html" class="btn-hero-primary">무료로 시작하기 →</a>
+    </section>
 
-    let selectedCameraIndex = null;
+    <footer>
+        &copy; 2026 독서 아이트래킹 — 공개SW 프로젝트 | 2026-1-sw-8
+    </footer>
 
-    document.getElementById('scan-btn').addEventListener('click', async () => {
-        const btn    = document.getElementById('scan-btn');
-        const status = document.getElementById('consent-status');
-        btn.disabled    = true;
-        btn.textContent = '스캔 중...';
-        status.textContent = '';
-
-        try {
-            const data = await scanWebcams();
-            if (data.cameras.length === 0) {
-                status.style.color = '#e74c3c';
-                status.textContent = '❌ 카메라를 찾을 수 없습니다. 웹캠을 연결해주세요.';
-                btn.disabled    = false;
-                btn.textContent = '🔍 다시 스캔';
-                return;
-            }
-            renderCameraList(data.cameras);
-            document.getElementById('step-scan').style.display   = 'none';
-            document.getElementById('step-select').style.display = 'block';
-            const validCam = data.cameras.find(c => !c.is_black) ?? data.cameras[0];
-            selectCamera(validCam.index);
-        } catch {
-            status.style.color = '#e74c3c';
-            status.textContent = '❌ 서버 연결 오류';
-            btn.disabled    = false;
-            btn.textContent = '🔍 카메라 스캔하기';
-        }
-    });
-
-    function renderCameraList(cameras) {
-        const list = document.getElementById('camera-list');
-        list.innerHTML = '';
-        cameras.forEach(cam => {
-            const div = document.createElement('div');
-            div.className    = 'camera-option';
-            div.dataset.index = cam.index;
-            const badge = cam.is_black
-                ? `<span class="cam-badge badge-warn">가상/빈 화면</span>`
-                : `<span class="cam-badge badge-ok">정상</span>`;
-            div.innerHTML = `
-                <input type="radio" name="camera" value="${cam.index}">
-                <span class="cam-label">카메라 ${cam.index}번</span>
-                ${badge}
-            `;
-            div.addEventListener('click', () => {
-                div.querySelector('input').checked = true;
-                selectCamera(cam.index);
-            });
-            list.appendChild(div);
-        });
-    }
-
-    function selectCamera(index) {
-        selectedCameraIndex = index;
-        document.querySelectorAll('.camera-option').forEach(el => {
-            el.classList.toggle('selected', parseInt(el.dataset.index) === index);
-            el.querySelector('input').checked = parseInt(el.dataset.index) === index;
-        });
-        document.getElementById('agree-btn').disabled = false;
-    }
-
-    document.getElementById('agree-btn').addEventListener('click', async () => {
-        const btn    = document.getElementById('agree-btn');
-        const status = document.getElementById('consent-status');
-        btn.disabled    = true;
-        btn.textContent = '웹캠 활성화 중...';
-        try {
-            localStorage.setItem('cameraIndex', selectedCameraIndex);
-            const data = await startWebcam(selectedCameraIndex);
-            if (data.success) {
-                status.style.color = '#27ae60';
-                status.textContent = '✅ 웹캠 활성화됨. 보정 페이지로 이동합니다...';
-                setTimeout(() => { location.href = '/calibration.html'; }, 800);
-            } else {
-                status.style.color = '#e74c3c';
-                status.textContent = '❌ 웹캠을 열 수 없습니다. 다른 카메라를 선택해보세요.';
-                btn.disabled    = false;
-                btn.textContent = '동의하고 시작하기 →';
-            }
-        } catch {
-            status.style.color = '#e74c3c';
-            status.textContent = '❌ 서버 연결 오류';
-            btn.disabled    = false;
-            btn.textContent = '동의하고 시작하기 →';
-        }
-    });
-    </script>
 </body>
 </html>

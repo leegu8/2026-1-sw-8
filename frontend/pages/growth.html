@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서 아이트래킹 — 성장일지</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/common.css">
+    <link rel="stylesheet" href="/static/growth.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="/" class="navbar-logo">👁 독서 아이트래킹</a>
+        <div class="navbar-right">
+            <span class="navbar-user" id="navbar-user"></span>
+            <a href="/reading-list.html" class="btn btn-outline">← 도서 목록</a>
+            <a href="/" class="btn btn-outline">로그아웃</a>
+        </div>
+    </nav>
+
+    <div class="growth-wrap">
+
+        <div class="growth-header">
+            <h2 id="growth-title">성장일지</h2>
+            <p id="growth-sub">최근 5회 독서 세션의 변화를 확인하세요</p>
+        </div>
+
+        <div class="attendance-card" id="attendance-card">
+            <div class="attendance-streak">
+                <span class="streak-fire">🔥</span>
+                <span class="streak-num" id="streak-num">0</span>
+                <span class="streak-label">일 연속 출석</span>
+            </div>
+            <div class="attendance-total">누적 출석 <strong id="total-days">0</strong>일</div>
+            <div class="attendance-dots" id="attendance-dots"></div>
+        </div>
+
+        <div id="no-data" class="empty-state" style="display:none">
+            아직 완독한 세션이 없습니다.<br>독서를 시작해보세요!
+        </div>
+
+        <div id="growth-content">
+            <div class="session-list" id="session-list"></div>
+
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h4>독서 속도 (WPM)</h4>
+                    <canvas id="chart-wpm"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>집중도 점수</h4>
+                    <canvas id="chart-concentration"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>완독률 (%)</h4>
+                    <canvas id="chart-completion"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>역행 비율 (%)</h4>
+                    <canvas id="chart-regression"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="/static/js/growth.js"></script>
+</body>
+</html>
