@@ -85,9 +85,9 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 | `level_history` | 사용자 레벨 이력 (초/중/고, tested_at) |
 | `attendance` | 출석체크 (user별, attended_at: date) |
 | `books` | 도서 (title, content, difficulty, genre) |
-| `reading_sessions` | 독서 세션 (user, book 연결, wpm, concentration_score 등) |
+| `reading_sessions` | 독서 세션 (user, book 연결, x_min, x_max, wpm, concentration_score 등) |
 | `correction_events` | 교정 이벤트 (BLUR/HIGHLIGHT, triggered_at) |
-| `gaze_summary` | 10초 구간별 시선 집계 (focus_rate, regression_count 등) |
+| `gaze_summary` | 10초 구간별 시선 집계 (focus_rate, regression_count, non_concentrated_ms, visited_line_indices 등) |
 
 ## API 엔드포인트
 
@@ -142,7 +142,7 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
 | `POST` | `/api/reading/log` | 10초마다 로그 전송 — gaze_summary 계산·저장, correction_events 저장 |
-| `POST` | `/api/reading/end` | 독서 종료 — 남은 로그 처리 + 세션 지표(wpm, 집중도 등) 계산 후 저장 |
+| `POST` | `/api/reading/end` | 독서 종료 `{session_id, ended_at?, reading_logs, correction_events}` — 남은 로그 처리 + 세션 지표(wpm, 집중도 등) 계산 후 저장 |
 
 ## 코딩 규칙
 
