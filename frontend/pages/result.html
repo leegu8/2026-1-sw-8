@@ -34,11 +34,9 @@
     const regressions = parseInt(p.get('regressions') ?? '-1');
     const isError     = p.get('error') === '1';
     const wpm         = parseInt(p.get('wpm')         ?? '0');
-    const regPerMin   = parseFloat(p.get('regpermin') ?? '0');
+    const regRate     = parseInt(p.get('regrate')     ?? '-1');
     const linesdone   = parseInt(p.get('linesdone')   ?? '0');
     const totallines  = parseInt(p.get('totallines')  ?? '1');
-    const endVel      = parseFloat(p.get('endvel')    ?? '0');
-    const baseVel     = parseFloat(p.get('basevel')   ?? '0');
 
     if (isError || focusRate === -1) {
         document.getElementById('result-metrics').innerHTML = `
@@ -59,14 +57,14 @@
             return Math.round(rate / 50 * 50);
         }
 
-        // 역행 억제: 분당 역행 횟수 기준 (절대 횟수 대신 정규화)
-        // ≤1회/분→90-100점 / ≤3회/분→70-89점 / ≤6회/분→50-69점 / ≤10회/분→20-49점 / >10회/분→0-20점
-        function calcRegScore(rpm) {
-            if (rpm <= 1)  return Math.min(100, Math.round(90 + (1 - rpm) * 10));
-            if (rpm <= 3)  return Math.round(70 + (3  - rpm) * 10);
-            if (rpm <= 6)  return Math.round(50 + (6  - rpm) * (20 / 3));
-            if (rpm <= 10) return Math.round(20 + (10 - rpm) * 7.5);
-            return Math.max(0, Math.round(20 - (rpm - 10) * 2));
+        // 역행비율: Rayner(1998) — 성인 독자 평균 역행 10-15%
+        // ≤5%→90-100점 / ≤15%→70-89점 / ≤25%→40-69점 / ≤40%→20-39점 / >40%→0-19점
+        function calcRegScore(rate) {
+            if (rate <= 5)  return Math.min(100, Math.round(90 + (5 - rate) * 2));
+            if (rate <= 15) return Math.round(70 + (15 - rate) * 2);
+            if (rate <= 25) return Math.round(40 + (25 - rate) * 3);
+            if (rate <= 40) return Math.round(20 + (40 - rate) * (20 / 15));
+            return Math.max(0, Math.round(20 - (rate - 40)));
         }
 
         // 독서 속도: 한국어 성인 평균 80-180 WPM 기준 구간별 점수
@@ -79,39 +77,35 @@
             return Math.max(0, Math.round(w / 40 * 20));
         }
 
-        // 피로도: baselineVelocity 대비 endVelocity 감소율 기준
-        // Stern et al.(1994) — 피로 시 시선 이동 속도 감소
-        // 감소율 ≤10%→100점 / ≤30%→70-99점 / ≤50%→50-69점 / ≤70%→30-49점 / >70%→0-29점
-        function calcFatigueScore(base, end) {
-            if (base <= 0 || end <= 0) return 90; // 60초 미만 세션 — 측정 불가
-            const ratio = Math.max(0, (base - end) / base); // 감소율 (0~1)
-            if (ratio <= 0.10) return 100;
-            if (ratio <= 0.30) return Math.round(100 - (ratio - 0.10) * (30 / 0.20));
-            if (ratio <= 0.50) return Math.round(70  - (ratio - 0.30) * (20 / 0.20));
-            if (ratio <= 0.70) return Math.round(50  - (ratio - 0.50) * (20 / 0.20));
-            return Math.max(0, Math.round(30 - (ratio - 0.70) * (30 / 0.30)));
-        }
-
         // 완독률: 시선이 실제로 닿은 줄 수 / 전체 줄 수 (줄 단위 판정)
         function calcDepthScore(done, total) {
             if (total <= 0) return 0;
             return Math.round(done / total * 100);
         }
 
+        // 독서시간: 세션 지속 시간 기반 참여도
+        // <20s→0-20점 / 20-60s→20-60점 / 60-120s→60-90점 / ≥120s(2분)→90-100점
+        function calcTimeScore(sec) {
+            if (sec >= 120) return Math.min(100, Math.round(90 + (sec - 120) / 60 * 10));
+            if (sec >= 60)  return Math.round(60 + (sec - 60)  / 60 * 30);
+            if (sec >= 20)  return Math.round(20 + (sec - 20)  / 40 * 40);
+            return Math.max(0, Math.round(sec / 20 * 20));
+        }
+
         // ── 점수 계산 ─────────────────────────────────────────────
-        const focusScore   = calcFocusScore(focusRate);
-        const regScore     = calcRegScore(regPerMin);
-        const wpmScore     = calcWpmScore(wpm);
-        const fatigueScore = calcFatigueScore(baseVel, endVel);
-        const depthScore   = calcDepthScore(linesdone, totallines);
+        const focusScore = calcFocusScore(focusRate);
+        const regScore   = calcRegScore(regRate);
+        const wpmScore   = calcWpmScore(wpm);
+        const depthScore = calcDepthScore(linesdone, totallines);
+        const timeScore  = calcTimeScore(totalSec);
 
         // 종합 점수 (가중 평균)
         const composite = Math.round(
-            focusScore   * 0.30 +
-            regScore     * 0.25 +
-            wpmScore     * 0.20 +
-            fatigueScore * 0.15 +
-            depthScore   * 0.10
+            focusScore * 0.30 +
+            regScore   * 0.25 +
+            wpmScore   * 0.20 +
+            depthScore * 0.15 +
+            timeScore  * 0.10
         );
 
         // ── 종합 등급 ─────────────────────────────────────────────
@@ -182,11 +176,6 @@
             </div>`;
         }
 
-        // 피로도 표시 텍스트 산출
-        const fatigueDecreaseStr = baseVel > 0 && endVel > 0
-            ? `감소율 ${Math.round(Math.max(0, (baseVel - endVel) / baseVel * 100))}%`
-            : '측정 불가(60초 미만)';
-
         const minuteStr = totalSec >= 60
             ? `${Math.floor(totalSec / 60)}분 ${totalSec % 60}초`
             : `${totalSec}초`;
@@ -213,34 +202,44 @@
                     <div style="font-size:0.8rem;color:#aaa;margin-bottom:12px;text-align:center;
                         letter-spacing:0.05em;">패턴 분석</div>
                     ${drawRadar(
-                        [focusScore, regScore, wpmScore, fatigueScore, depthScore],
-                        ['집중도', '역행 억제', '독서속도', '피로도', '완독률']
+                        [timeScore, depthScore, focusScore, regScore, wpmScore],
+                        ['독서시간', '완독률', '집중도', '역행비율', 'WPM']
                     )}
                 </div>
                 <div style="background:white;border-radius:14px;padding:24px;
                     box-shadow:0 2px 10px rgba(0,0,0,0.08);">
                     <div style="font-size:0.8rem;color:#aaa;margin-bottom:16px;
                         letter-spacing:0.05em;">지표별 상세</div>
-                    ${metricBar('👁', '집중도',
-                        '≥80%→우수',
-                        focusScore, `${focusRate}%`)}
-                    ${metricBar('↩', '역행 억제',
-                        '≤1회/분→우수',
-                        regScore, `${regPerMin.toFixed(1)}회/분`)}
-                    ${metricBar('📖', '독서 속도',
-                        '80-250WPM 구간별',
-                        wpmScore, `${wpm} WPM`)}
-                    ${metricBar('😴', '피로도',
-                        '속도 감소율 기준',
-                        fatigueScore, fatigueDecreaseStr)}
+                    ${metricBar('⏱', '독서시간',
+                        '≥2분→우수',
+                        timeScore, minuteStr)}
                     ${metricBar('✅', '완독률',
                         '줄 단위 방문 판정',
                         depthScore, `${linesdone}/${totallines}줄`)}
+                    ${metricBar('👁', '집중도',
+                        '≥80%→우수',
+                        focusScore, `${focusRate}%`)}
+                    ${metricBar('↩', '역행비율',
+                        '≤5%→우수',
+                        regScore, `${regRate}%`)}
+                    ${metricBar('📖', 'WPM',
+                        '80-250WPM 구간별',
+                        wpmScore, `${wpm} WPM`)}
                 </div>
             </div>`;
 
         // ── 텍스트 피드백 ─────────────────────────────────────────
         const goods = [], improvements = [];
+
+        if (timeScore >= 75)
+            goods.push(`${minuteStr} 동안 꾸준히 읽었습니다.`);
+        else if (totalSec < 60)
+            improvements.push('독서 시간이 너무 짧아요. 충분히 읽은 후 완료 버튼을 눌러주세요.');
+
+        if (depthScore >= 90)
+            goods.push(`전체 ${totallines}줄을 모두 읽었습니다.`);
+        else if (depthScore < 60)
+            improvements.push(`${totallines}줄 중 ${linesdone}줄만 방문했어요. 후반부 집중력을 높여보세요.`);
 
         if (focusScore >= 75)
             goods.push('텍스트에 잘 집중하며 읽었습니다.');
@@ -250,11 +249,11 @@
             improvements.push('시선이 자주 벗어났어요. 독서 환경을 조용히 만들어보세요.');
 
         if (regScore >= 75)
-            goods.push(`역행이 거의 없어(${regPerMin.toFixed(1)}회/분) 읽기 흐름이 좋습니다.`);
+            goods.push(`역행 비율이 낮아(${regRate}%) 읽기 흐름이 좋습니다.`);
         else if (regScore >= 50)
-            improvements.push('역행이 다소 있었어요. 읽기 전 전체 구조를 파악하면 도움이 됩니다.');
+            improvements.push(`역행이 다소 있었어요(${regRate}%). 읽기 전 전체 구조를 파악하면 도움이 됩니다.`);
         else
-            improvements.push('역행이 많았어요. 한 번에 이해하려 집중하는 연습을 해보세요.');
+            improvements.push(`역행 비율이 높아요(${regRate}%). 한 번에 이해하려 집중하는 연습을 해보세요.`);
 
         if (wpm > 250)
             improvements.push(`독서 속도(${wpm} WPM)가 매우 빠릅니다. 이해하며 읽고 있는지 확인해보세요.`);
@@ -262,16 +261,6 @@
             goods.push(`독서 속도(${wpm} WPM)가 적정 범위입니다.`);
         else if (wpm > 0 && wpmScore < 40)
             improvements.push('독서 속도가 느린 편이에요. 어절 단위로 묶어 읽는 연습을 해보세요.');
-
-        if (fatigueScore >= 80)
-            goods.push('독서 내내 일정한 시선 속도를 유지했습니다.');
-        else if (baseVel > 0)
-            improvements.push('후반부에 피로가 감지됐어요. 20분마다 짧게 휴식을 취해보세요.');
-
-        if (depthScore >= 90)
-            goods.push(`${linesdone}줄 모두 읽었습니다.`);
-        else if (depthScore < 60)
-            improvements.push(`${totallines}줄 중 ${linesdone}줄만 방문했어요. 후반부 집중력을 높여보세요.`);
 
         document.getElementById('result-feedback').innerHTML = `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">

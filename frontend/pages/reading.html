@@ -14,7 +14,8 @@
             border-radius: 0 4px 4px 0;
             pointer-events: none;
             display: none;
-            transition: top 0.08s ease;
+            opacity: 0;
+            transition: top 0.08s ease, opacity 0.4s ease;
             z-index: 0;
         }
         #book-title     { font-size: 1.9rem; }
@@ -22,6 +23,99 @@
         .reading-text p { margin: 0 0 1.2em; }
         .word           { display: inline; transition: filter 0.25s; }
         .word-blur      { filter: blur(3.5px); user-select: none; }
+
+        /* 독서 보조 개입 패널 */
+        #intervention-panel {
+            position: fixed;
+            top: 68px;
+            left: 20px;
+            background: rgba(15, 15, 25, 0.90);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 10px 14px;
+            z-index: 9997;
+            min-width: 130px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            font-size: 0.82rem;
+        }
+        .iv-title {
+            color: #a78bfa;
+            font-weight: 700;
+            font-size: 0.80rem;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.25);
+        }
+        .iv-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+        .iv-row:last-child { margin-bottom: 0; }
+        .iv-check { accent-color: #a78bfa; width: 14px; height: 14px; cursor: pointer; }
+        .iv-label { color: #d1d5db; cursor: pointer; font-size: 0.80rem; flex: 1; }
+        .iv-label.disabled { color: #4b5563; cursor: default; }
+
+        /* 개발자 모드 분석 패널 */
+        #dev-panel {
+            position: fixed;
+            top: 112px;
+            right: 20px;
+            background: rgba(15, 15, 25, 0.93);
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            border-radius: 10px;
+            padding: 12px 14px;
+            z-index: 9998;
+            min-width: 215px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            font-size: 0.82rem;
+        }
+        .dev-panel-title {
+            color: #a78bfa;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.25);
+        }
+        .dev-feature-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .dev-feature-label { flex: 1; color: #d1d5db; }
+        .dev-toggle {
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: none;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .dev-toggle.on  { background: #22c55e; color: #fff; }
+        .dev-toggle.off { background: #374151; color: #6b7280; }
+        .dev-feature-val {
+            min-width: 55px;
+            text-align: right;
+            font-family: monospace;
+            font-size: 0.83rem;
+        }
+
+        /* 줄 박스 */
+        #line-box {
+            position: absolute;
+            left: -4px; right: -4px;
+            border: 2px solid rgba(52, 152, 219, 0.75);
+            border-radius: 4px;
+            pointer-events: none;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 2;
+        }
     </style>
 </head>
 <body>
@@ -47,6 +141,7 @@
     <div class="page-content">
         <div class="reading-area">
             <div id="line-highlight-bar"></div>
+            <div id="line-box"></div>
             <h2 id="book-title">📖 불러오는 중...</h2>
             <div class="reading-text"></div>
         </div>
@@ -74,6 +169,23 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         pointer-events: none;
     ">🖱 개발자 모드</div>
+
+    <!-- 독서 보조 개입 패널 -->
+    <div id="intervention-panel">
+        <div class="iv-title">🛡 독서 보조</div>
+        <div class="iv-row">
+            <input type="checkbox" id="iv-blur-check" class="iv-check">
+            <label class="iv-label" for="iv-blur-check">역행 블러</label>
+        </div>
+        <div class="iv-row">
+            <input type="checkbox" id="iv-highlight-check" class="iv-check">
+            <label class="iv-label" for="iv-highlight-check">하이라이트</label>
+        </div>
+        <div class="iv-row">
+            <input type="checkbox" id="iv-box-check" class="iv-check">
+            <label class="iv-label" for="iv-box-check">줄 박스</label>
+        </div>
+    </div>
 
     <!-- 피로 감지 토스트 -->
     <div id="fatigue-toast" class="fatigue-toast">😴 독서 속도가 느려졌어요. 잠깐 쉬었다 읽는 건 어떨까요?</div>
