@@ -1,10 +1,6 @@
-from datetime import datetime
-from typing import Optional, List, Any, Dict
+from datetime import datetime, date
+from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
-from ...db.models import (
-    UserRole, ReadingStatus, EventType, Difficulty, Genre,
-    ReadingPattern, TriggerReason, InterventionType,
-)
 
 
 # ── User ──────────────────────────────────────────────────────────────────────
@@ -13,7 +9,6 @@ class UserCreate(BaseModel):
     email: str
     password_hash: str
     nickname: str
-    role: Optional[UserRole] = UserRole.USER
 
 
 class UserResponse(BaseModel):
@@ -21,9 +16,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     nickname: str
-    role: UserRole
     created_at: datetime
-    updated_at: datetime
 
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
@@ -32,6 +25,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     nickname: str
+    level: str
 
 
 class LoginRequest(BaseModel):
@@ -40,169 +34,157 @@ class LoginRequest(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
     id: int
     email: str
     nickname: str
-    role: UserRole
+    level: Optional[str] = None
 
 
-# ── Calibration ───────────────────────────────────────────────────────────────
+# ── LevelHistory ──────────────────────────────────────────────────────────────
 
-class CalibrationCreate(BaseModel):
+class LevelHistoryCreate(BaseModel):
     user_id: int
-    calibration_params: Dict[str, Any]
-    accuracy_score: Optional[float] = None
+    level_result: Optional[str] = None
 
 
-class CalibrationResponse(BaseModel):
+class LevelHistoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     user_id: int
-    calibration_params: Dict[str, Any]
-    accuracy_score: Optional[float]
-    calibrated_at: datetime
+    level_result: Optional[str]
+    tested_at: datetime
 
 
-# ── TextContent ───────────────────────────────────────────────────────────────
+# ── Attendance ────────────────────────────────────────────────────────────────
 
-class TextContentCreate(BaseModel):
+class AttendanceCreate(BaseModel):
+    user_id: int
+    attended_at: Optional[date] = None
+
+
+class AttendanceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    user_id: int
+    attended_at: date
+
+
+class AttendanceCheckResponse(BaseModel):
+    checked: bool
+
+
+# ── Book ──────────────────────────────────────────────────────────────────────
+
+class BookCreate(BaseModel):
     title: str
-    body: str
-    total_sentences: Optional[int] = None
-    total_paragraphs: Optional[int] = None
-    difficulty: Optional[Difficulty] = None
-    genre: Optional[Genre] = Genre.NONE
+    content: str
+    difficulty: Optional[str] = None
+    genre: Optional[str] = None
 
 
-class TextContentResponse(BaseModel):
+class BookResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     title: str
-    body: str
-    total_sentences: Optional[int]
-    total_paragraphs: Optional[int]
-    difficulty: Optional[Difficulty]
-    genre: Optional[Genre]
+    content: str
+    difficulty: Optional[str]
+    genre: Optional[str]
     created_at: datetime
+
+
+class BookListResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    difficulty: Optional[str]
+    genre: Optional[str]
+    created_at: datetime
+
+
+class CompletedBookItem(BaseModel):
+    book_id: int
 
 
 # ── ReadingSession ────────────────────────────────────────────────────────────
 
 class ReadingSessionCreate(BaseModel):
     user_id: int
-    text_id: int
-    calibration_id: int
+    book_id: int
+    total_lines: Optional[int] = None
 
 
 class ReadingSessionUpdate(BaseModel):
     ended_at: Optional[datetime] = None
-    status: Optional[ReadingStatus] = None
-    total_duration_ms: Optional[int] = None
+    total_duration_sec: Optional[int] = None
+    wpm: Optional[float] = None
+    concentration_score: Optional[float] = None
+    base_vel: Optional[float] = None
+    end_vel: Optional[float] = None
+    regression_ratio: Optional[float] = None
+    visited_lines: Optional[int] = None
+    total_lines: Optional[int] = None
 
 
 class ReadingSessionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     user_id: int
-    text_id: int
-    calibration_id: int
+    book_id: int
     started_at: datetime
     ended_at: Optional[datetime]
-    status: ReadingStatus
-    total_duration_ms: Optional[int]
-
-
-# ── GazeEvent ─────────────────────────────────────────────────────────────────
-
-class GazeEventCreate(BaseModel):
-    session_id: int
-    event_type: EventType
-    gaze_x: Optional[float] = None
-    gaze_y: Optional[float] = None
-    duration_ms: Optional[int] = None
-    sentence_index: Optional[int] = None
-    paragraph_index: Optional[int] = None
-
-
-class GazeEventBulkCreate(BaseModel):
-    events: List[GazeEventCreate]
-
-
-class GazeEventResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    session_id: int
-    event_type: EventType
-    gaze_x: Optional[float]
-    gaze_y: Optional[float]
-    duration_ms: Optional[int]
-    sentence_index: Optional[int]
-    paragraph_index: Optional[int]
-    recorded_at: datetime
-
-
-# ── ReadingMetric ─────────────────────────────────────────────────────────────
-
-class ReadingMetricCreate(BaseModel):
-    session_id: int
-    avg_fixation_ms: Optional[float] = None
-    regression_ratio: Optional[float] = None
-    linearity_score: Optional[float] = None
-    concentration_score: Optional[float] = None
-    reading_pattern: Optional[ReadingPattern] = None
-
-
-class ReadingMetricResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    session_id: int
-    avg_fixation_ms: Optional[float]
-    regression_ratio: Optional[float]
-    linearity_score: Optional[float]
+    total_duration_sec: Optional[int]
+    wpm: Optional[float]
     concentration_score: Optional[float]
-    reading_pattern: Optional[ReadingPattern]
-    calculated_at: datetime
+    base_vel: Optional[float]
+    end_vel: Optional[float]
+    regression_ratio: Optional[float]
+    visited_lines: Optional[int]
+    total_lines: Optional[int]
 
 
-# ── Intervention ──────────────────────────────────────────────────────────────
+# ── CorrectionEvent ───────────────────────────────────────────────────────────
 
-class InterventionCreate(BaseModel):
+class CorrectionEventCreate(BaseModel):
     session_id: int
-    metric_id: int
-    trigger_reason: TriggerReason
-    intervention_type: InterventionType
-    duration_ms: Optional[int] = None
+    event_type: str
 
 
-class InterventionResponse(BaseModel):
+class CorrectionEventResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     session_id: int
-    metric_id: int
-    trigger_reason: TriggerReason
-    intervention_type: InterventionType
+    event_type: str
     triggered_at: datetime
-    duration_ms: Optional[int]
-    accepted: bool
 
 
-# ── SessionReport ─────────────────────────────────────────────────────────────
+# ── GazeSummary ───────────────────────────────────────────────────────────────
 
-class SessionReportCreate(BaseModel):
+class GazeSummaryCreate(BaseModel):
     session_id: int
-    heatmap_data: Optional[Dict[str, Any]] = None
-    gaze_plot_data: Optional[Dict[str, Any]] = None
-    overall_score: Optional[float] = None
-    feedback_text: Optional[str] = None
+    section_index: int
+    section_start_sec: int
+    section_end_sec: int
+    section_start_line: Optional[int] = None
+    section_end_line: Optional[int] = None
+    focus_rate: float
+    regression_count: int
+    avg_gaze_speed: Optional[float] = None
 
 
-class SessionReportResponse(BaseModel):
+class GazeSummaryBulkCreate(BaseModel):
+    summaries: List[GazeSummaryCreate]
+
+
+class GazeSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     session_id: int
-    heatmap_data: Optional[Dict[str, Any]]
-    gaze_plot_data: Optional[Dict[str, Any]]
-    overall_score: Optional[float]
-    feedback_text: Optional[str]
-    generated_at: datetime
+    section_index: int
+    section_start_sec: int
+    section_end_sec: int
+    section_start_line: Optional[int]
+    section_end_line: Optional[int]
+    focus_rate: float
+    regression_count: int
+    avg_gaze_speed: Optional[float]
+    created_at: datetime

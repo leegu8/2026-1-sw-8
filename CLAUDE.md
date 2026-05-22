@@ -81,14 +81,13 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 
 | 테이블 | 설명 |
 |--------|------|
-| `users` | 사용자 (email, password_hash, nickname, role) |
-| `calibrations` | 보정 파라미터 저장 (user별) |
-| `text_contents` | 독서 지문 (title, body, difficulty) |
-| `reading_sessions` | 독서 세션 (user, text, calibration 연결) |
-| `gaze_events` | 세션 중 시선 이벤트 (fixation/saccade/blink, 좌표, duration) |
-| `reading_metrics` | 세션 분석 지표 (집중도, 역행비율, 선형성, 읽기패턴) |
-| `interventions` | 개입 기록 (trigger_reason, type, accepted 여부) |
-| `session_reports` | 세션 리포트 (heatmap, overall_score, feedback_text) |
+| `users` | 사용자 (email, password_hash, nickname) |
+| `level_history` | 사용자 레벨 이력 (초/중/고, tested_at) |
+| `attendance` | 출석체크 (user별, attended_at: date) |
+| `books` | 도서 (title, content, difficulty, genre) |
+| `reading_sessions` | 독서 세션 (user, book 연결, wpm, concentration_score 등) |
+| `correction_events` | 교정 이벤트 (BLUR/HIGHLIGHT, triggered_at) |
+| `gaze_summary` | 10초 구간별 시선 집계 (focus_rate, regression_count 등) |
 
 ## API 엔드포인트
 
@@ -96,8 +95,8 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| `POST` | `/api/auth/register` | 회원가입 `{email, password, nickname}` |
-| `POST` | `/api/auth/login` | 로그인 `{email, password}` → `{id, email, nickname, role}` |
+| `POST` | `/api/auth/register` | 회원가입 `{email, password, nickname, level}` → `{id, email, nickname, level}` |
+| `POST` | `/api/auth/login` | 로그인 `{email, password}` → `{id, email, nickname, level}` |
 
 ### 시선 추적
 
@@ -119,20 +118,31 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 | `POST/GET` | `/api/db/users` | 사용자 생성·목록 |
 | `GET/DELETE` | `/api/db/users/{id}` | 사용자 조회·삭제 |
 | `GET` | `/api/db/users/{id}/sessions` | 사용자 세션 목록 |
-| `POST/GET` | `/api/db/calibrations` | 보정 데이터 생성·조회 |
-| `POST/GET` | `/api/db/texts` | 지문 생성·목록 |
-| `POST/GET` | `/api/db/sessions` | 세션 생성·목록 |
-| `PATCH` | `/api/db/sessions/{id}` | 세션 업데이트 |
+| `GET` | `/api/db/users/{id}/level-history` | 사용자 레벨 이력 조회 |
+| `POST` | `/api/db/level-history` | 레벨 이력 저장 |
+| `GET` | `/api/db/users/{id}/attendance` | 사용자 출석 목록 |
+| `POST` | `/api/db/attendance` | 출석 기록 — 오늘 첫 출석이면 저장 후 `{checked: true}`, 중복이면 `{checked: false}` |
+| `POST/GET` | `/api/db/books` | 도서 생성·목록 (목록은 content 제외) |
+| `GET/DELETE` | `/api/db/books/{id}` | 도서 상세 조회·삭제 |
+| `GET` | `/api/db/users/{id}/completed-books` | 완독한 도서 ID 목록 |
+| `POST/GET` | `/api/db/sessions` | 세션 생성 `{user_id, book_id, total_lines}`·목록 |
+| `GET/PATCH` | `/api/db/sessions/{id}` | 세션 조회·업데이트 |
 | `POST` | `/api/db/sessions/{id}/end` | 세션 종료 (duration 자동 계산) |
-| `POST` | `/api/db/events/bulk` | 시선 이벤트 대량 저장 |
-| `GET` | `/api/db/sessions/{id}/events` | 세션별 이벤트 조회 |
-| `POST` | `/api/db/metrics` | 독서 지표 저장 (세션당 1건) |
-| `GET` | `/api/db/sessions/{id}/metrics` | 세션별 지표 조회 |
-| `POST` | `/api/db/interventions` | 개입 기록 저장 |
-| `PATCH` | `/api/db/interventions/{id}/accept` | 개입 수락 처리 |
-| `GET` | `/api/db/sessions/{id}/interventions` | 세션별 개입 목록 |
-| `POST` | `/api/db/reports` | 세션 리포트 저장 (세션당 1건) |
-| `GET` | `/api/db/sessions/{id}/report` | 세션별 리포트 조회 |
+| `POST` | `/api/db/correction-events` | 교정 이벤트 저장 |
+| `GET` | `/api/db/sessions/{id}/correction-events` | 세션별 교정 이벤트 조회 |
+| `POST` | `/api/db/gaze-summary` | 구간 시선 집계 저장 |
+| `POST` | `/api/db/gaze-summary/bulk` | 구간 시선 집계 대량 저장 |
+| `GET` | `/api/db/sessions/{id}/gaze-summary` | 세션별 구간 집계 조회 |
+| `GET` | `/api/db/sessions/{id}/result` | 세션 결과 (wpm, 집중도, 역행비율, 완독률 등) |
+| `GET` | `/api/db/users/{id}/growth` | 성장일지 — 최근 5세션 요약 (오름차순) |
+| `GET` | `/api/db/users/{id}/attendance/streak` | 출석 연속 일수·누적 일수·최근 7일 날짜 |
+
+### 독서 분석
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `POST` | `/api/reading/log` | 10초마다 로그 전송 — gaze_summary 계산·저장, correction_events 저장 |
+| `POST` | `/api/reading/end` | 독서 종료 — 남은 로그 처리 + 세션 지표(wpm, 집중도 등) 계산 후 저장 |
 
 ## 코딩 규칙
 

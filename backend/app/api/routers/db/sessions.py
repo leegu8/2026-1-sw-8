@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from ...schemas import ReadingSessionCreate, ReadingSessionUpdate, ReadingSessionResponse
 from ....db.session import get_db, get_or_404
-from ....db.models import ReadingSession, ReadingStatus
+from ....db.models import ReadingSession
 
 router = APIRouter()
 
@@ -47,9 +47,8 @@ async def end_session(session_id: int, db: AsyncSession = Depends(get_db)):
     session = await get_or_404(db, ReadingSession, session_id, "세션을 찾을 수 없습니다")
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     session.ended_at = now
-    session.status = ReadingStatus.COMPLETED
     if session.started_at:
-        session.total_duration_ms = int((now - session.started_at).total_seconds() * 1000)
+        session.total_duration_sec = int((now - session.started_at).total_seconds())
     await db.commit()
     await db.refresh(session)
     return session

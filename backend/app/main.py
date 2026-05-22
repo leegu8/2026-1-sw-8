@@ -12,6 +12,7 @@ from .domain.gaze.visualizer import FaceMeshVisualizer
 from .domain.gaze.tracker import GazeTracker
 from .db.session import init_db
 from .api.routers import calibration, webcam, gaze_ws, database, auth
+from .api.routers.reading import router as reading_router
 
 _ROOT        = Path(__file__).parent.parent.parent
 _FRONTEND    = _ROOT / "frontend"
@@ -40,6 +41,7 @@ app.include_router(webcam)
 app.include_router(gaze_ws)
 app.include_router(database)
 app.include_router(auth)
+app.include_router(reading_router)
 
 
 @app.get("/api/status")

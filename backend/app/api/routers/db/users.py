@@ -2,9 +2,9 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ...schemas import UserCreate, UserResponse, ReadingSessionResponse, CalibrationResponse
+from ...schemas import UserCreate, UserResponse, ReadingSessionResponse
 from ....db.session import get_db, get_or_404
-from ....db.models import User, ReadingSession, Calibration
+from ....db.models import User, ReadingSession
 
 router = APIRouter()
 
@@ -39,10 +39,4 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
 @router.get("/users/{user_id}/sessions", response_model=List[ReadingSessionResponse])
 async def get_user_sessions(user_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(ReadingSession).where(ReadingSession.user_id == user_id))
-    return result.scalars().all()
-
-
-@router.get("/users/{user_id}/calibrations", response_model=List[CalibrationResponse])
-async def get_user_calibrations(user_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Calibration).where(Calibration.user_id == user_id))
     return result.scalars().all()
