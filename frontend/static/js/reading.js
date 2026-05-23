@@ -160,7 +160,12 @@ if (DEV_MODE) {
         }));
     }, 33);
 
-    // ── 분석 항목 모니터 패널 ─────────────────────────────
+} else {
+    document.getElementById('reading-status').textContent = '👁 시선 추적 중';
+}
+
+// ── 분석 항목 모니터 패널 (항상 표시) ────────────────────
+{
     const devFeatures = [
         { key: 'totalSec',   label: '① 독서시간' },
         { key: 'completion', label: '② 완독률'   },
@@ -244,6 +249,15 @@ if (DEV_MODE) {
         </div>`;
     document.body.appendChild(panel);
 
+    // 독서 보조 패널 바로 아래에 위치
+    const ivPanel = document.getElementById('intervention-panel');
+    if (ivPanel) {
+        const ivRect = ivPanel.getBoundingClientRect();
+        panel.style.top   = (ivRect.bottom + 8) + 'px';
+        panel.style.right = 'auto';
+        panel.style.left  = '20px';
+    }
+
     const PATTERN_COLORS = { right: '#4ade80', down: '#60a5fa', left: '#f87171', up: '#f97316', still: '#facc15', oob: '#9ca3af' };
     const PATTERN_ICONS  = { right: '▶', down: '↓', left: '◀', up: '↑', still: '⏸', oob: '⊗' };
 
@@ -290,9 +304,6 @@ if (DEV_MODE) {
             ).join('');
         }
     }, 1000);
-
-} else {
-    document.getElementById('reading-status').textContent = '👁 시선 추적 중';
 }
 
 // ── 첫 단어 감지 (읽기 시작 트리거) ──────────────────────
