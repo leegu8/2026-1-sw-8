@@ -1,5 +1,6 @@
 // ── 책 로드 ──────────────────────────────────────────────
-let lineList = []; // [{top, bottom, xMin, xMax}] — document y, viewport x
+let lineList    = []; // [{top, bottom, xMin, xMax}] — document y, viewport x
+let readingAreaRect = null; // reading-area 경계 캐시 (좌우 이탈 판정용)
 
 (async () => {
     const bookId = +new URLSearchParams(location.search).get('book_id');
@@ -32,6 +33,7 @@ function buildLineList() {
         }
     });
     lineList = [...map.entries()].sort((a, b) => a[0] - b[0]).map(([, v]) => v);
+    readingAreaRect = document.querySelector('.reading-area')?.getBoundingClientRect() ?? null;
 
     // 단어 태깅용 원본 top 저장 (확장 전)
     const rawTops = lineList.map(l => l.top);
@@ -110,19 +112,25 @@ const patternData     = []; // [{type, t, line, x}] — gazeData 전환별 패�
 const rereadingEvents = []; // 재독 확정 타임스탬프 배열
 
 const REREAD_WINDOW_MS  = 30_000; // 슬라이딩 윈도우 30초
-const REREAD_BLUR_ON    = 3;      // 발동 임계값: 30초 안에 3회
-const REREAD_BLUR_OFF   = 1;      // 해제 임계값: 30초 안에 1회 이하
+const REREAD_BLUR_ON    = 3;      // 발동 임계값: 30초 안에 3회 (한번 발동 시 자동 해제 없음)
+const ADVANCE_DWELL     = 2;      // 전진 확정 샘플 수 (200ms)
+const REGRESS_DWELL     = 4;      // 역행 확정 샘플 수 (400ms) — 떨림/깜박임 노이즈 방어
 let   startTime         = null;
-let   lastValidLine     = -1;   // line >= 0 인 최신 줄 인덱스
-let   lastValidLineTime = 0;    // lastValidLine 갱신 시각 (깜박임 필터용)
+let   lastValidLine          = -1;   // line >= 0 인 최신 줄 인덱스
+let   lastValidLineTime      = 0;    // lastValidLine 갱신 시각 (깜박임 필터용)
 let   blurActive        = false;
-let   blurAnchorLine    = -1;
+let   blurLine          = -1;   // 블러 경계 줄 — 재독 ≥3일 때만 전진, 미만이면 동결
 let   oobSince          = null;
 
 // ── 줄 기반 역행 추적 ─────────────────────────────────────
-let   currentReadingLine  = -1; // 현재 기준 줄 (완독 시 전진)
-let   lineDwellLine       = -1; // 줄 확정 버퍼
-let   lineDwellCount      = 0;  // 연속 샘플 수 (2 이상이면 확정)
+let   currentReadingLine  = -1; // 현재 독서 헤드 — 재독 시 뒤로 이동 가능
+let   maxReadingLine      = -1; // 지금까지 도달한 최고 줄 — 절대 감소하지 않음 (블러 경계)
+let   lineDwellLine         = -1; // 줄 확정 버퍼
+let   lineDwellCount        = 0;  // 연속 샘플 수
+let   lineDwellMinX         = 0;  // 이 줄 방문 중 가장 왼쪽 x (귀환 시선 반영용)
+let   lineDwellHasRight     = false; // 이 줄 방문 중 right 패턴 발생 여부
+let   preDwellReadingLine   = -1; // 이 줄 착지 직전의 기준 줄 (재독 판정 기준)
+let   regressionCandidate = null;  // { line, startX } — 역행 후보 (전진 확인 대기 중)
 const lineSegmentsVisited = new Map(); // lineIndex → Set<segIndex>
 
 const gazeDot = document.getElementById('gaze-dot');
@@ -157,10 +165,11 @@ if (DEV_MODE) {
         { key: 'totalSec',   label: '① 독서시간' },
         { key: 'completion', label: '② 완독률'   },
         { key: 'focus',      label: '③ 집중도'   },
-        { key: 'regression', label: '④ 역행비율' },
-        { key: 'wpm',        label: '⑤ WPM'      },
-        { key: 'behavior',   label: '⑥ 독서상태' },
-        { key: 'baseLine',   label: '⑦ 기준 줄'  },
+        { key: 'regression',     label: '④ 재독비율'  },
+        { key: 'regressionRate', label: '⑤ 역행비율'  },
+        { key: 'wpm',            label: '⑥ WPM'       },
+        { key: 'behavior',       label: '⑦ 독서상태'  },
+        { key: 'baseLine',       label: '⑧ 기준 줄'   },
     ];
 
     function getFeatureValue(key) {
@@ -178,7 +187,10 @@ if (DEV_MODE) {
                 return `${calcFocusRate(elapsed)}%`;
             }
             case 'regression': {
-                return `${calcRegressions(elapsed).regRate}%`;
+                return `${calcRegressions(elapsed).regRate}회/30초`;
+            }
+            case 'regressionRate': {
+                return `${calcRegressionRate()}%`;
             }
             case 'wpm': {
                 const wc = document.querySelector('.reading-text').innerText
@@ -188,7 +200,8 @@ if (DEV_MODE) {
             case 'baseLine': {
                 if (currentReadingLine < 0) return '--';
                 const maxSeg = lineSegmentsVisited.get(currentReadingLine) ?? -1;
-                return `${currentReadingLine + 1}줄 (${maxSeg + 1}/5)`;
+                const maxStr = maxReadingLine >= 0 ? `↑${maxReadingLine + 1}` : '';
+                return `${currentReadingLine + 1}줄 (${maxSeg + 1}/5) ${maxStr}`;
             }
             case 'behavior': {
                 const behaviorMap = {
@@ -283,28 +296,36 @@ if (DEV_MODE) {
 }
 
 // ── 첫 단어 감지 (읽기 시작 트리거) ──────────────────────
-function isNearFirstWord(y) {
-    const firstWord = document.querySelector('.word');
-    if (!firstWord) return false;
-    const r = firstWord.getBoundingClientRect();
-    return y >= r.top - 10 && y <= r.bottom + 10;
+// 독서 시작 감지 — 1~2번째 줄 + 첫 번째 세그먼트(줄 너비 1/5 이내)
+function isReadingStart(x, y) {
+    if (!lineList.length) return false;
+    const line = getLineIndex(y);
+    if (line !== 0) return false;
+    const l = lineList[line];
+    if (!l) return false;
+    return x >= l.xMin && x <= l.xMin + (l.xMax - l.xMin) / 5;
 }
 
 // ── 시선 이벤트 수집 ──────────────────────────────────────
 window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
-    if (!startTime && isNearFirstWord(y)) {
+    if (!startTime && isReadingStart(x, y)) {
         startTime = Date.now();
-        // 시작 시점에 모든 분석 상태 초기화 — 시작 전 잔여 상태 제거
         gazeData.length        = 0;
         patternData.length     = 0;
         rereadingEvents.length = 0;
         lineSegmentsVisited.clear();
-        currentReadingLine = -1;
-        lineDwellLine      = -1;
-        lineDwellCount     = 0;
-        lastValidLine      = -1;
-        lastValidLineTime  = 0;
-        oobSince           = null;
+        currentReadingLine  = -1;
+        maxReadingLine      = -1;
+        lineDwellLine       = -1;
+        lineDwellCount      = 0;
+        lineDwellMinX         = 0;
+        lineDwellHasRight     = false;
+        preDwellReadingLine   = -1;
+        regressionCandidate   = null;
+        lastValidLine          = -1;
+        lastValidLineTime      = 0;
+        oobSince            = null;
+        return; // 독서 시작 이벤트는 수집 건너뜀 — 다음 이벤트부터 수집
     }
 
     updateCurrentLineHighlight(y);
@@ -313,19 +334,28 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
     const rawLine = getLineIndex(y);
 
     // 눈깜박임 필터: 300ms 이내 oob → 마지막 유효 줄 유지
-    const line = rawLine >= 0 ? rawLine
-               : (lastValidLine >= 0 && now - lastValidLineTime < 300) ? lastValidLine
-               : -1;
+    const rawFiltered = rawLine >= 0 ? rawLine
+                      : (lastValidLine >= 0 && now - lastValidLineTime < 300) ? lastValidLine
+                      : -1;
+
+    // 블러 활성 상태에서 블러 구간(기준 줄 위)으로 시선 → 이탈로 간주
+    const blurOob = blurActive && rawFiltered >= 0 && currentReadingLine >= 0 && rawFiltered < currentReadingLine;
+
+    // reading-area 밖(상하좌우)은 이탈로 간주
+    const xOob = readingAreaRect ? (x < readingAreaRect.left || x > readingAreaRect.right) : false;
+
+    const line = (blurOob || xOob) ? -1 : rawFiltered;
 
     if (!startTime) return;
 
     if (gazeData.length === 0 || now - gazeData[gazeData.length - 1].t >= 100) {
         const curr = { x, line, t: now };
+        let type = 'still';
         if (gazeData.length > 0) {
-            const type = classifyTransition(gazeData[gazeData.length - 1], curr);
+            type = classifyTransition(gazeData[gazeData.length - 1], curr);
             patternData.push({ type, t: now, line, x });
         }
-        updateLineTracking(x, line);
+        updateLineTracking(x, line, type);
         gazeData.push(curr);
         if (rawLine >= 0) {
             lastValidLine     = rawLine;
@@ -344,8 +374,9 @@ document.getElementById('done-btn').addEventListener('click', () => {
         time:        result.totalSec,
         completion:  result.completionRate  ?? -1,
         focus:       result.focusRate       ?? -1,
-        regressions: result.regressionCount ?? -1,
-        regrate:     result.regRate         ?? -1,
+        regressions:  result.regressionCount  ?? -1,
+        regrate:      result.regRate          ?? -1,
+        regratepct:   result.regressionRate   ?? -1,
         wpm:         result.wpm             ?? 0,
         linesdone:   result.visitedLines    ?? 0,
         totallines:  result.totalLines      ?? 0,
@@ -359,15 +390,14 @@ document.getElementById('recal-btn').addEventListener('click', () => {
 });
 
 // ── 역행 블러 ─────────────────────────────────────────────
-// 트리거: regRate > 20% / 해제: regRate < 15% (히스테리시스)
-// 효과: 처음(line 0)부터 blurAnchorLine - 3 까지 blur
-// blurAnchorLine: 활성 중 앞(아래)으로만 갱신 — 시선이 위로 올라가도 유지
+// 트리거: 30초 안에 재독 3회 이상 (Varao-Sousa et al., 2017 근거)
+// 전진: 재독 ≥ 3 유지 중에만 blurLine = currentReadingLine 따라 전진
+// 동결: 재독이 3 미만으로 떨어지면 blurLine 그 자리에서 멈춤 (끄지 않음)
 function applyRegressionBlur() {
-    const boundary = blurAnchorLine - 3;
     document.querySelectorAll('.word[data-line]').forEach(w => {
         const ln = +w.dataset.line;
-        if (ln >= 0 && ln <= boundary) w.classList.add('word-blur');
-        else                           w.classList.remove('word-blur');
+        if (ln >= 0 && ln < blurLine) w.classList.add('word-blur');
+        else                          w.classList.remove('word-blur');
     });
 }
 
@@ -379,21 +409,18 @@ const ivBlurCheck = document.getElementById('iv-blur-check');
 
 setInterval(() => {
     if (!startTime || !ivBlurCheck.checked) {
-        if (blurActive) { blurActive = false; blurAnchorLine = -1; clearRegressionBlur(); }
+        if (blurActive) { blurActive = false; blurLine = -1; clearRegressionBlur(); }
         return;
     }
-    const count = rereadingsInWindow();
-    if (!blurActive && count >= REREAD_BLUR_ON) {
-        blurActive     = true;
-        blurAnchorLine = lastValidLine;
-    } else if (blurActive && count <= REREAD_BLUR_OFF) {
-        blurActive     = false;
-        blurAnchorLine = -1;
-        clearRegressionBlur();
-        return;
+    const rereadCount = rereadingsInWindow();
+    if (!blurActive && rereadCount >= REREAD_BLUR_ON) {
+        blurActive = true;
     }
     if (blurActive) {
-        if (lastValidLine > blurAnchorLine) blurAnchorLine = lastValidLine;
+        // 재독 ≥ 3: blurLine 전진 / 재독 < 3: blurLine 동결
+        if (rereadCount >= REREAD_BLUR_ON) {
+            blurLine = currentReadingLine;
+        }
         applyRegressionBlur();
     }
 }, 500);
@@ -406,12 +433,13 @@ function analyzeReading() {
     const { visitedLines, totalLines, completionRate } = calcCompletion();
     const focusRate = calcFocusRate(totalSec);
     const { regressionCount, regRate } = calcRegressions(totalSec);
+    const regressionRate = calcRegressionRate();
 
     const wordCount = document.querySelector('.reading-text').innerText
         .trim().split(/\s+/).filter(w => w.length > 0).length;
     const wpm = totalSec > 0 ? Math.round(wordCount / (totalSec / 60)) : 0;
 
-    return { totalSec, completionRate, focusRate, regressionCount, regRate, wpm, visitedLines, totalLines, error: false };
+    return { totalSec, completionRate, focusRate, regressionCount, regRate, regressionRate, wpm, visitedLines, totalLines, error: false };
 }
 
 // ── 완독률 ────────────────────────────────────────────────
@@ -476,61 +504,104 @@ function calcFocusRate(totalSec) {
     return Math.round(Math.max(0, (gazeSpanMs - unfocusedMs) / gazeSpanMs * 100));
 }
 
-// ── 역행 분석 ─────────────────────────────────────────────
+// ── 역행 비율 (연구 정의) ─────────────────────────────────
+// patternData 중 up + left 비율 — 연구의 regression saccade 비율과 같은 개념
+// 정상 범위: 15~25% (Rayner 1978, Taylor 1965)
+function calcRegressionRate() {
+    if (!patternData.length) return 0;
+    const regCount = patternData.filter(p => p.type === 'up' || p.type === 'left').length;
+    return Math.round(regCount / patternData.length * 100);
+}
+
+// ── 재독 분석 (본 시스템 정의) ────────────────────────────
 function calcRegressions(totalSec = 0) {
     const regressionCount = rereadingEvents.length;
-    // regRate: 분당 재독 횟수
+    // regRate: 30초당 재독 횟수 (연구 기준 단위 — Varao-Sousa et al., 2017)
     const regRate = totalSec > 0
-        ? Math.round(regressionCount / (totalSec / 60) * 10) / 10
+        ? Math.round(regressionCount / (totalSec / 30) * 10) / 10
         : 0;
     return { regressionCount, regRate };
 }
 
-// 블러 트리거 전용: 최근 N 패턴 기반 역행비율
-function getRealtimeRegRate(windowPoints = 10) {
-    const recent = patternData.slice(-windowPoints);
-    return recent.length > 0
-        ? Math.round(countRegressions(recent) / recent.length * 100)
-        : 0;
-}
-
 // ── 줄 기반 역행 감지 ────────────────────────────────────
 // 매 100ms 샘플마다 호출 — 세그먼트 기록 + 줄 확정 + 역행 판정
-function updateLineTracking(x, line) {
-    if (line < 0) { lineDwellCount = 0; return; }
+// 재독 판정: 기준 줄 위에서 REGRESS_DWELL(400ms) 머문 뒤, 그 줄에서
+//   실제로 오른쪽으로 25% 이상 전진할 때만 재독 확정
+//   (멍때려서 시선 고정 → x 안 움직임 → 재독 아님)
+function updateLineTracking(x, line, type = 'still') {
+    if (line < 0) { lineDwellCount = 0; regressionCandidate = null; return; }
 
-    // 세그먼트 방문 기록 — 오른쪽으로만 증가 (왼쪽 이동으로는 채울 수 없음)
-    const l = lineList[line];
-    if (l) {
-        const sw = (l.xMax - l.xMin) / 5;
-        if (sw > 0) {
-            const seg = Math.max(0, Math.min(4, Math.floor((x - l.xMin) / sw)));
-            const prev = lineSegmentsVisited.get(line) ?? -1;
-            if (seg > prev) lineSegmentsVisited.set(line, seg);
+    // 기준 줄 초기화 (세그먼트 기록 전에 먼저 확정)
+    if (currentReadingLine < 0) {
+        currentReadingLine = line;
+        if (line > maxReadingLine) maxReadingLine = line;
+    }
+
+    // 세그먼트 방문 기록 — 현재 기준 줄만, 오른쪽으로만 증가
+    // 다른 줄 오염 방지: 기준 줄 외 줄의 세그먼트는 기록하지 않음
+    if (line === currentReadingLine) {
+        const l = lineList[line];
+        if (l) {
+            const sw = (l.xMax - l.xMin) / 5;
+            if (sw > 0) {
+                const seg  = Math.max(0, Math.min(4, Math.floor((x - l.xMin) / sw)));
+                const prev = lineSegmentsVisited.get(line) ?? -1;
+                if (seg > prev) lineSegmentsVisited.set(line, seg);
+            }
         }
     }
 
-    // 기준 줄 초기화
-    if (currentReadingLine < 0) { currentReadingLine = line; }
+    // 재독 후보 추적: 역행 줄에서 오른쪽으로 25% 이상 전진하면 재독 확정
+    if (regressionCandidate !== null) {
+        if (line !== regressionCandidate.line) {
+            regressionCandidate = null;
+        } else {
+            const lineInfo  = lineList[line];
+            const lineWidth = lineInfo ? lineInfo.xMax - lineInfo.xMin : 0;
+            if (lineWidth > 0 && x - regressionCandidate.startX > lineWidth * 0.25) {
+                rereadingEvents.push(Date.now());
+                regressionCandidate = null;
+            }
+        }
+    }
 
-    // 줄 확정: 같은 줄에 2샘플(200ms) 연속 머물러야 확정
+    // 줄 확정 (dwell 카운트) — 새 줄 착지 시 최솟값 x 초기화
     if (line === lineDwellLine) {
         lineDwellCount++;
+        if (x < lineDwellMinX) lineDwellMinX = x;
+        if (type === 'right') lineDwellHasRight = true;
     } else {
-        lineDwellLine  = line;
-        lineDwellCount = 1;
+        lineDwellLine       = line;
+        lineDwellCount      = 1;
+        lineDwellMinX       = x;
+        lineDwellHasRight   = (type === 'right');
+        preDwellReadingLine = currentReadingLine;
     }
 
-    if (lineDwellCount === 2) {                          // 확정 순간 1회만 판정
-        if (line < currentReadingLine) {
-            // 역행: 기준 줄 위로 확정 → 이벤트 기록 후 기준 리셋
-            rereadingEvents.push(Date.now());
-            currentReadingLine = line;
-        } else if (line > currentReadingLine) {
-            // 전진: 기준 줄이 완독(세그먼트 3 이상 도달)됐을 때만 기준 전진
+    if (line <= maxReadingLine && lineDwellCount >= ADVANCE_DWELL && lineDwellHasRight) {
+        // 이미 읽은 구간 — 200ms 머물면서 right 패턴이 있을 때만 기준 줄 갱신
+        currentReadingLine = line;
+    }
+
+    if (lineDwellCount >= ADVANCE_DWELL) {
+        if (line === currentReadingLine + 1 && line > maxReadingLine) {
+            // 새 구간 전진 — 현재 줄 4/5 완독 + 다음 줄 왼쪽 절반 착지 확인
             const maxSeg = lineSegmentsVisited.get(currentReadingLine) ?? -1;
-            if (maxSeg >= 3) currentReadingLine = line;
+            if (maxSeg >= 3) {
+                const nextL      = lineList[line];
+                const lineWidth  = nextL ? nextL.xMax - nextL.xMin : 0;
+                const landedLeft = lineWidth > 0 && lineDwellMinX <= nextL.xMin + lineWidth * 0.5;
+                if (landedLeft) {
+                    currentReadingLine = line;
+                    maxReadingLine     = line;
+                }
+            }
         }
+    }
+
+    // 역행 후보 등록: REGRESS_DWELL(400ms) + 착지 직전 기준 줄보다 위에 있을 때
+    if (lineDwellCount === REGRESS_DWELL && line < preDwellReadingLine && regressionCandidate === null) {
+        regressionCandidate = { line, startX: x };
     }
 }
 
@@ -626,21 +697,21 @@ function updateLineBox(lineIdx) {
 }
 
 // ── 하이라이트 개입 ───────────────────────────────────────
-// 트리거: 멍때리기 2초+ 또는 시선 이탈 2초+ / 시선 복귀 시 페이드 아웃
+// 트리거: 집중 이탈 2초+ → 읽던 줄(currentReadingLine)에 하이라이트 + "집중하세요"
 const ivHighlightCheck = document.getElementById('iv-highlight-check');
 setInterval(() => {
     const bar = document.getElementById('line-highlight-bar');
     if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); return; }
-    if (isLostFocus()) updateHighlightBar(lastValidLine);
+    if (isLostFocus()) updateHighlightBar(currentReadingLine);
     else               hideOverlay(bar);
 }, 500);
 
 // ── 줄 박스 개입 ─────────────────────────────────────────
-// 트리거: 멍때리기 2초+ 또는 시선 이탈 2초+ / 시선 복귀 시 페이드 아웃
+// 트리거: 집중 이탈 2초+ → 읽던 줄(currentReadingLine)에 박스
 const ivBoxCheck = document.getElementById('iv-box-check');
 setInterval(() => {
     const box = document.getElementById('line-box');
     if (!startTime || !ivBoxCheck.checked) { hideOverlay(box); return; }
-    if (isLostFocus()) updateLineBox(lastValidLine);
+    if (isLostFocus()) updateLineBox(currentReadingLine);
     else               hideOverlay(box);
 }, 500);

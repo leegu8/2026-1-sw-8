@@ -18,6 +18,17 @@
             transition: top 0.08s ease, opacity 0.4s ease;
             z-index: 0;
         }
+        #focus-label {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: rgba(52, 152, 219, 0.9);
+            white-space: nowrap;
+            pointer-events: none;
+        }
         #book-title     { font-size: 1.9rem; }
         .reading-text   { position: relative; z-index: 1; font-size: 1.12rem; line-height: 2; }
         .reading-text p { margin: 0 0 1.2em; }
@@ -153,7 +164,7 @@
     <div class="page-content">
         <div class="reading-area">
             <div id="current-line-highlight"></div>
-            <div id="line-highlight-bar"></div>
+            <div id="line-highlight-bar"><span id="focus-label">👁 집중하세요</span></div>
             <div id="line-box"></div>
             <h2 id="book-title">📖 불러오는 중...</h2>
             <div class="reading-text"></div>
@@ -187,21 +198,18 @@
     <div id="intervention-panel">
         <div class="iv-title">🛡 독서 보조</div>
         <div class="iv-row">
-            <input type="checkbox" id="iv-blur-check" class="iv-check">
+            <input type="checkbox" id="iv-blur-check" class="iv-check" checked>
             <label class="iv-label" for="iv-blur-check">역행 블러</label>
         </div>
         <div class="iv-row">
-            <input type="checkbox" id="iv-highlight-check" class="iv-check">
+            <input type="checkbox" id="iv-highlight-check" class="iv-check" checked>
             <label class="iv-label" for="iv-highlight-check">하이라이트</label>
         </div>
         <div class="iv-row">
-            <input type="checkbox" id="iv-box-check" class="iv-check">
+            <input type="checkbox" id="iv-box-check" class="iv-check" checked>
             <label class="iv-label" for="iv-box-check">줄 박스</label>
         </div>
     </div>
-
-    <!-- 피로 감지 토스트 -->
-    <div id="fatigue-toast" class="fatigue-toast">😴 독서 속도가 느려졌어요. 잠깐 쉬었다 읽는 건 어떨까요?</div>
 
     <script src="/static/js/reading.js" defer></script>
 </body>
