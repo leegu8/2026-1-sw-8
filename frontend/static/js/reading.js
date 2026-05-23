@@ -128,9 +128,9 @@ let   maxReadingLine      = -1; // 지금까지 도달한 최고 줄 — 절대 
 let   lineDwellLine         = -1; // 줄 확정 버퍼
 let   lineDwellCount        = 0;  // 연속 샘플 수
 let   lineDwellMinX         = 0;  // 이 줄 방문 중 가장 왼쪽 x (귀환 시선 반영용)
-let   lineDwellHasRight     = false; // 이 줄 방문 중 right 패턴 발생 여부
-let   preDwellReadingLine   = -1; // 이 줄 착지 직전의 기준 줄 (재독 판정 기준)
-let   regressionCandidate = null;  // { line, startX } — 역행 후보 (전진 확인 대기 중)
+let   lineDwellHasRight        = false; // 이 줄 방문 중 right 패턴 발생 여부
+let   baselineLastChangedTime  = 0;     // currentReadingLine 마지막 변경 시각
+let   skimAlertActive          = false; // 줄박스 경고 활성 — 완독 전진 시에만 해제
 const lineSegmentsVisited = new Map(); // lineIndex → Set<segIndex>
 
 const gazeDot = document.getElementById('gaze-dot');
@@ -318,10 +318,10 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
         maxReadingLine      = -1;
         lineDwellLine       = -1;
         lineDwellCount      = 0;
-        lineDwellMinX         = 0;
-        lineDwellHasRight     = false;
-        preDwellReadingLine   = -1;
-        regressionCandidate   = null;
+        lineDwellMinX           = 0;
+        lineDwellHasRight       = false;
+        baselineLastChangedTime = Date.now();
+        skimAlertActive         = false;
         lastValidLine          = -1;
         lastValidLineTime      = 0;
         oobSince            = null;
@@ -339,7 +339,8 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
                       : -1;
 
     // 블러 활성 상태에서 블러 구간(기준 줄 위)으로 시선 → 이탈로 간주
-    const blurOob = blurActive && rawFiltered >= 0 && currentReadingLine >= 0 && rawFiltered < currentReadingLine;
+    // 실제로 블러된 줄(blurLine 위)만 이탈로 처리 — blurLine과 OOB 범위 일치
+    const blurOob = blurActive && rawFiltered >= 0 && blurLine >= 0 && rawFiltered < blurLine;
 
     // reading-area 밖(상하좌우)은 이탈로 간주
     const xOob = readingAreaRect ? (x < readingAreaRect.left || x > readingAreaRect.right) : false;
@@ -508,9 +509,10 @@ function calcFocusRate(totalSec) {
 // patternData 중 up + left 비율 — 연구의 regression saccade 비율과 같은 개념
 // 정상 범위: 15~25% (Rayner 1978, Taylor 1965)
 function calcRegressionRate() {
-    if (!patternData.length) return 0;
-    const regCount = patternData.filter(p => p.type === 'up' || p.type === 'left').length;
-    return Math.round(regCount / patternData.length * 100);
+    const saccades = patternData.filter(p => p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down');
+    if (!saccades.length) return 0;
+    const regCount = saccades.filter(p => p.type === 'up' || p.type === 'left').length;
+    return Math.round(regCount / saccades.length * 100);
 }
 
 // ── 재독 분석 (본 시스템 정의) ────────────────────────────
@@ -524,21 +526,18 @@ function calcRegressions(totalSec = 0) {
 }
 
 // ── 줄 기반 역행 감지 ────────────────────────────────────
-// 매 100ms 샘플마다 호출 — 세그먼트 기록 + 줄 확정 + 역행 판정
-// 재독 판정: 기준 줄 위에서 REGRESS_DWELL(400ms) 머문 뒤, 그 줄에서
-//   실제로 오른쪽으로 25% 이상 전진할 때만 재독 확정
-//   (멍때려서 시선 고정 → x 안 움직임 → 재독 아님)
+// 재독 판정: currentReadingLine이 줄어들 때마다 이벤트 등록
+//   (200ms 머물면서 right 패턴 → 실제로 읽고 있는 것이 확인된 시점)
 function updateLineTracking(x, line, type = 'still') {
-    if (line < 0) { lineDwellCount = 0; regressionCandidate = null; return; }
+    if (line < 0) { lineDwellCount = 0; return; }
 
-    // 기준 줄 초기화 (세그먼트 기록 전에 먼저 확정)
+    // 기준 줄 초기화
     if (currentReadingLine < 0) {
         currentReadingLine = line;
         if (line > maxReadingLine) maxReadingLine = line;
     }
 
     // 세그먼트 방문 기록 — 현재 기준 줄만, 오른쪽으로만 증가
-    // 다른 줄 오염 방지: 기준 줄 외 줄의 세그먼트는 기록하지 않음
     if (line === currentReadingLine) {
         const l = lineList[line];
         if (l) {
@@ -551,57 +550,38 @@ function updateLineTracking(x, line, type = 'still') {
         }
     }
 
-    // 재독 후보 추적: 역행 줄에서 오른쪽으로 25% 이상 전진하면 재독 확정
-    if (regressionCandidate !== null) {
-        if (line !== regressionCandidate.line) {
-            regressionCandidate = null;
-        } else {
-            const lineInfo  = lineList[line];
-            const lineWidth = lineInfo ? lineInfo.xMax - lineInfo.xMin : 0;
-            if (lineWidth > 0 && x - regressionCandidate.startX > lineWidth * 0.25) {
-                rereadingEvents.push(Date.now());
-                regressionCandidate = null;
-            }
-        }
-    }
-
-    // 줄 확정 (dwell 카운트) — 새 줄 착지 시 최솟값 x 초기화
+    // 줄 확정 (dwell 카운트)
     if (line === lineDwellLine) {
         lineDwellCount++;
         if (x < lineDwellMinX) lineDwellMinX = x;
         if (type === 'right') lineDwellHasRight = true;
     } else {
-        lineDwellLine       = line;
-        lineDwellCount      = 1;
-        lineDwellMinX       = x;
-        lineDwellHasRight   = (type === 'right');
-        preDwellReadingLine = currentReadingLine;
+        lineDwellLine     = line;
+        lineDwellCount    = 1;
+        lineDwellMinX     = x;
+        lineDwellHasRight = (type === 'right');
     }
 
-    if (line <= maxReadingLine && lineDwellCount >= ADVANCE_DWELL && lineDwellHasRight) {
-        // 이미 읽은 구간 — 200ms 머물면서 right 패턴이 있을 때만 기준 줄 갱신
-        currentReadingLine = line;
-    }
-
-    if (lineDwellCount >= ADVANCE_DWELL) {
-        if (line === currentReadingLine + 1 && line > maxReadingLine) {
-            // 새 구간 전진 — 현재 줄 4/5 완독 + 다음 줄 왼쪽 절반 착지 확인
+    if (lineDwellCount >= ADVANCE_DWELL && lineDwellHasRight) {
+        if (line <= maxReadingLine) {
+            if (line < currentReadingLine) rereadingEvents.push(Date.now());
+            if (line !== currentReadingLine) baselineLastChangedTime = Date.now();
+            currentReadingLine = line;
+        } else if (line === currentReadingLine + 1) {
+            // 새 구간 전진 — 4/5 완독 + 왼쪽 절반 착지 확인
             const maxSeg = lineSegmentsVisited.get(currentReadingLine) ?? -1;
             if (maxSeg >= 3) {
                 const nextL      = lineList[line];
                 const lineWidth  = nextL ? nextL.xMax - nextL.xMin : 0;
                 const landedLeft = lineWidth > 0 && lineDwellMinX <= nextL.xMin + lineWidth * 0.5;
                 if (landedLeft) {
-                    currentReadingLine = line;
-                    maxReadingLine     = line;
+                    currentReadingLine      = line;
+                    maxReadingLine          = line;
+                    baselineLastChangedTime = Date.now();
+                    skimAlertActive         = false;
                 }
             }
         }
-    }
-
-    // 역행 후보 등록: REGRESS_DWELL(400ms) + 착지 직전 기준 줄보다 위에 있을 때
-    if (lineDwellCount === REGRESS_DWELL && line < preDwellReadingLine && regressionCandidate === null) {
-        regressionCandidate = { line, startX: x };
     }
 }
 
@@ -662,6 +642,40 @@ function getLineIndexStrict(y) {
     return -1;
 }
 
+// ── 라인 콜아웃 말풍선 ───────────────────────────────────
+const _calloutFocus = document.getElementById('callout-focus');
+const _calloutSkim  = document.getElementById('callout-skim');
+
+function _positionCallout(el, lineIdx, side) {
+    if (lineIdx < 0 || lineIdx >= lineList.length) return;
+    const ln      = lineList[lineIdx];
+    const centerY = (ln.top + ln.bottom) / 2 - window.scrollY;
+    if (side === 'left') {
+        el.style.left  = '';
+        el.style.right = (window.innerWidth - (readingAreaRect?.left ?? 0) + 6) + 'px';
+    } else {
+        el.style.right = '';
+        el.style.left  = ((readingAreaRect?.right ?? window.innerWidth * 0.75) + 6) + 'px';
+    }
+    el.style.top = (centerY - el.offsetHeight / 2) + 'px';
+}
+
+function showFocusCallout(lineIdx) {
+    if (lineIdx < 0 || lineIdx >= lineList.length) { hideFocusCallout(); return; }
+    _calloutFocus.querySelector('.callout-box').textContent = '👁 집중하세요';
+    _calloutFocus.classList.add('show');
+    _positionCallout(_calloutFocus, lineIdx, 'left');
+}
+function hideFocusCallout() { _calloutFocus.classList.remove('show'); }
+
+function showSkimCallout(lineIdx) {
+    if (lineIdx < 0 || lineIdx >= lineList.length) { hideSkimCallout(); return; }
+    _calloutSkim.querySelector('.callout-box').textContent = '↩ 이곳부터 다시 읽으세요';
+    _calloutSkim.classList.add('show');
+    _positionCallout(_calloutSkim, lineIdx, 'right');
+}
+function hideSkimCallout() { _calloutSkim.classList.remove('show'); }
+
 // 현재 읽는 줄 가벼운 하이라이트
 function updateCurrentLineHighlight(y) {
     const bar = document.getElementById('current-line-highlight');
@@ -697,21 +711,40 @@ function updateLineBox(lineIdx) {
 }
 
 // ── 하이라이트 개입 ───────────────────────────────────────
-// 트리거: 집중 이탈 2초+ → 읽던 줄(currentReadingLine)에 하이라이트 + "집중하세요"
+// 트리거: 집중 이탈 2초+ → 읽던 줄에 하이라이트 + 오른쪽 콜아웃 "집중하세요"
 const ivHighlightCheck = document.getElementById('iv-highlight-check');
 setInterval(() => {
     const bar = document.getElementById('line-highlight-bar');
-    if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); return; }
-    if (isLostFocus()) updateHighlightBar(currentReadingLine);
-    else               hideOverlay(bar);
+    if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); hideCallout(); return; }
+    if (isLostFocus()) {
+        updateHighlightBar(currentReadingLine);
+        showFocusCallout(currentReadingLine);
+    } else {
+        hideOverlay(bar);
+        hideFocusCallout();
+    }
 }, 500);
 
 // ── 줄 박스 개입 ─────────────────────────────────────────
-// 트리거: 집중 이탈 2초+ → 읽던 줄(currentReadingLine)에 박스
+// 트리거: 기준 줄이 5초 이상 고정 + 시선이 기준 줄 위에서 정상독서 중
+//         → 현재 기준 줄 끝까지 안 읽고 넘어간 것 → 오른쪽 콜아웃 "이곳부터 다시 읽으세요"
+// 소거: 기준 줄이 정상 완독 규칙으로 전진하면 사라짐
+const SKIM_ALERT_MS = 5000;
 const ivBoxCheck = document.getElementById('iv-box-check');
 setInterval(() => {
     const box = document.getElementById('line-box');
-    if (!startTime || !ivBoxCheck.checked) { hideOverlay(box); return; }
-    if (isLostFocus()) updateLineBox(currentReadingLine);
-    else               hideOverlay(box);
+    if (!startTime || !ivBoxCheck.checked) { hideOverlay(box); skimAlertActive = false; hideSkimCallout(); return; }
+    const skimDetected =
+        currentReadingLine >= 0 &&
+        lastValidLine > currentReadingLine &&
+        getReadingBehavior() === 'reading' &&
+        Date.now() - baselineLastChangedTime > SKIM_ALERT_MS;
+    if (skimDetected) skimAlertActive = true;
+    if (skimAlertActive) {
+        updateLineBox(currentReadingLine);
+        showSkimCallout(currentReadingLine);
+    } else {
+        hideOverlay(box);
+        hideSkimCallout();
+    }
 }, 500);

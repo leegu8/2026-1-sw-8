@@ -18,17 +18,34 @@
             transition: top 0.08s ease, opacity 0.4s ease;
             z-index: 0;
         }
-        #focus-label {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: rgba(52, 152, 219, 0.9);
-            white-space: nowrap;
+        /* 라인 콜아웃 공통 */
+        #callout-focus, #callout-skim {
+            position: fixed;
+            display: none;
+            align-items: center;
+            z-index: 9990;
             pointer-events: none;
         }
+        #callout-focus.show, #callout-skim.show { display: flex; }
+        .callout-arrow {
+            width: 0; height: 0;
+            border-top: 7px solid transparent;
+            border-bottom: 7px solid transparent;
+            flex-shrink: 0;
+        }
+        .callout-box {
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        /* 왼쪽 콜아웃 (focus) — 화살표가 오른쪽(→ 텍스트 방향) */
+        #callout-focus .callout-arrow { border-left: 8px solid rgba(52,152,219,0.9); }
+        #callout-focus .callout-box   { background: rgba(52,152,219,0.9); color: #fff; }
+        /* 오른쪽 콜아웃 (skim) — 화살표가 왼쪽(← 텍스트 방향) */
+        #callout-skim  .callout-arrow { border-right: 8px solid rgba(250,160,50,0.95); }
+        #callout-skim  .callout-box   { background: rgba(250,160,50,0.95); color: #fff; }
         #book-title     { font-size: 1.9rem; }
         .reading-text   { position: relative; z-index: 1; font-size: 1.12rem; line-height: 2; }
         .reading-text p { margin: 0 0 1.2em; }
@@ -119,7 +136,7 @@
         #line-box {
             position: absolute;
             left: -4px; right: -4px;
-            border: 2px solid rgba(52, 152, 219, 0.75);
+            border: 2px solid rgba(250, 160, 50, 0.85);
             border-radius: 4px;
             pointer-events: none;
             display: none;
@@ -164,7 +181,7 @@
     <div class="page-content">
         <div class="reading-area">
             <div id="current-line-highlight"></div>
-            <div id="line-highlight-bar"><span id="focus-label">👁 집중하세요</span></div>
+            <div id="line-highlight-bar"></div>
             <div id="line-box"></div>
             <h2 id="book-title">📖 불러오는 중...</h2>
             <div class="reading-text"></div>
@@ -209,6 +226,16 @@
             <input type="checkbox" id="iv-box-check" class="iv-check" checked>
             <label class="iv-label" for="iv-box-check">줄 박스</label>
         </div>
+    </div>
+
+    <!-- 라인 콜아웃 말풍선 -->
+    <div id="callout-focus">  <!-- 왼쪽: 집중하세요 -->
+        <div class="callout-box"></div>
+        <div class="callout-arrow"></div>
+    </div>
+    <div id="callout-skim">   <!-- 오른쪽: 이곳부터 다시 읽으세요 -->
+        <div class="callout-arrow"></div>
+        <div class="callout-box"></div>
     </div>
 
     <script src="/static/js/reading.js" defer></script>
