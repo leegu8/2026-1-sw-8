@@ -146,7 +146,7 @@ export class GazeWidget {
         });
 
         document.getElementById('gw-calibrate').addEventListener('click', () => {
-            location.href = '/calibration.html';
+            location.href = '/guide.html';
         });
 
         document.getElementById('gw-header').addEventListener('click', (e) => {

@@ -133,9 +133,12 @@
             </div>
         </div>
 
-        <div style="text-align:center;">
+        <div style="text-align:center; display:flex; justify-content:center; align-items:center; gap:12px;">
             <button class="btn btn-success" onclick="goToBookList()">
                 도서 선택하기 →
+            </button>
+            <button class="btn" id="reset-cal-btn" style="background:transparent; border:2px solid #e74c3c; color:#e74c3c;">
+                🔄 보정 초기화
             </button>
             <script>
             function goToBookList() {
@@ -166,19 +169,32 @@
     ">🖱 마우스 보정 모드 &nbsp;|&nbsp; Q 로 해제</div>
 
     <script type="module">
-    import { addCalibrationPoint } from '/static/js/api/gazeApi.js';
+    import { addCalibrationPoint, clearCalibration } from '/static/js/api/gazeApi.js';
 
-    const DWELL_MS    = 250;  // 마우스 정지 판정 시간(ms)
-    const DWELL_COUNT = 3;    // 정지 시 수집 샘플 수
-    const CLICK_COUNT = 20;   // 클릭 시 수집 샘플 수 (더 높은 가중치)
-    const MOVE_THR    = 8;    // 이동 감지 최소 픽셀
-    const COOLDOWN_MS = 400;  // 연속 수집 최소 간격(ms)
+    document.getElementById('reset-cal-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('reset-cal-btn');
+        btn.disabled = true;
+        btn.textContent = '초기화 중...';
+        try {
+            await clearCalibration();
+            btn.textContent = '✅ 초기화 완료';
+            setTimeout(() => {
+                btn.textContent = '🔄 보정 초기화';
+                btn.disabled = false;
+            }, 1500);
+        } catch {
+            btn.textContent = '❌ 실패';
+            setTimeout(() => {
+                btn.textContent = '🔄 보정 초기화';
+                btn.disabled = false;
+            }, 1500);
+        }
+    });
 
-    let calMode     = false;
-    let sending     = false;
-    let dwellTimer  = null;
-    let lastSampleAt = 0;
-    let lastMx = -999, lastMy = -999;
+    const CLICK_COUNT = 20;
+
+    let calMode = false;
+    let sending = false;
     const badge = document.getElementById('cal-mode-badge');
 
     document.addEventListener('keydown', (e) => {
@@ -186,42 +202,17 @@
         calMode = !calMode;
         badge.style.display        = calMode ? 'block' : 'none';
         document.body.style.cursor = calMode ? 'crosshair' : '';
-        if (!calMode) clearTimeout(dwellTimer);
     });
 
-    document.addEventListener('mousemove', (e) => {
-        if (!calMode) return;
-        const dx = e.clientX - lastMx;
-        const dy = e.clientY - lastMy;
-        if (Math.hypot(dx, dy) < MOVE_THR) return;
-        lastMx = e.clientX;
-        lastMy = e.clientY;
-
-        clearTimeout(dwellTimer);
-        dwellTimer = setTimeout(() => {
-            const now = Date.now();
-            if (sending || now - lastSampleAt < COOLDOWN_MS) return;
-            lastSampleAt = now;
-            collect(lastMx, lastMy, DWELL_COUNT);
-        }, DWELL_MS);
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!calMode) return;
-        clearTimeout(dwellTimer);
-        lastSampleAt = Date.now();
-        collect(e.clientX, e.clientY, CLICK_COUNT);
-    });
-
-    async function collect(x, y, count) {
-        if (sending) return;
+    document.addEventListener('click', async (e) => {
+        if (!calMode || sending) return;
         sending = true;
         try {
-            await addCalibrationPoint(x, y, count);
+            await addCalibrationPoint(e.clientX, e.clientY, CLICK_COUNT);
         } finally {
             sending = false;
         }
-    }
+    });
     </script>
 </body>
 </html>
