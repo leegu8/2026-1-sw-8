@@ -68,6 +68,10 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     if (!level)                            { showMsg(msg, 'error', '독서 수준을 선택해주세요.'); return; }
     if (!terms)                           { showMsg(msg, 'error', '이용약관에 동의해주세요.'); return; }
 
+    const submitBtn = document.querySelector('.btn-submit--signup');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '처리 중...';
+
     try {
         const res = await fetch('/api/auth/register', {
             method: 'POST',
@@ -75,16 +79,29 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
             body: JSON.stringify({ email, password, nickname, level }),
         });
 
-        if (!res.ok) {
-            showMsg(msg, 'error', '이미 사용 중인 이메일입니다.');
+        if (res.status === 409) {
+            showMsg(msg, 'error', '❌ 이미 사용 중인 이메일입니다.');
             return;
         }
+        if (!res.ok) {
+            showMsg(msg, 'error', '❌ 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+            return;
+        }
+
+        const data = await res.json();
+        localStorage.setItem('user_id',    data.id);
+        localStorage.setItem('user_email', data.email);
+        localStorage.setItem('user_nick',  data.nickname);
+        localStorage.setItem('user_level', data.level ?? level);
 
         showMsg(msg, 'success', '✅ 가입 완료! 로그인 페이지로 이동합니다...');
         setTimeout(() => location.href = '/login.html', 900);
 
     } catch {
-        showMsg(msg, 'error', '서버 연결 오류가 발생했습니다.');
+        showMsg(msg, 'error', '❌ 서버에 연결할 수 없습니다. 네트워크를 확인해주세요.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '가입하기';
     }
 });
 

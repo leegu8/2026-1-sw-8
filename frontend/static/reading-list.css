@@ -49,7 +49,7 @@
 .library-wrap {
     max-width: 1000px;
     margin: 0 auto;
-    padding: 36px 24px 60px;
+    padding: 2.25rem 1.5rem 3.75rem;
 }
 
 /* ── 유저 배너 ── */
@@ -59,9 +59,9 @@
     justify-content: space-between;
     background: white;
     border-radius: 14px;
-    padding: 24px 32px;
+    padding: 1.5rem 2rem;
     box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-    margin-bottom: 28px;
+    margin-bottom: 1.75rem;
 }
 
 .user-banner-info h2 { font-size: 1.3rem; margin-bottom: 6px; color: #1a1a2e; }
@@ -267,7 +267,7 @@
 
 @media (max-width: 700px) {
     .navbar        { padding: 0 20px; }
-    .library-wrap  { padding: 24px 16px 40px; }
+    .library-wrap  { padding: 16px 14px 32px; }
     .user-banner   { flex-direction: column; align-items: flex-start; gap: 14px; }
     .filter-row    { flex-direction: column; align-items: flex-start; }
     .book-grid     { grid-template-columns: 1fr; }

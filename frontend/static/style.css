@@ -1,3 +1,8 @@
+html {
+    /* 1024px→12px / 1366px→15px / 1920px→16px(최대) */
+    font-size: clamp(12px, 1.1vw, 16px);
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -15,7 +20,7 @@ body {
 .page-header {
     background: #2c3e50;
     color: white;
-    padding: 14px 32px;
+    padding: 0.875rem 2rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -68,13 +73,13 @@ body {
 .page-content {
     max-width: 800px;
     margin: 0 auto;
-    padding: 48px 24px;
+    padding: 3rem 1.5rem;
 }
 
 /* 버튼 */
 .btn {
-    padding: 14px 36px;
-    font-size: 1.05rem;
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
     border: none;
     border-radius: 10px;
     cursor: pointer;
@@ -258,20 +263,20 @@ body {
 /* 홈 페이지 */
 .hero {
     text-align: center;
-    padding: 80px 0 60px;
+    padding: 5rem 0 3.75rem;
 }
 
 .hero h1 {
     font-size: 2.4rem;
     font-weight: bold;
-    margin-bottom: 16px;
+    margin-bottom: 1rem;
     line-height: 1.3;
 }
 
 .hero p {
     font-size: 1.15rem;
     color: #666;
-    margin-bottom: 40px;
+    margin-bottom: 2.5rem;
     line-height: 1.8;
 }
 
@@ -298,15 +303,15 @@ body {
 .guide-list {
     background: white;
     border-radius: 12px;
-    padding: 32px;
+    padding: 2rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-    margin-bottom: 32px;
+    margin-bottom: 2rem;
 }
 
 .guide-item {
     display: flex;
-    gap: 20px;
-    padding: 20px 0;
+    gap: 1.25rem;
+    padding: 1.25rem 0;
     border-bottom: 1px solid #f0f0f0;
 }
 
@@ -342,9 +347,9 @@ body {
 .reading-area {
     background: white;
     border-radius: 12px;
-    padding: 40px 48px;
+    padding: 2.5rem 3rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-    margin-bottom: 24px;
+    margin-bottom: 1.5rem;
 }
 
 .reading-area h2 {
@@ -431,3 +436,4 @@ body {
 }
 
 .result-feedback h3 { color: #2c3e50; margin-bottom: 12px; }
+

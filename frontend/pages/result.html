@@ -7,8 +7,6 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div id="gaze-dot"></div>
-
     <header class="page-header">
         <div class="logo">👁 독서 아이트래킹</div>
     </header>
@@ -20,13 +18,17 @@
         </p>
         <div id="result-metrics"></div>
         <div id="result-feedback"></div>
-        <div style="text-align:center; margin-top:32px; display:flex; gap:12px; justify-content:center;">
-            <button class="btn btn-primary"  onclick="location.href='/reading.html'">다시 읽기</button>
-            <button class="btn btn-warning"  onclick="location.href='/calibration.html'">재보정 후 다시 읽기</button>
+        <div style="text-align:center; margin-top:32px;">
+            <button class="btn btn-success" onclick="goToBookList()">도서 목록으로 가기</button>
         </div>
+        <script>
+        function goToBookList() {
+            const isDev = localStorage.getItem('user_id') === '0';
+            location.href = isDev ? '/reading-list.html' : '/reading-list-user.html';
+        }
+        </script>
     </div>
 
-    <script type="module" src="/static/js/gaze.js"></script>
     <script>
     const p           = new URLSearchParams(location.search);
     const totalSec    = parseInt(p.get('time')        ?? '0');

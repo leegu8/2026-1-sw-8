@@ -398,7 +398,7 @@ document.getElementById('done-btn').addEventListener('click', () => {
 });
 
 document.getElementById('recal-btn').addEventListener('click', () => {
-    window.location.href = '/calibration.html';
+    window.location.href = '/guide.html';
 });
 
 // ── 역행 블러 ─────────────────────────────────────────────

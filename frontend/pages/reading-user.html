@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서하기 - 독서 아이트래킹</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .reading-area { position: relative; }
+        #book-title   { font-size: 1.9rem; }
+        .reading-text   { position: relative; z-index: 1; font-size: 1.12rem; line-height: 2; }
+        .reading-text p { margin: 0 0 1.2em; }
+        .word           { display: inline; transition: filter 0.25s; }
+        .word-blur      { filter: blur(3.5px); user-select: none; }
+    </style>
+</head>
+<body>
+
+    <header class="page-header">
+        <div class="logo">👁 독서 아이트래킹</div>
+        <div class="progress-bar">
+            <div class="progress-step done">
+                <div class="circle">✓</div> 웹캠 연결
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step done">
+                <div class="circle">✓</div> 사용 안내
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step active">
+                <div class="circle">3</div> 독서하기
+            </div>
+        </div>
+    </header>
+
+    <div class="page-content">
+        <div class="reading-area">
+            <h2 id="book-title">📖 불러오는 중...</h2>
+            <div class="reading-text"></div>
+        </div>
+
+        <div class="reading-controls">
+            <button id="done-btn"  class="btn btn-success">다 읽었어요 →</button>
+            <button id="recal-btn" class="btn btn-warning">재보정</button>
+            <div id="reading-status" style="color:#666; font-size:0.95rem;"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/reading-user.js" defer></script>
+</body>
+</html>

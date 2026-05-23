@@ -12,13 +12,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 48px 24px;
+    padding: 3rem 1.5rem;
 }
 
 .card {
     background: white;
     border-radius: 16px;
-    padding: 44px 40px;
+    padding: 2.75rem 2.5rem;
     width: 100%;
     max-width: 460px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
@@ -74,10 +74,10 @@ body {
 
 .btn-submit {
     width: 100%;
-    padding: 14px;
+    padding: 0.875rem;
     border: none;
     border-radius: 10px;
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
     font-family: inherit;
@@ -173,5 +173,5 @@ body {
 .terms-group a:hover { text-decoration: underline; }
 
 @media (max-width: 500px) {
-    .card { padding: 32px 24px; }
+    .card { padding: 1.5rem 1.25rem; }
 }

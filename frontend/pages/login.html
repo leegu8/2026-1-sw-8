@@ -45,7 +45,7 @@
             <div class="divider">또는</div>
 
             <button class="btn-social" onclick="devLogin()"><span>🛠</span> 개발자로 로그인하기</button>
-            <button class="btn-social"><span>🔵</span> 구글로 로그인</button>
+            <button class="btn-social" onclick="guestLogin()"><span>👤</span> 임시 사용자로 로그인하기</button>
 
             <div class="card-footer">
                 아직 계정이 없으신가요? <a href="/signup.html">회원가입</a>
@@ -60,6 +60,13 @@
         localStorage.setItem('user_email', 'dev@test.com');
         localStorage.setItem('user_nick',  '개발자');
         localStorage.setItem('user_level', '고등');
+        location.href = '/home.html';
+    }
+    function guestLogin() {
+        localStorage.setItem('user_id',    'guest');
+        localStorage.setItem('user_email', 'guest@temp.com');
+        localStorage.setItem('user_nick',  '임시 사용자');
+        localStorage.setItem('user_level', '중등');
         location.href = '/home.html';
     }
     </script>

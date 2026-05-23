@@ -13,7 +13,7 @@
         <div class="logo">👁 독서 아이트래킹</div>
         <div class="progress-bar">
             <div class="progress-step done">
-                <div class="circle">✓</div> 시선 보정
+                <div class="circle">✓</div> 웹캠 연결
             </div>
             <div class="progress-line"></div>
             <div class="progress-step active">
@@ -32,15 +32,75 @@
 
         <div class="guide-notice">
             💡 시선 추적이 활성화되어 있습니다. 빨간 점이 시선을 따라다니는지 확인하세요.
-            정확도가 낮다면 <a href="/calibration.html" style="color:#3498db;">재보정</a>을 진행하세요.
+            정확도가 낮다면 <strong>Q 키</strong>를 눌러 보정하세요.
         </div>
 
+        <!-- Q키 보정 방법 -->
+        <div style="
+            background: #fff8e1;
+            border: 2px solid #f39c12;
+            border-radius: 12px;
+            padding: 24px 28px;
+            margin-bottom: 24px;
+        ">
+            <h3 style="margin:0 0 16px; font-size:1.1rem; color:#e67e22;">
+                🎯 시선 보정 방법 (Q 키)
+            </h3>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; align-items:flex-start; gap:14px;">
+                    <div style="
+                        min-width:28px; height:28px; border-radius:50%;
+                        background:#f39c12; color:white;
+                        display:flex; align-items:center; justify-content:center;
+                        font-weight:bold; font-size:0.85rem;
+                    ">1</div>
+                    <div>
+                        <strong>Q 키를 눌러 보정 모드 진입</strong>
+                        <p style="margin:4px 0 0; color:#666; font-size:0.9rem;">
+                            커서가 십자(✛) 모양으로 바뀌고 상단에 빨간 배지가 표시됩니다.
+                        </p>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:flex-start; gap:14px;">
+                    <div style="
+                        min-width:28px; height:28px; border-radius:50%;
+                        background:#f39c12; color:white;
+                        display:flex; align-items:center; justify-content:center;
+                        font-weight:bold; font-size:0.85rem;
+                    ">2</div>
+                    <div>
+                        <strong>화면 여러 곳을 바라보며 클릭</strong>
+                        <p style="margin:4px 0 0; color:#666; font-size:0.9rem;">
+                            시선이 향하는 위치에 마우스를 두고 클릭하세요. 클릭할 때마다 시선 위치가 보정됩니다.
+                            독서 영역(화면 중앙~좌우)을 집중적으로 클릭하면 더 정확해집니다.
+                        </p>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:flex-start; gap:14px;">
+                    <div style="
+                        min-width:28px; height:28px; border-radius:50%;
+                        background:#f39c12; color:white;
+                        display:flex; align-items:center; justify-content:center;
+                        font-weight:bold; font-size:0.85rem;
+                    ">3</div>
+                    <div>
+                        <strong>Q 키를 다시 눌러 보정 종료</strong>
+                        <p style="margin:4px 0 0; color:#666; font-size:0.9rem;">
+                            보정 데이터가 누적되어 시선 정확도가 향상됩니다.
+                            빨간 점이 시선을 잘 따라오면 보정이 완료된 것입니다.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 사용 안내 -->
         <div class="guide-list">
             <div class="guide-item">
                 <div class="num">1</div>
                 <div>
                     <h3>올바른 자세 유지</h3>
-                    <p>화면과 40~60cm 거리를 유지하고, 정면을 바라보세요.</p>
+                    <p>화면과 40~60cm 거리를 유지하고 정면을 바라보세요. 머리가 많이 기울어지면 시선 추적 정확도가 떨어집니다.</p>
                 </div>
             </div>
             <div class="guide-item">
@@ -53,23 +113,36 @@
             <div class="guide-item">
                 <div class="num">3</div>
                 <div>
-                    <h3>역행 시 블러 처리</h3>
-                    <p>이미 읽은 부분으로 시선이 역행하면 해당 줄이 흐려집니다. 앞으로 읽는 연습을 해보세요.</p>
+                    <h3>현재 읽는 줄 하이라이트</h3>
+                    <p>시선이 향하는 줄이 파란색으로 강조됩니다. 한 줄씩 집중해서 읽어보세요.</p>
                 </div>
             </div>
             <div class="guide-item">
                 <div class="num">4</div>
                 <div>
-                    <h3>현재 읽는 줄 하이라이트</h3>
-                    <p>현재 시선이 향하는 줄이 파란색으로 강조됩니다. 한 줄씩 집중해서 읽어보세요.</p>
+                    <h3>역행 시 블러 처리</h3>
+                    <p>이미 읽은 부분으로 시선이 역행하면 해당 줄이 흐려집니다. 앞으로 읽는 습관을 길러보세요.</p>
+                </div>
+            </div>
+            <div class="guide-item">
+                <div class="num">5</div>
+                <div>
+                    <h3>독서 분석 결과 제공</h3>
+                    <p>독서가 끝나면 집중도, 역행 비율, WPM(분당 읽은 단어 수) 등 상세한 분석 결과를 확인할 수 있습니다.</p>
                 </div>
             </div>
         </div>
 
         <div style="text-align:center;">
-            <button class="btn btn-success" onclick="location.href='/reading-list.html'">
+            <button class="btn btn-success" onclick="goToBookList()">
                 도서 선택하기 →
             </button>
+            <script>
+            function goToBookList() {
+                const isDev = localStorage.getItem('user_id') === '0';
+                location.href = isDev ? '/reading-list.html' : '/reading-list-user.html';
+            }
+            </script>
         </div>
     </div>
 

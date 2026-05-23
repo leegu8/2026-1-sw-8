@@ -31,10 +31,10 @@ form.addEventListener('submit', async (e) => {
     submitBtn.textContent = '등록 중...';
 
     try {
-        const res = await fetch('/api/db/texts', {
+        const res = await fetch('/api/db/books', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, difficulty, genre, body: content }),
+            body: JSON.stringify({ title, difficulty, genre, content }),
         });
 
         if (!res.ok) {
@@ -42,9 +42,8 @@ form.addEventListener('submit', async (e) => {
             throw new Error(data.detail || `오류 ${res.status}`);
         }
 
-        showMsg('도서가 등록되었습니다.', 'success');
-        form.reset();
-        wordCount.textContent = '0자';
+        showMsg('✅ 도서가 등록되었습니다. 도서 목록으로 이동합니다...', 'success');
+        setTimeout(() => location.href = '/reading-list.html', 1200);
 
     } catch (err) {
         showMsg(err.message, 'error');
