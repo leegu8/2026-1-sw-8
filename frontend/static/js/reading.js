@@ -339,8 +339,6 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
         return; // 독서 시작 이벤트는 수집 건너뜀 — 다음 이벤트부터 수집
     }
 
-    updateCurrentLineHighlight(y);
-
     const now     = Date.now();
     const rawLine = getLineIndex(y);
 
@@ -687,17 +685,6 @@ function showSkimCallout(lineIdx) {
 }
 function hideSkimCallout() { _calloutSkim.classList.remove('show'); }
 
-// 현재 읽는 줄 가벼운 하이라이트
-function updateCurrentLineHighlight(y) {
-    const bar = document.getElementById('current-line-highlight');
-    const lineIdx = getLineIndexStrict(y);
-    if (lineIdx < 0) { bar.style.display = 'none'; return; }
-    const areaTop = document.querySelector('.reading-area').getBoundingClientRect().top + window.scrollY;
-    const ln = lineList[lineIdx];
-    bar.style.top    = (ln.top - areaTop) + 'px';
-    bar.style.height = (ln.bottom - ln.top + 4) + 'px';
-    bar.style.display = 'block';
-}
 
 // lineIdx 줄에 하이라이트 바 위치 지정
 function updateHighlightBar(lineIdx) {
