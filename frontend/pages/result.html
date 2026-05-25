@@ -18,13 +18,17 @@
         </p>
         <div id="result-metrics"></div>
         <div id="result-feedback"></div>
-        <div style="text-align:center; margin-top:32px;">
-            <button class="btn btn-success" onclick="goToBookList()">도서 목록으로 가기</button>
+        <div id="cta-buttons" style="text-align:center; margin-top:32px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="goToBookList()">다른 도서 읽기</button>
+            <button class="btn btn-success" onclick="goToGrowth()">성장일지 확인하기</button>
         </div>
         <script>
         function goToBookList() {
             const isDev = localStorage.getItem('user_id') === '0';
             location.href = isDev ? '/reading-list.html' : '/reading-list-user.html';
+        }
+        function goToGrowth() {
+            location.href = '/growth.html';
         }
         </script>
     </div>
@@ -41,11 +45,23 @@
     const totallines  = parseInt(p.get('totallines')  ?? '1');
 
     if (isError || focusRate === -1) {
+        document.getElementById('cta-buttons').style.display = 'none';
         document.getElementById('result-metrics').innerHTML = `
-            <p style="text-align:center; color:#e74c3c; margin-bottom:24px;">
-                수집된 시선 데이터가 부족합니다.<br>
-                독서 중 얼굴이 카메라에 잘 보이는지 확인하고 다시 시도하세요.
-            </p>`;
+            <div style="background:white;border-radius:16px;padding:48px 32px;
+                box-shadow:0 2px 10px rgba(0,0,0,0.08);margin-bottom:20px;text-align:center;">
+                <div style="font-size:2.4rem;margin-bottom:16px;">📖</div>
+                <div style="font-size:1.1rem;font-weight:700;color:#2c3e50;margin-bottom:10px;">
+                    리포트를 생성하기에 데이터가 부족해요
+                </div>
+                <div style="font-size:0.92rem;color:#7f8c8d;line-height:1.8;margin-bottom:28px;">
+                    처음부터 끝까지 완독하면 집중도·역행비율·WPM 등<br>
+                    정밀한 독서 성장 리포트를 받을 수 있어요.
+                </div>
+                <button class="btn btn-primary" onclick="history.back()"
+                    style="font-size:0.95rem;">
+                    다시 읽기
+                </button>
+            </div>`;
     } else {
 
         // ── 지표별 점수 산출 함수 ─────────────────────────────────
@@ -72,7 +88,10 @@
         // 독서 속도: 한국어 성인 평균 80-180 WPM 기준 구간별 점수
         // <40WPM→0-20점 / 40-80→20-60점 / 80-160→60-90점 / 160-250→90-100점 / >250→85점(이해 의심)
         function calcWpmScore(w) {
-            if (w > 250)  return 85;
+            if (w > 800)  return 10;
+            if (w > 500)  return Math.round(40 - (w - 500) * (25 / 300));
+            if (w > 350)  return Math.round(65 - (w - 350) * (25 / 150));
+            if (w > 250)  return Math.round(85 - (w - 250) * (20 / 100));
             if (w >= 160) return Math.round(90 + (w - 160) * (10 / 90));
             if (w >= 80)  return Math.round(60 + (w - 80)  * (30 / 80));
             if (w >= 40)  return Math.round(20 + (w - 40)  * (40 / 40));
@@ -243,12 +262,22 @@
         else if (depthScore < 60)
             improvements.push(`${totallines}줄 중 ${linesdone}줄만 방문했어요. 후반부 집중력을 높여보세요.`);
 
-        if (focusScore >= 75)
-            goods.push('텍스트에 잘 집중하며 읽었습니다.');
-        else if (focusScore >= 50)
+        // 집중도 — wpm 과속 또는 완독률 저조 시 칭찬 문구 상호 배제
+        if (focusScore >= 75) {
+            if (wpm > 250) {
+                // 집중 수치는 높지만 속도가 과도 → 통합 경고 (WPM 블록 중복 방지)
+                improvements.push(`집중도(${focusRate}%)는 높지만 독서 속도(${wpm} WPM)가 너무 빠릅니다. 내용을 충분히 소화하며 읽고 있는지 확인해보세요.`);
+            } else if (depthScore < 60) {
+                // 집중 수치는 높지만 후반부 미완독 → 통합 경고
+                improvements.push(`집중도(${focusRate}%)는 양호하지만 전체 ${totallines}줄 중 ${linesdone}줄만 읽었어요. 끝까지 읽는 습관을 들여보세요.`);
+            } else {
+                goods.push('텍스트에 잘 집중하며 읽었습니다.');
+            }
+        } else if (focusScore >= 50) {
             improvements.push('가끔 시선이 텍스트 밖으로 벗어났어요. 화면 중앙을 의식해보세요.');
-        else
+        } else {
             improvements.push('시선이 자주 벗어났어요. 독서 환경을 조용히 만들어보세요.');
+        }
 
         if (regScore >= 75)
             goods.push(`역행 비율이 낮아(${regRate}%) 읽기 흐름이 좋습니다.`);
@@ -257,11 +286,10 @@
         else
             improvements.push(`역행 비율이 높아요(${regRate}%). 한 번에 이해하려 집중하는 연습을 해보세요.`);
 
-        if (wpm > 250)
-            improvements.push(`독서 속도(${wpm} WPM)가 매우 빠릅니다. 이해하며 읽고 있는지 확인해보세요.`);
-        else if (wpmScore >= 75)
+        // WPM — wpm > 250 경우는 집중도 블록에서 이미 통합 처리했으므로 중복 출력 제외
+        if (wpm <= 250 && wpmScore >= 75)
             goods.push(`독서 속도(${wpm} WPM)가 적정 범위입니다.`);
-        else if (wpm > 0 && wpmScore < 40)
+        else if (wpm > 0 && wpm <= 250 && wpmScore < 40)
             improvements.push('독서 속도가 느린 편이에요. 어절 단위로 묶어 읽는 연습을 해보세요.');
 
         document.getElementById('result-feedback').innerHTML = `

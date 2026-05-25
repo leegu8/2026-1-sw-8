@@ -55,14 +55,17 @@ async def system_status(request: Request):
     }
 
 
+_NO_CACHE = {"Cache-Control": "no-store"}
+
+
 @app.get("/")
 async def root():
-    return FileResponse(str(_FRONTEND / "pages" / "index.html"))
+    return FileResponse(str(_FRONTEND / "pages" / "index.html"), headers=_NO_CACHE)
 
 
 @app.get("/{page}.html")
 async def serve_page(page: str):
     path = _FRONTEND / "pages" / f"{page}.html"
     if path.exists():
-        return FileResponse(str(path))
-    return FileResponse(str(_FRONTEND / "pages" / "index.html"))
+        return FileResponse(str(path), headers=_NO_CACHE)
+    return FileResponse(str(_FRONTEND / "pages" / "index.html"), headers=_NO_CACHE)
