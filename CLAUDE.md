@@ -8,19 +8,30 @@
 2026-1-sw-8/
 ├── requirements.txt
 ├── frontend/
-│   ├── pages/        # index, calibration, guide, reading, result
+│   ├── pages/        # index, login, signup, calibration, guide, reading, reading-user, result, growth, reading-list, reading-list-user, book-write
 │   └── static/
 │       ├── style.css
 │       └── js/
 │           ├── gaze.js               # 공통 진입점 — WS 연결 + 이벤트 분기
+│           ├── reading.js            # 독서 페이지 (개발자용) — 시선 분석·교정 이벤트
+│           ├── reading-user.js       # 독서 페이지 (사용자용) — 시선 분석
+│           ├── reading-list.js       # 도서 목록 (개발자용)
+│           ├── reading-list-user.js  # 도서 목록 (사용자용)
+│           ├── growth.js             # 성장일지
+│           ├── login.js              # 로그인
+│           ├── signup.js             # 회원가입
+│           ├── book-write.js         # 도서 등록 (개발자용)
+│           ├── auth-guard.js         # 로그인 여부 체크
 │           ├── ui/gazeDot.js         # 시선 점 렌더링
 │           ├── ui/widget.js          # 플로팅 웹캠 위젯
 │           ├── services/gazeSocket.js # WS → CustomEvent 변환
 │           └── api/gazeApi.js        # REST API 호출
 └── backend/app/
-    ├── main.py               # FastAPI 앱 진입점, 라우터 등록
+    ├── main.py               # FastAPI 앱 진입점, 라우터 등록, seed 데이터
     ├── core/config.py        # 전역 상수
     ├── core/model_loader.py  # MediaPipe 모델 다운로드·로드
+    ├── data/books.json       # 도서 seed 데이터
+    ├── data/sessions_seed.json # 개발자 계정 독서 세션 seed 데이터
     ├── db/models.py          # SQLAlchemy ORM 모델
     ├── db/session.py         # 엔진·세션·init_db·get_db·get_or_404
     ├── api/schemas/gaze.py   # CalibrationPoint, WebcamStartRequest
@@ -31,6 +42,13 @@
         ├── gaze_ws.py        # WebSocket /ws
         ├── webcam.py         # /api/webcam
         └── db/               # /api/db — 리소스별 1파일
+            ├── books.py
+            ├── sessions.py
+            ├── correction_events.py
+            ├── result.py
+            ├── growth.py
+            ├── attendance.py
+            └── level_history.py
 ```
 
 ## 실행
@@ -47,13 +65,18 @@ uvicorn backend.app.main:app --reload
 ## 페이지 흐름
 
 ```
-index → calibration → guide → reading → result
+index → login/signup → reading-list → reading → result → growth
 ```
 
+- **login**: 이메일·비밀번호 로그인. 로그인 성공 시 출석체크 자동 호출
+- **signup**: 회원가입. 이메일·비밀번호·닉네임·레벨 입력
 - **calibration**: 화면 14개 지점을 응시하며 Ridge Regression 모델 학습
 - **guide**: 사용 안내. Q키 — 마우스 보정 모드(클릭·정지로 추가 보정)
-- **reading**: 실시간 하이라이트·역행 블러. D키 — 개발자 모드(마우스 = 시선)
-- **result**: 집중도·역행 횟수 분석 결과 표시
+- **reading** (개발자): 실시간 하이라이트·역행 블러·줄박스 개입. 분석 지표 프론트에서 계산 후 DB 저장. BLUR/HIGHLIGHT/BOX 교정 이벤트 발동 시 발생 줄 DB 저장
+- **reading-user** (사용자): 역행 블러만 적용. 동일한 분석·저장 구조
+- **result**: DB에서 세션 결과 조회. 집중도·역행비율·WPM·완독률·독서시간 기반 종합 점수 계산 후 DB 저장
+- **growth**: 최근 5세션 지표·점수 차트, 출석 달력
+- **reading-list** (개발자): 도서 목록. 읽은 도서는 커리큘럼/전체 목록에서 제외되고 읽은 도서 탭으로 이동
 
 ## 시선 이벤트 흐름
 
@@ -85,9 +108,8 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 | `level_history` | 사용자 레벨 이력 (초/중/고, tested_at) |
 | `attendance` | 출석체크 (user별, attended_at: date) |
 | `books` | 도서 (title, content, difficulty, genre) |
-| `reading_sessions` | 독서 세션 (user, book 연결, x_min, x_max, wpm, concentration_score 등) |
-| `correction_events` | 교정 이벤트 (BLUR/HIGHLIGHT, triggered_at) |
-| `gaze_summary` | 10초 구간별 시선 집계 (focus_rate, regression_count, non_concentrated_ms, visited_line_indices 등) |
+| `reading_sessions` | 독서 세션 (wpm, concentration_score, regression_ratio, visited_lines, word_count, score 등) |
+| `correction_events` | 교정 이벤트 (BLUR/HIGHLIGHT/BOX, line_index, triggered_at) |
 
 ## API 엔드포인트
 
@@ -111,38 +133,21 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 | `GET` | `/api/webcam/preview` | MJPEG 스트림 (10fps) |
 | `WebSocket` | `/ws` | 30fps 시선 좌표 스트리밍 |
 
-### DB CRUD
+### DB
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| `POST/GET` | `/api/db/users` | 사용자 생성·목록 |
-| `GET/DELETE` | `/api/db/users/{id}` | 사용자 조회·삭제 |
-| `GET` | `/api/db/users/{id}/sessions` | 사용자 세션 목록 |
 | `GET` | `/api/db/users/{id}/level-history` | 사용자 레벨 이력 조회 |
-| `POST` | `/api/db/level-history` | 레벨 이력 저장 |
-| `GET` | `/api/db/users/{id}/attendance` | 사용자 출석 목록 |
-| `POST` | `/api/db/attendance` | 출석 기록 — 오늘 첫 출석이면 저장 후 `{checked: true}`, 중복이면 `{checked: false}` |
+| `POST` | `/api/db/attendance` | 출석 기록 — 오늘 첫 출석이면 `{checked: true}`, 중복이면 `{checked: false}` |
+| `GET` | `/api/db/users/{id}/attendance/streak` | 출석 연속 일수·누적 일수·최근 7일 날짜 |
 | `POST/GET` | `/api/db/books` | 도서 생성·목록 (목록은 content 제외) |
 | `GET/DELETE` | `/api/db/books/{id}` | 도서 상세 조회·삭제 |
 | `GET` | `/api/db/users/{id}/completed-books` | 완독한 도서 ID 목록 |
-| `POST/GET` | `/api/db/sessions` | 세션 생성 `{user_id, book_id, total_lines, x_min, x_max}`·목록 |
-| `GET/PATCH` | `/api/db/sessions/{id}` | 세션 조회·업데이트 |
-| `POST` | `/api/db/sessions/{id}/end` | 세션 종료 (duration 자동 계산) |
-| `POST` | `/api/db/correction-events` | 교정 이벤트 저장 |
-| `GET` | `/api/db/sessions/{id}/correction-events` | 세션별 교정 이벤트 조회 |
-| `POST` | `/api/db/gaze-summary` | 구간 시선 집계 저장 |
-| `POST` | `/api/db/gaze-summary/bulk` | 구간 시선 집계 대량 저장 |
-| `GET` | `/api/db/sessions/{id}/gaze-summary` | 세션별 구간 집계 조회 |
-| `GET` | `/api/db/sessions/{id}/result` | 세션 결과 (wpm, 집중도, 역행비율, 완독률 등) |
-| `GET` | `/api/db/users/{id}/growth` | 성장일지 — 최근 5세션 요약 (오름차순) |
-| `GET` | `/api/db/users/{id}/attendance/streak` | 출석 연속 일수·누적 일수·최근 7일 날짜 |
-
-### 독서 분석
-
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| `POST` | `/api/reading/log` | 10초마다 로그 전송 — gaze_summary 계산·저장, correction_events 저장 |
-| `POST` | `/api/reading/end` | 독서 종료 `{session_id, ended_at?, reading_logs, correction_events}` — 남은 로그 처리 + 세션 지표(wpm, 집중도 등) 계산 후 저장 |
+| `POST` | `/api/db/sessions` | 세션 생성 `{user_id, book_id, total_lines, x_min, x_max}` |
+| `PATCH` | `/api/db/sessions/{id}` | 세션 업데이트 (분석 지표·점수 저장) |
+| `GET` | `/api/db/sessions/{id}/result` | 세션 결과 (wpm, 집중도, 역행비율, 완독률, 교정이벤트 목록 등) |
+| `POST` | `/api/db/correction-events` | 교정 이벤트 저장 `{session_id, event_type, line_index}` |
+| `GET` | `/api/db/users/{id}/growth` | 성장일지 — 최근 5세션 요약·점수 (오름차순) |
 
 ## 코딩 규칙
 
