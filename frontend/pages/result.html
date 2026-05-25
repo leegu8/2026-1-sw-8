@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>독서 성장 리포트 - 독서 아이트래킹</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/js/auth-guard.js"></script>
 </head>
 <body>
     <header class="page-header">
@@ -24,7 +25,7 @@
         </div>
         <script>
         function goToBookList() {
-            const isDev = localStorage.getItem('user_id') === '0';
+            const isDev = localStorage.getItem('user_id') === '100';
             location.href = isDev ? '/reading-list.html' : '/reading-list-user.html';
         }
         function goToGrowth() {
@@ -34,17 +35,10 @@
     </div>
 
     <script>
-    const p           = new URLSearchParams(location.search);
-    const totalSec    = parseInt(p.get('time')        ?? '0');
-    const focusRate   = parseInt(p.get('focus')       ?? '-1');
-    const regressions = parseInt(p.get('regressions') ?? '-1');
-    const isError     = p.get('error') === '1';
-    const wpm         = parseInt(p.get('wpm')         ?? '0');
-    const regRate     = parseInt(p.get('regrate')     ?? '-1');
-    const linesdone   = parseInt(p.get('linesdone')   ?? '0');
-    const totallines  = parseInt(p.get('totallines')  ?? '1');
+    (async () => {
+    const sessionId = new URLSearchParams(location.search).get('session_id');
 
-    if (isError || focusRate === -1) {
+    function showNoData() {
         document.getElementById('cta-buttons').style.display = 'none';
         document.getElementById('result-metrics').innerHTML = `
             <div style="background:white;border-radius:16px;padding:48px 32px;
@@ -62,7 +56,26 @@
                     다시 읽기
                 </button>
             </div>`;
-    } else {
+    }
+
+    if (!sessionId) { showNoData(); return; }
+
+    const resultRes = await fetch(`/api/db/sessions/${sessionId}/result`);
+    if (!resultRes.ok) { showNoData(); return; }
+
+    const data = await resultRes.json();
+
+    const totalSec   = data.total_duration_sec || 0;
+    const focusRate  = data.summary.concentration_score != null ? Math.round(data.summary.concentration_score) : -1;
+    const regRate    = data.summary.regression_ratio    != null ? Math.round(data.summary.regression_ratio)    : -1;
+    const wpm        = Math.round(data.summary.wpm || 0);
+    const linesdone  = data.visited_lines ?? 0;
+    const totallines = data.total_lines   ?? 1;
+    const wordCount  = data.word_count    ?? 0;
+
+    if (focusRate === -1) { showNoData(); return; }
+
+    {
 
         // ── 지표별 점수 산출 함수 ─────────────────────────────────
 
@@ -128,6 +141,14 @@
             depthScore * 0.15 +
             timeScore  * 0.10
         );
+
+        if (sessionId) {
+            fetch(`/api/db/sessions/${sessionId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ score: composite }),
+            }).catch(() => {});
+        }
 
         // ── 종합 등급 ─────────────────────────────────────────────
         const grade =
@@ -316,6 +337,7 @@
                 </div>
             </div>`;
     }
+    })();
     </script>
 </body>
 </html>

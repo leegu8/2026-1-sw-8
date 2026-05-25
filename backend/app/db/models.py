@@ -1,5 +1,5 @@
 from datetime import datetime, date, timezone
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -72,11 +72,12 @@ class ReadingSession(Base):
     regression_ratio = Column(Float)
     visited_lines = Column(Integer)
     total_lines = Column(Integer)
+    word_count = Column(Integer)
+    score = Column(Float)
 
     user = relationship("User", back_populates="reading_sessions")
     book = relationship("Book", back_populates="reading_sessions")
     correction_events = relationship("CorrectionEvent", back_populates="session")
-    gaze_summaries = relationship("GazeSummary", back_populates="session")
 
 
 class CorrectionEvent(Base):
@@ -84,25 +85,9 @@ class CorrectionEvent(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(Integer, ForeignKey("reading_sessions.id"), nullable=False)
     event_type = Column(String, nullable=False)
+    line_index = Column(Integer)
     triggered_at = Column(DateTime, default=_now)
 
     session = relationship("ReadingSession", back_populates="correction_events")
 
 
-class GazeSummary(Base):
-    __tablename__ = "gaze_summary"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(Integer, ForeignKey("reading_sessions.id"), nullable=False)
-    section_index = Column(Integer, nullable=False)
-    section_start_sec = Column(Integer, nullable=False)
-    section_end_sec = Column(Integer, nullable=False)
-    section_start_line = Column(Integer)
-    section_end_line = Column(Integer)
-    focus_rate = Column(Float, nullable=False)
-    regression_count = Column(Integer, nullable=False)
-    avg_gaze_speed = Column(Float)
-    non_concentrated_ms = Column(Integer, default=0)
-    visited_line_indices = Column(JSON, default=list)
-    created_at = Column(DateTime, default=_now)
-
-    session = relationship("ReadingSession", back_populates="gaze_summaries")

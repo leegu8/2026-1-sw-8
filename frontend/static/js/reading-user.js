@@ -5,8 +5,7 @@ let readingAreaRect = null;
 (async () => {
     const bookId = +new URLSearchParams(location.search).get('book_id');
     if (!bookId) return;
-    const books = await fetch('/static/textdate/books.json').then(r => r.json());
-    const book  = books.find(b => b.id === bookId);
+    const book = await fetch(`/api/db/books/${bookId}`).then(r => r.ok ? r.json() : null);
     if (!book) return;
     document.getElementById('book-title').textContent = `📖 ${book.title}`;
     document.title = `${book.title} - 독서 아이트래킹`;
@@ -14,7 +13,10 @@ let readingAreaRect = null;
     document.querySelector('.reading-text').innerHTML = paras.map(para =>
         `<p>${para.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`
     ).join('');
+    bookWordCount = document.querySelector('.reading-text').innerText
+        .trim().split(/\s+/).filter(w => w.length > 0).length;
     buildLineList();
+    await createSession(bookId);
 })();
 
 function buildLineList() {
@@ -84,9 +86,24 @@ function getSegIdx(p) {
 import('/static/js/gaze.js');
 
 // ── 상태 변수 ────────────────────────────────────────────
+let   sessionId       = null;
+let   bookWordCount   = 0;
 const gazeData        = [];
 const patternData     = [];
 const rereadingEvents = [];
+
+let blurEventSent = false;
+
+async function sendCorrectionEvent(type, lineIndex) {
+    if (!sessionId) return;
+    try {
+        await fetch('/api/db/correction-events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, event_type: type, line_index: lineIndex }),
+        });
+    } catch {}
+}
 
 const REREAD_WINDOW_MS  = 30_000;
 const REREAD_BLUR_ON    = 3;
@@ -165,6 +182,31 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
     }
 });
 
+async function createSession(bookId) {
+    const userId = +(localStorage.getItem('user_id') || '0');
+    if (!userId) return;
+    try {
+        const res = await fetch('/api/db/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id:     userId,
+                book_id:     bookId,
+                total_lines: lineList.length || null,
+                x_min:       readingAreaRect ? readingAreaRect.left  : null,
+                x_max:       readingAreaRect ? readingAreaRect.right : null,
+            }),
+        });
+        if (res.ok) {
+            sessionId = (await res.json()).id;
+        } else {
+            console.error('createSession 실패:', res.status, await res.text());
+        }
+    } catch (err) {
+        console.error('createSession 오류:', err);
+    }
+}
+
 function isReadingStart(x, y) {
     if (!lineList.length) return false;
     const line = getLineIndex(y);
@@ -175,21 +217,27 @@ function isReadingStart(x, y) {
 }
 
 // ── 다 읽었어요 버튼 ──────────────────────────────────────
-document.getElementById('done-btn').addEventListener('click', () => {
+document.getElementById('done-btn').addEventListener('click', async () => {
     const result = analyzeReading();
-    const params = new URLSearchParams({
-        time:        result.totalSec,
-        completion:  result.completionRate  ?? -1,
-        focus:       result.focusRate       ?? -1,
-        regressions: result.regressionCount ?? -1,
-        regrate:     result.regRate         ?? -1,
-        regratepct:  result.regressionRate  ?? -1,
-        wpm:         result.wpm             ?? 0,
-        linesdone:   result.visitedLines    ?? 0,
-        totallines:  result.totalLines      ?? 0,
-        error:       result.error ? '1' : '0',
-    });
-    window.location.href = `/result.html?${params}`;
+    if (sessionId) {
+        try {
+            await fetch(`/api/db/sessions/${sessionId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ended_at:            new Date().toISOString().slice(0, 19),
+                    total_duration_sec:  Math.round(result.totalSec),
+                    wpm:                 result.error ? null : (result.wpm             ?? null),
+                    concentration_score: result.error ? null : (result.focusRate       ?? null),
+                    regression_ratio:    result.error ? null : (result.regressionRate  ?? null),
+                    visited_lines:       result.visitedLines ?? null,
+                    total_lines:         result.totalLines   ?? null,
+                    word_count:          bookWordCount || null,
+                }),
+            });
+        } catch {}
+    }
+    window.location.href = `/result.html?session_id=${sessionId ?? ''}`;
 });
 
 document.getElementById('recal-btn').addEventListener('click', () => {
@@ -214,6 +262,10 @@ setInterval(() => {
     const rereadCount = rereadingsInWindow();
     if (!blurActive && rereadCount >= REREAD_BLUR_ON) {
         blurActive = true;
+        if (!blurEventSent) {
+            blurEventSent = true;
+            sendCorrectionEvent('BLUR', currentReadingLine);
+        }
     }
     if (blurActive) {
         if (rereadCount >= REREAD_BLUR_ON) blurLine = currentReadingLine;

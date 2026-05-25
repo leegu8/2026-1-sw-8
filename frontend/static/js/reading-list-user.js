@@ -1,11 +1,36 @@
-const USER_LEVEL  = localStorage.getItem('user_level') || '중등';
-const READ_BOOKS  = JSON.parse(localStorage.getItem('read_books') || '[]');
+const USER_NICK   = localStorage.getItem('user_nick')  || '사용자';
+let   USER_LEVEL  = localStorage.getItem('user_level') || '중등';
+const USER_ID     = localStorage.getItem('user_id');
 
-let BOOKS = [];
+let BOOKS         = [];
+let READ_BOOK_IDS = new Set();
+
+async function syncLevel() {
+    if (!USER_ID) return;
+    try {
+        const res = await fetch(`/api/db/users/${USER_ID}/level-history`);
+        if (!res.ok) return;
+        const history = await res.json();
+        if (!history.length) return;
+        const latest = history.reduce((a, b) =>
+            new Date(a.tested_at) > new Date(b.tested_at) ? a : b
+        );
+        localStorage.setItem('user_level', latest.level_result);
+        USER_LEVEL = latest.level_result;
+    } catch {}
+}
 
 async function loadBooks() {
-    const res = await fetch('/static/textdate/books.json');
-    BOOKS = await res.json();
+    await syncLevel();
+    const [booksRes, completedRes] = await Promise.all([
+        fetch('/api/db/books'),
+        USER_ID ? fetch(`/api/db/users/${USER_ID}/completed-books`) : Promise.resolve(null),
+    ]);
+    BOOKS = await booksRes.json();
+    if (completedRes?.ok) {
+        const completed = await completedRes.json();
+        READ_BOOK_IDS = new Set(completed.map(c => c.book_id));
+    }
     setupBanner();
     renderCurriculum();
     renderAllBooks('all');
@@ -15,7 +40,7 @@ async function loadBooks() {
 }
 
 function setupBanner() {
-    document.getElementById('banner-greeting').textContent = '안녕하세요!';
+    document.getElementById('banner-greeting').textContent = `안녕하세요, ${USER_NICK}님!`;
     document.getElementById('banner-level-desc').textContent =
         `현재 레벨: ${USER_LEVEL} | 레벨에 맞는 커리큘럼을 확인하세요`;
     const badge = document.getElementById('level-badge');
@@ -46,7 +71,7 @@ function setupFilters() {
 
 function renderCurriculum() {
     const grid  = document.getElementById('curriculum-grid');
-    const books = BOOKS.filter(b => b.difficulty === USER_LEVEL);
+    const books = BOOKS.filter(b => b.difficulty === USER_LEVEL && !READ_BOOK_IDS.has(b.id));
     grid.innerHTML = books.length
         ? books.map((b, i) => bookCardHTML(b, i + 1, true)).join('')
         : '<div class="empty-state">커리큘럼 도서가 없습니다.<br>전체 도서 목록에서 직접 선택하세요.</div>';
@@ -55,7 +80,8 @@ function renderCurriculum() {
 
 function renderAllBooks(level) {
     const grid  = document.getElementById('all-grid');
-    const books = level === 'all' ? BOOKS : BOOKS.filter(b => b.difficulty === level);
+    const filtered = level === 'all' ? BOOKS : BOOKS.filter(b => b.difficulty === level);
+    const books = filtered.filter(b => !READ_BOOK_IDS.has(b.id));
     grid.innerHTML = books.length
         ? books.map(b => bookCardHTML(b, null, false)).join('')
         : '<div class="empty-state">해당 레벨의 도서가 없습니다.</div>';
@@ -64,7 +90,7 @@ function renderAllBooks(level) {
 
 function renderReadBooks() {
     const grid  = document.getElementById('read-grid');
-    const books = BOOKS.filter(b => READ_BOOKS.includes(b.id));
+    const books = BOOKS.filter(b => READ_BOOK_IDS.has(b.id));
     grid.innerHTML = books.length
         ? books.map(b => bookCardHTML(b, null, false, true)).join('')
         : '<div class="empty-state">아직 완독한 도서가 없습니다.</div>';

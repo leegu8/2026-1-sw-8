@@ -55,18 +55,35 @@
 
     <script src="/static/js/login.js"></script>
     <script>
-    function devLogin() {
-        localStorage.setItem('user_id',    '0');
-        localStorage.setItem('user_email', 'dev@test.com');
-        localStorage.setItem('user_nick',  '개발자');
-        localStorage.setItem('user_level', '고등');
+    async function devLogin() {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'admin@admin.com', password: 'admin1234' }),
+        });
+        if (!res.ok) { alert('개발자 로그인 실패 — 서버를 재시작해주세요'); return; }
+        const data = await res.json();
+        localStorage.setItem('user_id',    String(data.id));
+        localStorage.setItem('user_email', data.email);
+        localStorage.setItem('user_nick',  data.nickname);
+        localStorage.setItem('user_level', data.level ?? '고등');
+        fetch('/api/db/attendance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: data.id }),
+        }).catch(() => {});
         location.href = '/home.html';
     }
-    function guestLogin() {
-        localStorage.setItem('user_id',    'guest');
+    async function guestLogin() {
+        localStorage.setItem('user_id',    '101');
         localStorage.setItem('user_email', 'guest@temp.com');
-        localStorage.setItem('user_nick',  '임시 사용자');
+        localStorage.setItem('user_nick',  '게스트');
         localStorage.setItem('user_level', '중등');
+        fetch('/api/db/attendance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: 101 }),
+        }).catch(() => {});
         location.href = '/home.html';
     }
     </script>

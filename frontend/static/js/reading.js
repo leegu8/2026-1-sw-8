@@ -5,8 +5,7 @@ let readingAreaRect = null; // reading-area 경계 캐시 (좌우 이탈 판정�
 (async () => {
     const bookId = +new URLSearchParams(location.search).get('book_id');
     if (!bookId) return;
-    const books = await fetch('/static/textdate/books.json').then(r => r.json());
-    const book  = books.find(b => b.id === bookId);
+    const book = await fetch(`/api/db/books/${bookId}`).then(r => r.ok ? r.json() : null);
     if (!book) return;
     document.getElementById('book-title').textContent = `📖 ${book.title}`;
     document.title = `${book.title} - 독서 아이트래킹`;
@@ -14,7 +13,10 @@ let readingAreaRect = null; // reading-area 경계 캐시 (좌우 이탈 판정�
     document.querySelector('.reading-text').innerHTML = paras.map(para =>
         `<p>${para.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`
     ).join('');
+    bookWordCount = document.querySelector('.reading-text').innerText
+        .trim().split(/\s+/).filter(w => w.length > 0).length;
     buildLineList();
+    await createSession(bookId);
 })();
 
 // 줄별 메타 구축 — document 기준 y, viewport 기준 x (수평 스크롤 없음)
@@ -107,9 +109,26 @@ if (!DEV_MODE) {
 }
 
 // ── 상태 변수 ────────────────────────────────────────────
+let   sessionId       = null;
+let   bookWordCount   = 0;
 const gazeData        = [];
 const patternData     = []; // [{type, t, line, x}] — gazeData 전환별 패턴
 const rereadingEvents = []; // 재독 확정 타임스탬프 배열
+
+let blurEventSent      = false;
+let highlightEventSent = false;
+let boxEventSent       = false;
+
+async function sendCorrectionEvent(type, lineIndex) {
+    if (!sessionId) return;
+    try {
+        await fetch('/api/db/correction-events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, event_type: type, line_index: lineIndex }),
+        });
+    } catch {}
+}
 
 const REREAD_WINDOW_MS  = 30_000; // 슬라이딩 윈도우 30초
 const REREAD_BLUR_ON    = 3;      // 발동 임계값: 30초 안에 3회 (한번 발동 시 자동 해제 없음)
@@ -170,11 +189,10 @@ if (DEV_MODE) {
         { key: 'totalSec',   label: '① 독서시간' },
         { key: 'completion', label: '② 완독률'   },
         { key: 'focus',      label: '③ 집중도'   },
-        { key: 'regression',     label: '④ 재독비율'  },
-        { key: 'regressionRate', label: '⑤ 역행비율'  },
-        { key: 'wpm',            label: '⑥ WPM'       },
-        { key: 'behavior',       label: '⑦ 독서상태'  },
-        { key: 'baseLine',       label: '⑧ 기준 줄'   },
+        { key: 'regressionRate', label: '④ 역행비율'  },
+        { key: 'wpm',            label: '⑤ WPM'       },
+        { key: 'behavior',       label: '⑥ 독서상태'  },
+        { key: 'baseLine',       label: '⑦ 기준 줄'   },
     ];
 
     function getFeatureValue(key) {
@@ -190,9 +208,6 @@ if (DEV_MODE) {
             }
             case 'focus': {
                 return `${calcFocusRate(elapsed)}%`;
-            }
-            case 'regression': {
-                return `${calcRegressions(elapsed).regRate}회/30초`;
             }
             case 'regressionRate': {
                 return `${calcRegressionRate()}%`;
@@ -377,22 +392,54 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
     }
 });
 
+// ── 세션 생성 ─────────────────────────────────────────────
+async function createSession(bookId) {
+    const userId = +(localStorage.getItem('user_id') || '0');
+    if (!userId) return;
+    try {
+        const res = await fetch('/api/db/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id:     userId,
+                book_id:     bookId,
+                total_lines: lineList.length || null,
+                x_min:       readingAreaRect ? readingAreaRect.left  : null,
+                x_max:       readingAreaRect ? readingAreaRect.right : null,
+            }),
+        });
+        if (res.ok) {
+            sessionId = (await res.json()).id;
+        } else {
+            console.error('createSession 실패:', res.status, await res.text());
+        }
+    } catch (err) {
+        console.error('createSession 오류:', err);
+    }
+}
+
 // ── 다 읽었어요 버튼 ──────────────────────────────────────
-document.getElementById('done-btn').addEventListener('click', () => {
+document.getElementById('done-btn').addEventListener('click', async () => {
     const result = analyzeReading();
-    const params = new URLSearchParams({
-        time:        result.totalSec,
-        completion:  result.completionRate  ?? -1,
-        focus:       result.focusRate       ?? -1,
-        regressions:  result.regressionCount  ?? -1,
-        regrate:      result.regRate          ?? -1,
-        regratepct:   result.regressionRate   ?? -1,
-        wpm:         result.wpm             ?? 0,
-        linesdone:   result.visitedLines    ?? 0,
-        totallines:  result.totalLines      ?? 0,
-        error:       result.error ? '1' : '0',
-    });
-    window.location.href = `/result.html?${params}`;
+    if (sessionId) {
+        try {
+            await fetch(`/api/db/sessions/${sessionId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ended_at:            new Date().toISOString().slice(0, 19),
+                    total_duration_sec:  Math.round(result.totalSec),
+                    wpm:                 result.error ? null : (result.wpm             ?? null),
+                    concentration_score: result.error ? null : (result.focusRate       ?? null),
+                    regression_ratio:    result.error ? null : (result.regressionRate  ?? null),
+                    visited_lines:       result.visitedLines ?? null,
+                    total_lines:         result.totalLines   ?? null,
+                    word_count:          bookWordCount || null,
+                }),
+            });
+        } catch {}
+    }
+    window.location.href = `/result.html?session_id=${sessionId ?? ''}`;
 });
 
 document.getElementById('recal-btn').addEventListener('click', () => {
@@ -419,12 +466,16 @@ const ivBlurCheck = document.getElementById('iv-blur-check');
 
 setInterval(() => {
     if (!startTime || !ivBlurCheck.checked) {
-        if (blurActive) { blurActive = false; blurLine = -1; clearRegressionBlur(); }
+        if (blurActive) { blurActive = false; blurLine = -1; clearRegressionBlur(); blurEventSent = false; }
         return;
     }
     const rereadCount = rereadingsInWindow();
     if (!blurActive && rereadCount >= REREAD_BLUR_ON) {
         blurActive = true;
+        if (!blurEventSent) {
+            blurEventSent = true;
+            sendCorrectionEvent('BLUR', currentReadingLine);
+        }
     }
     if (blurActive) {
         // 재독 ≥ 3: blurLine 전진 / 재독 < 3: blurLine 동결
@@ -713,13 +764,18 @@ function updateLineBox(lineIdx) {
 const ivHighlightCheck = document.getElementById('iv-highlight-check');
 setInterval(() => {
     const bar = document.getElementById('line-highlight-bar');
-    if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); hideCallout(); return; }
+    if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); hideFocusCallout(); return; }
     if (isLostFocus()) {
         updateHighlightBar(currentReadingLine);
         showFocusCallout(currentReadingLine);
+        if (!highlightEventSent) {
+            highlightEventSent = true;
+            sendCorrectionEvent('HIGHLIGHT', currentReadingLine);
+        }
     } else {
         hideOverlay(bar);
         hideFocusCallout();
+        highlightEventSent = false;
     }
 }, 500);
 
@@ -741,8 +797,13 @@ setInterval(() => {
     if (skimAlertActive) {
         updateLineBox(currentReadingLine);
         showSkimCallout(currentReadingLine);
+        if (!boxEventSent) {
+            boxEventSent = true;
+            sendCorrectionEvent('BOX', currentReadingLine);
+        }
     } else {
         hideOverlay(box);
         hideSkimCallout();
+        boxEventSent = false;
     }
 }, 500);

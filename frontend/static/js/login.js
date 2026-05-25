@@ -26,6 +26,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         localStorage.setItem('user_id',    user.id);
         localStorage.setItem('user_email', user.email);
         localStorage.setItem('user_nick',  user.nickname);
+        localStorage.setItem('user_level', user.level ?? '고등');
 
         fetch('/api/db/attendance', {
             method: 'POST',

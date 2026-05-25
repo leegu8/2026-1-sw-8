@@ -1,22 +1,6 @@
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel, ConfigDict
-
-
-# ── User ──────────────────────────────────────────────────────────────────────
-
-class UserCreate(BaseModel):
-    email: str
-    password_hash: str
-    nickname: str
-
-
-class UserResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    email: str
-    nickname: str
-    created_at: datetime
 
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
@@ -42,11 +26,6 @@ class AuthResponse(BaseModel):
 
 # ── LevelHistory ──────────────────────────────────────────────────────────────
 
-class LevelHistoryCreate(BaseModel):
-    user_id: int
-    level_result: Optional[str] = None
-
-
 class LevelHistoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -60,13 +39,6 @@ class LevelHistoryResponse(BaseModel):
 class AttendanceCreate(BaseModel):
     user_id: int
     attended_at: Optional[date] = None
-
-
-class AttendanceResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    user_id: int
-    attended_at: date
 
 
 class AttendanceCheckResponse(BaseModel):
@@ -126,6 +98,8 @@ class ReadingSessionUpdate(BaseModel):
     regression_ratio: Optional[float] = None
     visited_lines: Optional[int] = None
     total_lines: Optional[int] = None
+    word_count: Optional[int] = None
+    score: Optional[float] = None
 
 
 class ReadingSessionResponse(BaseModel):
@@ -145,6 +119,8 @@ class ReadingSessionResponse(BaseModel):
     regression_ratio: Optional[float]
     visited_lines: Optional[int]
     total_lines: Optional[int]
+    word_count: Optional[int]
+    score: Optional[float]
 
 
 # ── CorrectionEvent ───────────────────────────────────────────────────────────
@@ -152,6 +128,7 @@ class ReadingSessionResponse(BaseModel):
 class CorrectionEventCreate(BaseModel):
     session_id: int
     event_type: str
+    line_index: Optional[int] = None
 
 
 class CorrectionEventResponse(BaseModel):
@@ -159,37 +136,7 @@ class CorrectionEventResponse(BaseModel):
     id: int
     session_id: int
     event_type: str
+    line_index: Optional[int]
     triggered_at: datetime
 
 
-# ── GazeSummary ───────────────────────────────────────────────────────────────
-
-class GazeSummaryCreate(BaseModel):
-    session_id: int
-    section_index: int
-    section_start_sec: int
-    section_end_sec: int
-    section_start_line: Optional[int] = None
-    section_end_line: Optional[int] = None
-    focus_rate: float
-    regression_count: int
-    avg_gaze_speed: Optional[float] = None
-
-
-class GazeSummaryBulkCreate(BaseModel):
-    summaries: List[GazeSummaryCreate]
-
-
-class GazeSummaryResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    session_id: int
-    section_index: int
-    section_start_sec: int
-    section_end_sec: int
-    section_start_line: Optional[int]
-    section_end_line: Optional[int]
-    focus_rate: float
-    regression_count: int
-    avg_gaze_speed: Optional[float]
-    created_at: datetime

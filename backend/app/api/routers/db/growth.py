@@ -48,6 +48,7 @@ async def get_growth(user_id: int, db: AsyncSession = Depends(get_db)):
             "book_title": book.title if book else "",
             "started_at": session.started_at.date().isoformat(),
             "total_duration_sec": session.total_duration_sec,
+            "score": session.score,
             "summary": {
                 "wpm": session.wpm,
                 "completion_rate": completion_rate,

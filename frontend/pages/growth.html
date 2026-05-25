@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/static/common.css">
     <link rel="stylesheet" href="/static/growth.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/auth-guard.js"></script>
 </head>
 <body>
 
@@ -15,7 +16,7 @@
         <a href="/" class="navbar-logo">👁 독서 아이트래킹</a>
         <div class="navbar-right">
             <span class="navbar-user" id="navbar-user"></span>
-            <a href="/reading-list.html" class="btn btn-outline">← 도서 목록</a>
+            <a id="back-to-list" href="/reading-list-user.html" class="btn btn-outline">← 도서 목록</a>
             <a href="/" class="btn btn-outline">로그아웃</a>
         </div>
     </nav>
