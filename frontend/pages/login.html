@@ -14,13 +14,15 @@
   .stage {
     position: fixed; inset: 0;
     background: #04081C;
+    overflow: hidden;
   }
   .canvas {
     width: 1440px; height: 900px;
     position: absolute;
     left: 50%; top: 50%;
+    margin-left: -720px; margin-top: -450px;
     transform-origin: center center;
-    /* transform set inline: translate(-50%,-50%) scale(s) */
+    /* transform set inline: scale(s) */
   }
   body {
     font-family: "Pretendard", -apple-system, system-ui, sans-serif;
@@ -241,7 +243,7 @@ function LoginAurora() {
   return (
     <React.Fragment>
     <div className="stage">
-    <div className="canvas" style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
+    <div className="canvas" style={{ transform: `scale(${scale})` }}>
     <div style={{
       width: '100%', height: '100%', position: 'relative', overflow: 'hidden',
       background: '#04081C', color: '#E8EEFF', fontFamily: T.body,
