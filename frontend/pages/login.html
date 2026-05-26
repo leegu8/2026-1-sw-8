@@ -3,26 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>공소 · 로그인</title>
+<title>독서 아이트래킹 · 로그인</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
 <style>
-  /* desktop-canvas scaling — design is authored at 1440×900 and scaled to fit any viewport */
-  html, body { margin: 0; padding: 0; height: 100%; background: #04081C; overflow: hidden; }
-  .stage {
-    position: fixed; inset: 0;
-    background: #04081C;
-    overflow: hidden;
-  }
+  html, body { margin: 0; padding: 0; background: #04081C; }
+  .stage { min-height: 100vh; position: relative; overflow: hidden; }
   .canvas {
-    width: 1440px; height: 900px;
-    position: absolute;
-    left: 50%; top: 50%;
-    margin-left: -720px; margin-top: -450px;
-    transform-origin: center center;
-    /* transform set inline: scale(s) */
+    width: 1000px; min-height: 100vh;
+    margin: 0 auto; position: relative;
+    display: flex; flex-direction: column;
   }
   body {
     font-family: "Pretendard", -apple-system, system-ui, sans-serif;
@@ -32,6 +24,7 @@
     line-break: strict;
     overflow-wrap: break-word;
     -webkit-font-smoothing: antialiased;
+    min-width: 1000px;
   }
   h1, h2, h3, .head, .display { letter-spacing: -0.03em; }
   * { box-sizing: border-box; }
@@ -116,9 +109,9 @@ function BrandMark({ accent, primary }) {
         </svg>
       </div>
       <div>
-        <div style={{ fontFamily: T.serif, fontWeight: 700, fontSize: 20, letterSpacing: '-0.02em' }}>공소</div>
+        <div style={{ fontFamily: T.serif, fontWeight: 700, fontSize: 14, letterSpacing: '-0.02em' }}>독서 아이트래킹</div>
         <div style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: '0.22em', color: 'rgba(232,238,255,0.5)', marginTop: 2 }}>
-          GONGSO · READING
+          EYE-TRACKING · READING
         </div>
       </div>
     </div>
@@ -172,32 +165,12 @@ function EyeToggle({ on, onToggle }) {
   );
 }
 
-function SocialBtn({ kind }) {
-  const labels = { google: 'Google', kakao: 'Kakao', apple: 'Apple' };
-  const ic = {
-    google: <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.08-1.79 2.72v2.26h2.9c1.7-1.56 2.69-3.87 2.69-6.62z" fill="#4285F4"/><path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.83.86-3.06.86-2.36 0-4.36-1.59-5.07-3.74H.91v2.34A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.93 10.68A5.41 5.41 0 0 1 3.64 9c0-.58.1-1.15.29-1.68V4.98H.91A8.997 8.997 0 0 0 0 9c0 1.45.35 2.83.91 4.02l3.02-2.34z" fill="#FBBC05"/><path d="M9 3.58c1.32 0 2.51.45 3.45 1.35l2.58-2.58C13.47.89 11.43 0 9 0 5.48 0 2.44 2.02.91 4.98l3.02 2.34C4.64 5.17 6.64 3.58 9 3.58z" fill="#EA4335"/></svg>,
-    kakao: <div style={{ width: 18, height: 18, borderRadius: 4, background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#3A1D1D' }}>K</div>,
-    apple: <svg width="18" height="18" viewBox="0 0 18 18" fill="#E8EEFF"><path d="M13.95 9.6c0-2.3 1.9-3.4 2-3.4-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.9-3.5.9-.7 0-1.9-.8-3.1-.8-1.6 0-3.1.9-3.9 2.4-1.7 2.9-.4 7.2 1.2 9.6.8 1.1 1.7 2.4 2.9 2.4 1.2-.1 1.6-.8 3-.8s1.9.8 3.1.8c1.3 0 2.1-1.2 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7-.1 0-2.5-1-2.5-3.3zM11.5 3c.6-.8 1.1-2 1-3.1-1 0-2.1.7-2.8 1.5-.6.7-1.1 1.9-1 3 1.1.1 2.2-.6 2.8-1.4z"/></svg>,
-  };
-  return (
-    <button type="button" className="btn-ghost" style={{
-      flex: 1, height: 52, borderRadius: 12,
-      background: 'rgba(255,255,255,0.05)',
-      border: '1px solid rgba(255,255,255,0.10)',
-      color: '#E8EEFF',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-      fontFamily: T.body, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-    }}>{ic[kind]}<span>{labels[kind]}</span></button>
-  );
-}
-
 function LoginAurora() {
   const [t, setTweak] = useTweaks(TWEAKS);
   const [pw, setPw] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [showPw, setShowPw] = React.useState(false);
   const [remember, setRemember] = React.useState(true);
-  const [scale, setScale] = React.useState(1);
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
@@ -212,10 +185,12 @@ function LoginAurora() {
       });
       if (!res.ok) { setError('이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
       const user = await res.json();
-      localStorage.setItem('user_id', user.id);
-      localStorage.setItem('user_email', user.email);
-      localStorage.setItem('user_nick', user.nickname);
-      localStorage.setItem('user_level', user.level ?? '고등');
+      const store = remember ? localStorage : sessionStorage;
+      ['user_id','user_email','user_nick','user_level'].forEach(k => localStorage.removeItem(k));
+      store.setItem('user_id', user.id);
+      store.setItem('user_email', user.email);
+      store.setItem('user_nick', user.nickname);
+      store.setItem('user_level', user.level ?? '고등');
       fetch('/api/db/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -227,25 +202,15 @@ function LoginAurora() {
     } finally { setLoading(false); }
   };
 
-  React.useEffect(() => {
-    const fit = () => {
-      const W = 1440, H = 900;
-      const s = Math.min(window.innerWidth / W, window.innerHeight / H);
-      setScale(s);
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
-  }, []);
 
   const { accent, primary } = t;
 
   return (
     <React.Fragment>
     <div className="stage">
-    <div className="canvas" style={{ transform: `scale(${scale})` }}>
+    <div className="canvas">
     <div style={{
-      width: '100%', height: '100%', position: 'relative', overflow: 'hidden',
+      width: '100%', minHeight: '100vh', position: 'relative',
       background: '#04081C', color: '#E8EEFF', fontFamily: T.body,
     }}>
       {/* aurora layer */}
@@ -302,9 +267,9 @@ function LoginAurora() {
       {/* main grid */}
       <main style={{
         position: 'relative', zIndex: 2,
-        display: 'grid', gridTemplateColumns: '1.1fr 0.9fr',
-        padding: '8px 80px 56px', gap: 80, alignItems: 'center',
-        height: 'calc(100% - 84px)',
+        display: 'grid', gridTemplateColumns: '1fr 1fr',
+        padding: '8px 40px 48px', gap: 40, alignItems: 'center',
+        flex: 1,
         maxWidth: 1640, margin: '0 auto',
       }}>
         {/* headline */}
@@ -353,7 +318,7 @@ function LoginAurora() {
           backdropFilter: 'blur(28px)',
           WebkitBackdropFilter: 'blur(28px)',
           boxShadow: '0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)',
-          maxWidth: 460, justifySelf: 'end', width: '100%',
+          maxWidth: 400, justifySelf: 'end', width: '100%',
         }}>
           <div style={{ fontFamily: T.serif, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}>
             계정으로 로그인
@@ -401,21 +366,6 @@ function LoginAurora() {
             {loading ? '로그인 중...' : '로그인하고 이어 읽기'}
             {!loading && <svg width="18" height="18" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
           </button>
-
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0 14px',
-            color: 'rgba(232,238,255,0.4)', fontSize: 11, letterSpacing: '0.2em',
-          }}>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-            또는 소셜 계정으로
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-          </div>
-
-          <div style={{ display: 'flex', gap: 10 }}>
-            <SocialBtn kind="google" />
-            <SocialBtn kind="kakao" />
-            <SocialBtn kind="apple" />
-          </div>
 
           <div style={{
             marginTop: 22, paddingTop: 18, borderTop: '1px dashed rgba(255,255,255,0.08)',

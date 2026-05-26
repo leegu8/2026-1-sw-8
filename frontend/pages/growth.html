@@ -7,17 +7,20 @@
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="/static/common.css">
     <link rel="stylesheet" href="/static/growth.css">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+    <link rel="stylesheet" href="/static/aurora-theme.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/js/auth-guard.js"></script>
 </head>
 <body>
+<div class="aurora-bg"><div class="aurora-layer"></div></div>
 
     <nav class="navbar">
-        <a href="/" class="navbar-logo">👁 독서 아이트래킹</a>
+        <a href="/home.html" class="navbar-logo">👁 독서 아이트래킹</a>
         <div class="navbar-right">
             <span class="navbar-user" id="navbar-user"></span>
             <a id="back-to-list" href="/reading-list-user.html" class="btn btn-outline">← 도서 목록</a>
-            <a href="/" class="btn btn-outline">로그아웃</a>
+            <a href="#" class="btn-logout" onclick="localStorage.clear();sessionStorage.clear();location.href='/home.html'">로그아웃</a>
         </div>
     </nav>
 

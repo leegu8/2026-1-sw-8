@@ -1,6 +1,6 @@
 (function () {
     const path    = location.pathname;
-    const userId  = localStorage.getItem('user_id');
+    const userId  = localStorage.getItem('user_id') || sessionStorage.getItem('user_id');
     const isDev   = userId === '100';
 
     // 공개 페이지 — 인증 불필요

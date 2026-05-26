@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사용 안내 - 독서 아이트래킹</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+    <link rel="stylesheet" href="/static/aurora-theme.css">
     <script src="/static/js/auth-guard.js"></script>
 </head>
 <body>
+<div class="aurora-bg"><div class="aurora-layer"></div></div>
     <div id="gaze-dot"></div>
 
     <header class="page-header">
-        <div class="logo">👁 독서 아이트래킹</div>
+        <a href="/home.html" class="logo" style="text-decoration:none;color:inherit;">👁 독서 아이트래킹</a>
         <div class="progress-bar">
             <div class="progress-step done">
                 <div class="circle">✓</div> 웹캠 연결
@@ -29,7 +32,7 @@
 
     <div class="page-content">
         <h2 style="font-size:1.6rem; margin-bottom:8px;">사용 안내</h2>
-        <p style="color:#666; margin-bottom:28px;">독서를 시작하기 전에 아래 내용을 확인해 주세요.</p>
+        <p style="color:rgba(232,238,255,0.6); margin-bottom:28px;">독서를 시작하기 전에 아래 내용을 확인해 주세요.</p>
 
         <div class="guide-notice">
             💡 시선 추적이 활성화되어 있습니다. 빨간 점이 시선을 따라다니는지 확인하세요.
@@ -38,26 +41,26 @@
 
         <!-- Q키 보정 방법 -->
         <div style="
-            background: #fff8e1;
-            border: 2px solid #f39c12;
+            background: rgba(118,90,255,0.08);
+            border: 1px solid rgba(118,90,255,0.28);
             border-radius: 12px;
             padding: 24px 28px;
             margin-bottom: 24px;
         ">
-            <h3 style="margin:0 0 16px; font-size:1.1rem; color:#e67e22;">
+            <h3 style="margin:0 0 16px; font-size:1.1rem; color:#a78bfa;">
                 🎯 시선 보정 방법 (Q 키)
             </h3>
             <div style="display:flex; flex-direction:column; gap:12px;">
                 <div style="display:flex; align-items:flex-start; gap:14px;">
                     <div style="
                         min-width:28px; height:28px; border-radius:50%;
-                        background:#f39c12; color:white;
+                        background:rgba(118,90,255,0.5); color:white;
                         display:flex; align-items:center; justify-content:center;
                         font-weight:bold; font-size:0.85rem;
                     ">1</div>
                     <div>
-                        <strong>Q 키를 눌러 보정 모드 진입</strong>
-                        <p style="margin:4px 0 0; color:#666; font-size:0.9rem;">
+                        <strong style="color:#E8EEFF;">Q 키를 눌러 보정 모드 진입</strong>
+                        <p style="margin:4px 0 0; color:rgba(232,238,255,0.65); font-size:0.9rem;">
                             커서가 십자(✛) 모양으로 바뀌고 상단에 빨간 배지가 표시됩니다.
                         </p>
                     </div>
@@ -65,13 +68,13 @@
                 <div style="display:flex; align-items:flex-start; gap:14px;">
                     <div style="
                         min-width:28px; height:28px; border-radius:50%;
-                        background:#f39c12; color:white;
+                        background:rgba(118,90,255,0.5); color:white;
                         display:flex; align-items:center; justify-content:center;
                         font-weight:bold; font-size:0.85rem;
                     ">2</div>
                     <div>
-                        <strong>화면 여러 곳을 바라보며 클릭</strong>
-                        <p style="margin:4px 0 0; color:#666; font-size:0.9rem;">
+                        <strong style="color:#E8EEFF;">화면 여러 곳을 바라보며 클릭</strong>
+                        <p style="margin:4px 0 0; color:rgba(232,238,255,0.65); font-size:0.9rem;">
                             시선이 향하는 위치에 마우스를 두고 클릭하세요. 클릭할 때마다 시선 위치가 보정됩니다.
                             독서 영역(화면 중앙~좌우)을 집중적으로 클릭하면 더 정확해집니다.
                         </p>
@@ -80,13 +83,13 @@
                 <div style="display:flex; align-items:flex-start; gap:14px;">
                     <div style="
                         min-width:28px; height:28px; border-radius:50%;
-                        background:#f39c12; color:white;
+                        background:rgba(118,90,255,0.5); color:white;
                         display:flex; align-items:center; justify-content:center;
                         font-weight:bold; font-size:0.85rem;
                     ">3</div>
                     <div>
-                        <strong>Q 키를 다시 눌러 보정 종료</strong>
-                        <p style="margin:4px 0 0; color:#666; font-size:0.9rem;">
+                        <strong style="color:#E8EEFF;">Q 키를 다시 눌러 보정 종료</strong>
+                        <p style="margin:4px 0 0; color:rgba(232,238,255,0.65); font-size:0.9rem;">
                             보정 데이터가 누적되어 시선 정확도가 향상됩니다.
                             빨간 점이 시선을 잘 따라오면 보정이 완료된 것입니다.
                         </p>
@@ -138,7 +141,7 @@
             <button class="btn btn-success" onclick="goToBookList()">
                 도서 선택하기 →
             </button>
-            <button class="btn" id="reset-cal-btn" style="background:transparent; border:2px solid #e74c3c; color:#e74c3c;">
+            <button class="btn" id="reset-cal-btn" style="background:linear-gradient(135deg,#a81b1b,#e74c3c); border:none; color:white;">
                 🔄 보정 초기화
             </button>
             <script>
