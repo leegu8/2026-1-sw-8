@@ -9,7 +9,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     nickname: str
-    level: str
+    level: Optional[str] = None
 
 
 class LoginRequest(BaseModel):

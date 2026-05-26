@@ -262,19 +262,17 @@ function Signup() {
   const [showPw, setShowPw] = React.useState(false);
   const [agree, setAgree] = React.useState(false);
   const [agreeMkt, setAgreeMkt] = React.useState(false);
-  const [level, setLevel] = React.useState('');
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
   const handleSignup = async () => {
     if (!canSubmit) return;
-    if (!level) { setError('독서 수준을 선택해주세요.'); return; }
     setLoading(true); setError('');
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: pw, nickname: nick, level }),
+        body: JSON.stringify({ email, password: pw, nickname: nick }),
       });
       if (res.status === 409) { setError('이미 사용 중인 이메일입니다.'); return; }
       if (!res.ok) { setError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'); return; }
@@ -282,7 +280,6 @@ function Signup() {
       localStorage.setItem('user_id', data.id);
       localStorage.setItem('user_email', data.email);
       localStorage.setItem('user_nick', data.nickname);
-      localStorage.setItem('user_level', data.level ?? level);
       location.href = '/reading-list.html';
     } catch {
       setError('서버 연결 오류가 발생했습니다.');
@@ -293,7 +290,7 @@ function Signup() {
   const { accent, primary } = t;
   const strength = pwStrength(pw);
   const pw2Error = pw2 && pw2 !== pw ? '비밀번호가 일치하지 않아요' : null;
-  const canSubmit = email && nick && pw && pw2 === pw && agree && level;
+  const canSubmit = email && nick && pw && pw2 === pw && agree;
 
   return (
     <React.Fragment>
@@ -438,25 +435,6 @@ function Signup() {
               accent={accent}
               error={pw2Error}
             />
-          </div>
-
-          {/* level select */}
-          <div style={{ marginTop: 14 }}>
-            <div style={{ fontFamily: T.body, fontSize: 12, fontWeight: 500, color: 'rgba(232,238,255,0.55)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 10 }}>
-              독서 수준<span style={{ color: '#FF9494', marginLeft: 4 }}>*</span>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {['초등', '중등', '고등'].map((lv) => (
-                <button key={lv} type="button" onClick={() => setLevel(lv)} style={{
-                  flex: 1, height: 44, borderRadius: 12, border: level === lv ? `1px solid ${accent}` : '1px solid rgba(255,255,255,0.10)',
-                  background: level === lv ? `${accent}22` : 'rgba(255,255,255,0.04)',
-                  color: level === lv ? accent : 'rgba(232,238,255,0.6)',
-                  fontFamily: T.body, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                  transition: 'all 160ms',
-                  boxShadow: level === lv ? `0 0 0 4px ${accent}1F` : 'none',
-                }}>{lv}</button>
-              ))}
-            </div>
           </div>
 
           {/* agreements */}

@@ -9,167 +9,21 @@
     <link rel="stylesheet" href="/static/aurora-theme.css">
     <script src="/static/js/auth-guard.js"></script>
     <style>
-        .reading-area   { position: relative; }
-        #line-highlight-bar {
-            position: absolute; left: 0; right: 0;
-            background: rgba(52, 152, 219, 0.13);
-            border-left: 3px solid rgba(52, 152, 219, 0.55);
-            border-radius: 0 4px 4px 0;
-            pointer-events: none;
-            display: none;
-            opacity: 0;
-            transition: top 0.08s ease, opacity 0.4s ease;
-            z-index: 0;
-        }
-        /* 라인 콜아웃 공통 */
-        #callout-focus, #callout-skim {
-            position: fixed;
-            display: none;
-            align-items: center;
-            z-index: 9990;
-            pointer-events: none;
-        }
-        #callout-focus.show, #callout-skim.show { display: flex; }
-        .callout-arrow {
-            width: 0; height: 0;
-            border-top: 7px solid transparent;
-            border-bottom: 7px solid transparent;
-            flex-shrink: 0;
-        }
-        .callout-box {
-            padding: 5px 10px;
-            border-radius: 6px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-        /* 왼쪽 콜아웃 (focus) — 화살표가 오른쪽(→ 텍스트 방향) */
-        #callout-focus .callout-arrow { border-left: 8px solid rgba(52,152,219,0.9); }
-        #callout-focus .callout-box   { background: rgba(52,152,219,0.9); color: #fff; }
-        /* 오른쪽 콜아웃 (skim) — 화살표가 왼쪽(← 텍스트 방향) */
-        #callout-skim  .callout-arrow { border-right: 8px solid rgba(250,160,50,0.95); }
-        #callout-skim  .callout-box   { background: rgba(250,160,50,0.95); color: #fff; }
-        #book-title     { font-size: 1.9rem; }
+        .reading-area { position: relative; }
+        #book-title   { font-size: 1.9rem; }
         .reading-text   { position: relative; z-index: 1; font-size: 1.12rem; line-height: 2; }
         .reading-text p { margin: 0 0 1.2em; }
         .word           { display: inline; transition: filter 0.25s; }
         .word-blur      { filter: blur(2px); opacity: 0.55; user-select: none; }
-
-        /* 독서 보조 개입 패널 */
-        #intervention-panel {
-            position: fixed;
-            top: 68px;
-            left: 20px;
-            background: rgba(15, 15, 25, 0.90);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 10px;
-            padding: 10px 14px;
-            z-index: 9997;
-            min-width: 130px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            font-size: 0.82rem;
-        }
-        .iv-title {
-            color: #a78bfa;
-            font-weight: 700;
-            font-size: 0.80rem;
-            margin-bottom: 8px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid rgba(139, 92, 246, 0.25);
-        }
-        .iv-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 5px;
-        }
-        .iv-row:last-child { margin-bottom: 0; }
-        .iv-check { accent-color: #a78bfa; width: 14px; height: 14px; cursor: pointer; }
-        .iv-label { color: #d1d5db; cursor: pointer; font-size: 0.80rem; flex: 1; }
-        .iv-label.disabled { color: #4b5563; cursor: default; }
-
-        /* 개발자 모드 분석 패널 */
-        #dev-panel {
-            position: fixed;
-            top: 112px;
-            right: 20px;
-            background: rgba(15, 15, 25, 0.93);
-            border: 1px solid rgba(139, 92, 246, 0.35);
-            border-radius: 10px;
-            padding: 12px 14px;
-            z-index: 9998;
-            min-width: 215px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            font-size: 0.82rem;
-        }
-        .dev-panel-title {
-            color: #a78bfa;
-            font-weight: 700;
-            font-size: 0.85rem;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid rgba(139, 92, 246, 0.25);
-        }
-        .dev-feature-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 6px;
-        }
-        .dev-feature-label { flex: 1; color: #d1d5db; }
-        .dev-toggle {
-            padding: 2px 8px;
-            border-radius: 4px;
-            border: none;
-            font-size: 0.72rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .dev-toggle.on  { background: #22c55e; color: #fff; }
-        .dev-toggle.off { background: #374151; color: #6b7280; }
-        .dev-feature-val {
-            min-width: 55px;
-            text-align: right;
-            font-family: monospace;
-            font-size: 0.83rem;
-        }
-
-        /* 줄 박스 */
-        #line-box {
-            position: absolute;
-            left: -4px; right: -4px;
-            border: 2px solid rgba(250, 160, 50, 0.85);
-            border-radius: 4px;
-            pointer-events: none;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.4s ease;
-            z-index: 2;
-        }
-
-        /* 현재 읽는 줄 가벼운 하이라이트 */
-        #current-line-highlight {
-            position: absolute; left: 0; right: 0;
-            background: rgba(255, 210, 80, 0.13);
-            border-left: 3px solid rgba(255, 190, 50, 0.55);
-            border-radius: 0 4px 4px 0;
-            pointer-events: none;
-            display: none;
-            transition: top 0.08s ease;
-            z-index: 0;
-        }
     </style>
 </head>
 <body>
 <div class="aurora-bg"><div class="aurora-layer"></div></div>
-    <div id="gaze-dot"></div>
-
     <header class="page-header">
         <a href="/home.html" class="logo" style="text-decoration:none;color:inherit;">👁 독서 아이트래킹</a>
         <div class="progress-bar">
             <div class="progress-step done">
-                <div class="circle">✓</div> 시선 보정
+                <div class="circle">✓</div> 웹캠 연결
             </div>
             <div class="progress-line"></div>
             <div class="progress-step done">
@@ -184,9 +38,6 @@
 
     <div class="page-content">
         <div class="reading-area">
-            <div id="current-line-highlight"></div>
-            <div id="line-highlight-bar"></div>
-            <div id="line-box"></div>
             <h2 id="book-title">📖 불러오는 중...</h2>
             <div class="reading-text"></div>
         </div>
@@ -196,50 +47,6 @@
             <button id="recal-btn" class="btn btn-warning">재보정</button>
             <div id="reading-status" style="color:#666; font-size:0.95rem;"></div>
         </div>
-    </div>
-
-    <!-- 개발자 모드 배지 -->
-    <div id="dev-mode-badge" style="
-        display: none;
-        position: fixed;
-        top: 68px;
-        right: 20px;
-        background: #8e44ad;
-        color: white;
-        padding: 8px 18px;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        z-index: 9999;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        pointer-events: none;
-    ">🖱 개발자 모드</div>
-
-    <!-- 독서 보조 개입 패널 -->
-    <div id="intervention-panel">
-        <div class="iv-title">🛡 독서 보조</div>
-        <div class="iv-row">
-            <input type="checkbox" id="iv-blur-check" class="iv-check" checked>
-            <label class="iv-label" for="iv-blur-check">역행 블러</label>
-        </div>
-        <div class="iv-row">
-            <input type="checkbox" id="iv-highlight-check" class="iv-check" checked>
-            <label class="iv-label" for="iv-highlight-check">하이라이트</label>
-        </div>
-        <div class="iv-row">
-            <input type="checkbox" id="iv-box-check" class="iv-check" checked>
-            <label class="iv-label" for="iv-box-check">줄 박스</label>
-        </div>
-    </div>
-
-    <!-- 라인 콜아웃 말풍선 -->
-    <div id="callout-focus">  <!-- 왼쪽: 집중하세요 -->
-        <div class="callout-box"></div>
-        <div class="callout-arrow"></div>
-    </div>
-    <div id="callout-skim">   <!-- 오른쪽: 이곳부터 다시 읽으세요 -->
-        <div class="callout-arrow"></div>
-        <div class="callout-box"></div>
     </div>
 
     <script src="/static/js/reading.js" defer></script>

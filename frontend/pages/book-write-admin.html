@@ -167,8 +167,8 @@
         </div>
       </a>
       <div class="nav-links">
-        <a class="nav-link" href="/reading-list.html">독서 목록</a>
-        <a class="nav-link" href="/book-write.html" style="color: #fff;">도서 등록</a>
+        <a class="nav-link" href="/reading-list-admin.html">독서 목록</a>
+        <a class="nav-link" href="/book-write-admin.html" style="color: #fff;">도서 등록</a>
         <a class="nav-link">리포트</a>
         <span class="navbar-user"><span class="avatar">신</span>신민호님</span>
         <a class="btn btn-line" href="/login.html">로그아웃</a>
@@ -209,17 +209,6 @@
           </div>
 
           <div class="row">
-            <div class="form-group">
-              <label class="field-label" for="difficulty"><span>난이도<span class="required">*</span></span></label>
-              <div class="field-select">
-                <select id="difficulty" required>
-                  <option value="" disabled selected>선택</option>
-                  <option value="초등">초등</option>
-                  <option value="중등">중등</option>
-                  <option value="고등">고등</option>
-                </select>
-              </div>
-            </div>
             <div class="form-group">
               <label class="field-label" for="genre"><span>장르</span></label>
               <div class="field-select">
@@ -279,10 +268,6 @@
               <div class="v" id="p-time">0<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">분</span></div>
               <div class="k">예상</div>
             </div>
-            <div class="s">
-              <div class="v" id="p-level">—</div>
-              <div class="k">레벨</div>
-            </div>
           </div>
 
           <div class="preview-body empty" id="p-body">
@@ -306,14 +291,12 @@
 <script>
   const title = document.getElementById('title');
   const genre = document.getElementById('genre');
-  const diff = document.getElementById('difficulty');
   const content = document.getElementById('content');
 
   const pTitle = document.getElementById('p-title');
   const pMeta = document.getElementById('p-meta');
   const pWords = document.getElementById('p-words');
   const pTime = document.getElementById('p-time');
-  const pLevel = document.getElementById('p-level');
   const pBody = document.getElementById('p-body');
 
   const tCount = document.getElementById('title-count');
@@ -331,7 +314,6 @@
     pMeta.textContent = metaBits;
     pWords.innerHTML = `${wlen}<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">자</span>`;
     pTime.innerHTML = `${mins}<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">분</span>`;
-    pLevel.textContent = diff.value || '—';
 
     if (c.trim().length) {
       pBody.classList.remove('empty');
@@ -346,8 +328,7 @@
     tCount.textContent = `${t.length} / 60`;
     wCount.textContent = `${wlen}자 · ${lines}줄 · 예상 ${mins}분`;
   }
-  [title, genre, diff, content].forEach((el) => el.addEventListener('input', update));
-  diff.addEventListener('change', update);
+  [title, genre, content].forEach((el) => el.addEventListener('input', update));
   genre.addEventListener('change', update);
 
   // submit
@@ -355,9 +336,9 @@
     e.preventDefault();
     const msg = document.getElementById('msg');
     const submitBtn = document.getElementById('submit-btn');
-    if (!title.value.trim() || !diff.value || !content.value.trim()) {
+    if (!title.value.trim() || !content.value.trim()) {
       msg.className = 'msg bad show';
-      msg.textContent = '필수 항목(제목, 난이도, 본문)을 모두 채워주세요.';
+      msg.textContent = '필수 항목(제목, 본문)을 모두 채워주세요.';
       return;
     }
     submitBtn.disabled = true;
@@ -369,7 +350,6 @@
         body: JSON.stringify({
           title: title.value.trim(),
           content: content.value.trim(),
-          difficulty: diff.value,
           genre: genre.value || null,
         }),
       });
@@ -378,8 +358,8 @@
         throw new Error(data.detail || `오류 ${res.status}`);
       }
       msg.className = 'msg ok show';
-      msg.innerHTML = `✓ 등록 완료. 잠시 후 <a href="/reading-list.html" style="color: var(--accent); font-weight: 600;">라이브러리</a>로 이동합니다.`;
-      setTimeout(() => { location.href = '/reading-list.html'; }, 1500);
+      msg.innerHTML = `✓ 등록 완료. 잠시 후 <a href="/reading-list-admin.html" style="color: var(--accent); font-weight: 600;">라이브러리</a>로 이동합니다.`;
+      setTimeout(() => { location.href = '/reading-list-admin.html'; }, 1500);
     } catch (err) {
       msg.className = 'msg bad show';
       msg.textContent = err.message || '서버 연결 오류가 발생했습니다.';

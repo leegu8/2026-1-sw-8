@@ -508,8 +508,9 @@
   const uid = localStorage.getItem('user_id') || sessionStorage.getItem('user_id');
   const nick = localStorage.getItem('user_nick') || sessionStorage.getItem('user_nick') || '사용자';
   if (!uid) return;
+  const listPage = uid === '100' ? '/reading-list-admin.html' : '/reading-list.html';
   document.getElementById('nav-login').textContent = nick + '님';
-  document.getElementById('nav-login').href = '/reading-list-user.html';
+  document.getElementById('nav-login').href = listPage;
   const signupBtn = document.getElementById('nav-signup');
   signupBtn.textContent = '로그아웃';
   signupBtn.href = '#';
@@ -518,6 +519,11 @@
     localStorage.clear(); sessionStorage.clear();
     location.reload();
   };
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('a[href="/signup.html"]').forEach(function(btn) {
+      btn.href = listPage;
+    });
+  });
 })();
 </script>
 

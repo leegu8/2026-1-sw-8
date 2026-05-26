@@ -174,6 +174,25 @@ function LoginAurora() {
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
+  const handleDevLogin = async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'admin@admin.com', password: 'admin1234' }),
+      });
+      if (!res.ok) { setError('개발자 계정 로그인 실패'); return; }
+      const user = await res.json();
+      localStorage.setItem('user_id', user.id);
+      localStorage.setItem('user_email', user.email);
+      localStorage.setItem('user_nick', user.nickname);
+      location.href = '/reading-list-admin.html';
+    } catch {
+      setError('서버 연결 오류가 발생했습니다.');
+    } finally { setLoading(false); }
+  };
+
   const handleLogin = async () => {
     if (!email || !pw) { setError('이메일과 비밀번호를 입력해주세요.'); return; }
     setLoading(true); setError('');
@@ -186,11 +205,10 @@ function LoginAurora() {
       if (!res.ok) { setError('이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
       const user = await res.json();
       const store = remember ? localStorage : sessionStorage;
-      ['user_id','user_email','user_nick','user_level'].forEach(k => localStorage.removeItem(k));
+      ['user_id','user_email','user_nick'].forEach(k => { localStorage.removeItem(k); sessionStorage.removeItem(k); });
       store.setItem('user_id', user.id);
       store.setItem('user_email', user.email);
       store.setItem('user_nick', user.nickname);
-      store.setItem('user_level', user.level ?? '고등');
       fetch('/api/db/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -367,8 +385,19 @@ function LoginAurora() {
             {!loading && <svg width="18" height="18" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
           </button>
 
+          {/* DEV: 임시 개발자 로그인 버튼 */}
+          <button className="btn-ghost" onClick={handleDevLogin} disabled={loading} style={{
+            marginTop: 10, width: '100%', height: 38, borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer',
+            background: 'rgba(167,139,250,0.08)', border: '1px dashed rgba(167,139,250,0.35)',
+            color: '#a78bfa', fontSize: 12.5, fontWeight: 500, fontFamily: T.body, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', gap: 7, opacity: loading ? 0.6 : 1,
+          }}>
+            <span style={{ fontSize: 10, background: 'rgba(167,139,250,0.25)', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.06em', fontWeight: 700 }}>DEV</span>
+            개발자 모드로 로그인
+          </button>
+
           <div style={{
-            marginTop: 22, paddingTop: 18, borderTop: '1px dashed rgba(255,255,255,0.08)',
+            marginTop: 14, paddingTop: 14, borderTop: '1px dashed rgba(255,255,255,0.08)',
             fontSize: 12, color: 'rgba(232,238,255,0.45)', letterSpacing: '0.02em', lineHeight: 1.5,
           }}>
             로그인하면 <a style={{ color: accent, textDecoration: 'none' }}>이용약관</a>과{' '}

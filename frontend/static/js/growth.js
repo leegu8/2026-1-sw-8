@@ -3,7 +3,7 @@ const nick   = localStorage.getItem('user_nick') || '';
 
 document.getElementById('navbar-user').textContent = nick;
 if (nick) document.getElementById('growth-title').textContent = `${nick}의 성장일지`;
-if (userId === '100') document.getElementById('back-to-list').href = '/reading-list.html';
+if (userId === '100') document.getElementById('back-to-list').href = '/reading-list-admin.html';
 
 async function loadAttendance() {
     let data = { streak: 0, total_days: 0, recent_dates: [] };

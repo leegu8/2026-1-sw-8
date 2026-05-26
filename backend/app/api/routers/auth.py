@@ -39,8 +39,6 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         nickname=body.nickname,
     )
     db.add(user)
-    await db.flush()
-    db.add(LevelHistory(user_id=user.id, level_result=body.level))
     await db.commit()
     await db.refresh(user)
     return AuthResponse(id=user.id, email=user.email, nickname=user.nickname, level=body.level)
