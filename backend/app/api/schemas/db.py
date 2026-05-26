@@ -84,8 +84,6 @@ class ReadingSessionCreate(BaseModel):
     book_id: int
     started_at: Optional[datetime] = None
     total_lines: Optional[int] = None
-    x_min: Optional[float] = None
-    x_max: Optional[float] = None
 
 
 class ReadingSessionUpdate(BaseModel):
@@ -93,8 +91,6 @@ class ReadingSessionUpdate(BaseModel):
     total_duration_sec: Optional[int] = None
     wpm: Optional[float] = None
     concentration_score: Optional[float] = None
-    base_vel: Optional[float] = None
-    end_vel: Optional[float] = None
     regression_ratio: Optional[float] = None
     visited_lines: Optional[int] = None
     total_lines: Optional[int] = None
@@ -110,12 +106,8 @@ class ReadingSessionResponse(BaseModel):
     started_at: datetime
     ended_at: Optional[datetime]
     total_duration_sec: Optional[int]
-    x_min: Optional[float]
-    x_max: Optional[float]
     wpm: Optional[float]
     concentration_score: Optional[float]
-    base_vel: Optional[float]
-    end_vel: Optional[float]
     regression_ratio: Optional[float]
     visited_lines: Optional[int]
     total_lines: Optional[int]

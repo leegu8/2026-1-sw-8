@@ -72,7 +72,7 @@ index → login/signup → reading-list → reading → result → growth
 - **signup**: 회원가입. 이메일·비밀번호·닉네임·레벨 입력
 - **calibration**: 화면 14개 지점을 응시하며 Ridge Regression 모델 학습
 - **guide**: 사용 안내. Q키 — 마우스 보정 모드(클릭·정지로 추가 보정)
-- **reading** (개발자): 실시간 하이라이트·역행 블러·줄박스 개입. 분석 지표 프론트에서 계산 후 DB 저장. BLUR/HIGHLIGHT/BOX 교정 이벤트 발동 시 발생 줄 DB 저장
+- **reading** (개발자): 실시간 하이라이트·역행 블러·줄박스 개입. 분석 지표 프론트에서 계산 후 DB 저장. BLUR/HIGHLIGHT/BOX 교정 이벤트는 종료 버튼 클릭 시 한 번에 DB 저장
 - **reading-user** (사용자): 역행 블러만 적용. 동일한 분석·저장 구조
 - **result**: DB에서 세션 결과 조회. 집중도·역행비율·WPM·완독률·독서시간 기반 종합 점수 계산 후 DB 저장
 - **growth**: 최근 5세션 지표·점수 차트, 출석 달력
@@ -108,7 +108,7 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 | `level_history` | 사용자 레벨 이력 (초/중/고, tested_at) |
 | `attendance` | 출석체크 (user별, attended_at: date) |
 | `books` | 도서 (title, content, difficulty, genre) |
-| `reading_sessions` | 독서 세션 (wpm, concentration_score, regression_ratio, visited_lines, word_count, score 등) |
+| `reading_sessions` | 독서 세션 (wpm, concentration_score, regression_ratio, visited_lines, total_lines, word_count, score) |
 | `correction_events` | 교정 이벤트 (BLUR/HIGHLIGHT/BOX, line_index, triggered_at) |
 
 ## API 엔드포인트
@@ -143,10 +143,10 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 | `POST/GET` | `/api/db/books` | 도서 생성·목록 (목록은 content 제외) |
 | `GET/DELETE` | `/api/db/books/{id}` | 도서 상세 조회·삭제 |
 | `GET` | `/api/db/users/{id}/completed-books` | 완독한 도서 ID 목록 |
-| `POST` | `/api/db/sessions` | 세션 생성 `{user_id, book_id, total_lines, x_min, x_max}` |
+| `POST` | `/api/db/sessions` | 세션 생성 `{user_id, book_id, total_lines}` |
 | `PATCH` | `/api/db/sessions/{id}` | 세션 업데이트 (분석 지표·점수 저장) |
 | `GET` | `/api/db/sessions/{id}/result` | 세션 결과 (wpm, 집중도, 역행비율, 완독률, 교정이벤트 목록 등) |
-| `POST` | `/api/db/correction-events` | 교정 이벤트 저장 `{session_id, event_type, line_index}` |
+| `POST` | `/api/db/correction-events` | 교정 이벤트 저장 `{session_id, event_type, line_index}` — 종료 시 일괄 전송 |
 | `GET` | `/api/db/users/{id}/growth` | 성장일지 — 최근 5세션 요약·점수 (오름차순) |
 
 ## 코딩 규칙

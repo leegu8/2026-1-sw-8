@@ -93,16 +93,10 @@ const patternData     = [];
 const rereadingEvents = [];
 
 let blurEventSent = false;
+const pendingCorrectionEvents = [];
 
-async function sendCorrectionEvent(type, lineIndex) {
-    if (!sessionId) return;
-    try {
-        await fetch('/api/db/correction-events', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ session_id: sessionId, event_type: type, line_index: lineIndex }),
-        });
-    } catch {}
+function sendCorrectionEvent(type, lineIndex) {
+    pendingCorrectionEvents.push({ event_type: type, line_index: lineIndex ?? null });
 }
 
 const REREAD_WINDOW_MS  = 30_000;
@@ -193,8 +187,6 @@ async function createSession(bookId) {
                 user_id:     userId,
                 book_id:     bookId,
                 total_lines: lineList.length || null,
-                x_min:       readingAreaRect ? readingAreaRect.left  : null,
-                x_max:       readingAreaRect ? readingAreaRect.right : null,
             }),
         });
         if (res.ok) {
@@ -235,6 +227,13 @@ document.getElementById('done-btn').addEventListener('click', async () => {
                     word_count:          bookWordCount || null,
                 }),
             });
+            for (const ev of pendingCorrectionEvents) {
+                await fetch('/api/db/correction-events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId, ...ev }),
+                }).catch(() => {});
+            }
         } catch {}
     }
     window.location.href = `/result.html?session_id=${sessionId ?? ''}`;
