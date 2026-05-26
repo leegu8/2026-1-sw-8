@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>공소 · 레벨 설문</title>
+<link rel="stylesheet" href="base.css" />
+<style>
+  .page { position: relative; min-height: 100vh; }
+  main { position: relative; z-index: 1; padding: 32px 0 60px; }
+  .aurora-bg { position: fixed; inset: 0; pointer-events: none; opacity: 0.45; }
+
+  .survey-wrap { max-width: 720px; margin: 0 auto; padding: 0 56px; }
+
+  /* progress */
+  .progress {
+    margin: 32px 0 40px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .progress .bar {
+    flex: 1; height: 4px; border-radius: 999px;
+    background: var(--surface); overflow: hidden;
+  }
+  .progress .bar-fill {
+    height: 100%; width: 20%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--primary));
+    transition: width 240ms ease;
+  }
+  .progress .num {
+    font-family: var(--mono); font-size: 12px;
+    letter-spacing: 0.16em; color: var(--accent);
+  }
+
+  /* card */
+  .q-card {
+    padding: 44px 48px; border-radius: var(--r-xl);
+    background: var(--surface-glass);
+    border: 1px solid rgba(255,255,255,0.10);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+  }
+  .q-num {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.22em; color: var(--accent);
+    margin-bottom: 18px;
+  }
+  .q-text {
+    font-family: var(--serif); font-weight: 700;
+    font-size: 32px; line-height: 1.2; letter-spacing: -0.025em;
+    margin-bottom: 36px;
+  }
+  .q-passage {
+    padding: 22px 26px; border-radius: var(--r-md);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    font-family: var(--serif); font-size: 16px; line-height: 1.85;
+    color: rgba(232,238,255,0.92);
+    margin-bottom: 28px;
+  }
+  .q-passage::before {
+    content: ""; display: block; width: 24px; height: 1px;
+    background: var(--accent); margin-bottom: 14px;
+  }
+
+  /* options */
+  .opts { display: grid; gap: 10px; }
+  .opt {
+    padding: 18px 22px; border-radius: 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 16px;
+    transition: all 200ms;
+    user-select: none;
+  }
+  .opt:hover { border-color: rgba(255,255,255,0.18); transform: translateY(-1px); }
+  .opt.selected {
+    background: color-mix(in oklab, var(--accent), transparent 90%);
+    border-color: color-mix(in oklab, var(--accent), transparent 50%);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent), transparent 88%);
+  }
+  .opt .marker {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    color: var(--muted); flex: none;
+    transition: all 200ms;
+  }
+  .opt.selected .marker {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #04102E; border-color: transparent;
+  }
+  .opt .txt {
+    font-size: 15px; line-height: 1.5; color: var(--ink);
+  }
+
+  /* nav buttons */
+  .nav-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 24px;
+  }
+  .nav-row .help {
+    font-size: 12.5px; color: var(--muted-2); font-family: var(--mono); letter-spacing: 0.08em;
+  }
+
+  /* result screen */
+  #result { display: none; }
+  #result.show { display: block; }
+  .result-card {
+    text-align: center;
+    padding: 56px 56px 48px; border-radius: var(--r-xl);
+    background: var(--surface-glass);
+    border: 1px solid rgba(255,255,255,0.10);
+    backdrop-filter: blur(28px);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+    position: relative; overflow: hidden;
+  }
+  .result-card::before {
+    content: ""; position: absolute; left: 50%; top: -40%;
+    width: 80%; height: 80%; transform: translateX(-50%);
+    background: radial-gradient(circle,
+      color-mix(in oklab, var(--accent), transparent 70%) 0%, transparent 70%);
+    filter: blur(20px); pointer-events: none;
+  }
+  .result-card > * { position: relative; z-index: 1; }
+  .result-ring {
+    width: 120px; height: 120px; margin: 0 auto 28px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 30% 30%, color-mix(in oklab, var(--accent), transparent 70%), transparent 60%),
+      conic-gradient(from 0deg, var(--accent), var(--primary) 60%, color-mix(in oklab, var(--primary), transparent 70%));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 24px 60px color-mix(in oklab, var(--primary), transparent 50%);
+  }
+  .result-ring .inner {
+    width: 96px; height: 96px; border-radius: 50%; background: #06091F;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-weight: 700; font-size: 26px;
+    color: var(--accent); letter-spacing: -0.022em;
+  }
+  .result-card .label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; color: var(--accent); }
+  .result-card h2 { font-family: var(--serif); font-weight: 700; font-size: 40px; letter-spacing: -0.028em; margin: 12px 0 14px; }
+  .result-card .lede { font-size: 15px; color: var(--muted); line-height: 1.65; max-width: 460px; margin: 0 auto; }
+
+  .level-meter {
+    margin: 32px auto 0; max-width: 380px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .level-meter .step {
+    height: 6px; border-radius: 999px; background: var(--surface);
+    position: relative;
+  }
+  .level-meter .step.on { background: linear-gradient(90deg, var(--accent), var(--primary)); }
+  .level-meter .step .lbl {
+    position: absolute; top: 14px; left: 0;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
+    color: var(--muted-2);
+  }
+  .level-meter .step.on .lbl { color: var(--accent); }
+
+  .result-card .actions {
+    margin-top: 56px; display: flex; gap: 12px; justify-content: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="aurora-bg"><div class="aurora"></div></div>
+
+  <!-- NAV -->
+  <nav class="top">
+    <div class="container">
+      <a class="brand" href="Home.html">
+        <div class="brand-mark">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2" />
+            <circle cx="12" cy="12" r="3" fill="#04102E" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">공소</div>
+          <div class="brand-mono">GONGSO · READING</div>
+        </div>
+      </a>
+      <div class="nav-links">
+        <span class="navbar-user"><span class="avatar">김</span>김호재님</span>
+        <a class="btn btn-line" href="ReadingList.html">건너뛰기</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="survey-wrap">
+
+      <div id="survey">
+        <div style="text-align: center; margin-top: 18px;">
+          <span class="eyebrow" style="margin-bottom: 14px;">LEVEL SURVEY · 5 QUESTIONS</span>
+          <h1 style="font-family: var(--serif); font-weight: 700; font-size: 36px; letter-spacing: -0.028em; margin-top: 16px;">
+            당신에게 맞는 <span class="grad-text">읽기 깊이</span>를 찾아드릴게요.
+          </h1>
+          <p style="font-size: 14.5px; color: var(--muted); margin: 12px 0 0;">짧은 글을 읽고 답하기 5문항. 정답이 아닌 <em>당신의 감각</em>이 기준입니다.</p>
+        </div>
+
+        <div class="progress">
+          <span class="num" id="frac">1 / 5</span>
+          <div class="bar"><div class="bar-fill" id="bar"></div></div>
+        </div>
+
+        <div class="q-card">
+          <div class="q-num" id="q-num">QUESTION 01</div>
+          <div class="q-text" id="q-text">아래 문장에서 ‘결’이라는 단어가 의미하는 바로 가장 적절한 것은?</div>
+
+          <div class="q-passage" id="q-passage">
+            오래된 장인의 손길에서 <strong>나무의 결</strong>이 살아난다. 
+            그 결을 거스르지 않으려 그는 한참을 들여다본다.
+          </div>
+
+          <div class="opts" id="opts"></div>
+        </div>
+
+        <div class="nav-row">
+          <button class="btn btn-line btn-lg" id="prev-btn" disabled>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L4 7l5 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            이전
+          </button>
+          <span class="help">화살표 ← → 키로 이동</span>
+          <button class="btn btn-primary btn-lg" id="next-btn" disabled>
+            다음
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l5 4-5 4" stroke="#04102E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div id="result">
+        <div class="result-card">
+          <div class="result-ring">
+            <div class="inner">중등</div>
+          </div>
+          <div class="label">YOUR LEVEL · LEVEL 02</div>
+          <h2>중등 레벨로 시작합니다</h2>
+          <p class="lede">
+            당신의 답변은 익숙한 단어와 새로운 단어 사이에서 흥미를 가장 잘 보였어요.
+            중등 레벨의 추천 글 5권을 시작점으로 제안합니다. 언제든 더 깊거나 가벼운 글로 옮길 수 있어요.
+          </p>
+
+          <div class="level-meter">
+            <div class="step"><span class="lbl">초등</span></div>
+            <div class="step on"><span class="lbl">중등</span></div>
+            <div class="step"><span class="lbl">고등</span></div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-line btn-lg" onclick="retake()">다시 측정</button>
+            <button class="btn btn-primary btn-lg" onclick="location.href='Camera.html'">
+              시선 보정 시작
+              <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="container">
+      <span>© 2026 GONGSO</span>
+      <span>LEVEL SURVEY · v 0.4</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // 5 questions — designed to feel like a thoughtful reading assessment, not a quiz
+  const QS = [
+    {
+      passage: `오래된 장인의 손길에서 <b>나무의 결</b>이 살아난다. 그 결을 거스르지 않으려 그는 한참을 들여다본다.`,
+      q: `아래 문장에서 ‘결’이라는 단어가 의미하는 바로 가장 가까운 것은?`,
+      options: ['표면의 무늬', '나무의 가지', '나무가 자라온 방향과 흐름', '꼼꼼한 손기술'],
+      score: [1, 0, 2, 1],
+    },
+    {
+      passage: `완득이는 오늘도 권투 글러브를 빌렸다. <b>그래도 손은 빈손이 아니었다</b>.`,
+      q: `‘손은 빈손이 아니었다’에서 작가가 강조하려는 것은?`,
+      options: ['글러브의 무게감', '빌린 물건의 미안함', '주인공이 들고 있는 추상적인 것 — 의지나 결심', '권투의 위험함'],
+      score: [0, 1, 2, 0],
+    },
+    {
+      passage: `아래 문단을 30초 안에 읽고, 핵심 어휘를 골라보세요.<br/><br/><i>"빛이 잘 드는 자리는 늘 그늘보다 비좁다. 사람들은 그 자리를 차지하려 다투지만, 그늘에서는 비좁을 일이 없다."</i>`,
+      q: `이 문단의 메시지에 가장 가까운 것은?`,
+      options: ['좋은 자리는 모두가 원한다', '대조를 통해 욕망과 평온의 관계를 보여준다', '햇빛과 그늘은 서로 보완된다', '경쟁의 폐해를 비판한다'],
+      score: [0, 2, 1, 1],
+    },
+    {
+      passage: null,
+      q: `평소에 한 권의 책을 끝까지 읽을 때, 가장 자주 일어나는 일은?`,
+      options: ['처음부터 끝까지 매끄럽게 읽는다', '중간에 멈춰 다시 읽는 구간이 있다', '여러 책을 동시에 읽다 끝까지 못 가는 경우가 많다', '주로 짧은 글이나 인용 위주로 읽는다'],
+      score: [2, 2, 1, 0],
+    },
+    {
+      passage: null,
+      q: `‘깊게 읽었다’고 느끼는 순간은 언제인가요? (가장 가까운 답)`,
+      options: ['끝까지 읽었을 때', '문장을 곱씹게 되는 구절을 만났을 때', '저자의 의도를 다시 생각하게 됐을 때', '다른 책이나 경험과 연결된 순간이 있을 때'],
+      score: [0, 1, 2, 2],
+    },
+  ];
+
+  const state = { idx: 0, answers: Array(QS.length).fill(null) };
+  const qNum = document.getElementById('q-num');
+  const qText = document.getElementById('q-text');
+  const qPassage = document.getElementById('q-passage');
+  const opts = document.getElementById('opts');
+  const prev = document.getElementById('prev-btn');
+  const next = document.getElementById('next-btn');
+  const bar = document.getElementById('bar');
+  const frac = document.getElementById('frac');
+
+  function render() {
+    const q = QS[state.idx];
+    qNum.textContent = `QUESTION ${String(state.idx + 1).padStart(2, '0')}`;
+    qText.textContent = q.q;
+    if (q.passage) { qPassage.style.display = ''; qPassage.innerHTML = q.passage; } else { qPassage.style.display = 'none'; }
+    opts.innerHTML = '';
+    q.options.forEach((label, i) => {
+      const div = document.createElement('div');
+      div.className = 'opt' + (state.answers[state.idx] === i ? ' selected' : '');
+      div.innerHTML = `<div class="marker">${String.fromCharCode(65 + i)}</div><div class="txt">${label}</div>`;
+      div.addEventListener('click', () => {
+        state.answers[state.idx] = i;
+        render();
+      });
+      opts.appendChild(div);
+    });
+    bar.style.width = `${((state.idx + 1) / QS.length) * 100}%`;
+    frac.textContent = `${state.idx + 1} / ${QS.length}`;
+    prev.disabled = state.idx === 0;
+    next.disabled = state.answers[state.idx] === null;
+    next.querySelector('svg + *')?.remove();
+    next.innerHTML = state.idx === QS.length - 1
+      ? `결과 보기 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l5 4-5 4" stroke="#04102E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>`
+      : `다음 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l5 4-5 4" stroke="#04102E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
+  }
+
+  prev.addEventListener('click', () => { if (state.idx > 0) { state.idx--; render(); } });
+  next.addEventListener('click', () => {
+    if (state.idx < QS.length - 1) { state.idx++; render(); }
+    else finish();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (document.getElementById('result').classList.contains('show')) return;
+    if (e.key === 'ArrowLeft' && !prev.disabled) prev.click();
+    if (e.key === 'ArrowRight' && !next.disabled) next.click();
+  });
+
+  function finish() {
+    document.getElementById('survey').style.display = 'none';
+    document.getElementById('result').classList.add('show');
+    // (in reality the score would map to a level; demo shows "중등")
+  }
+
+  function retake() {
+    state.idx = 0; state.answers.fill(null);
+    document.getElementById('survey').style.display = '';
+    document.getElementById('result').classList.remove('show');
+    render();
+  }
+
+  render();
+</script>
+
+</body>
+</html>

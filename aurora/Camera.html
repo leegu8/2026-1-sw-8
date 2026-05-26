@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>공소 · 카메라 선택</title>
+<link rel="stylesheet" href="base.css" />
+<style>
+  .page { position: relative; min-height: 100vh; }
+  main { position: relative; z-index: 1; padding: 12px 0 60px; }
+  .aurora-bg { position: fixed; inset: 0; pointer-events: none; opacity: 0.5; }
+
+  .setup-wrap { max-width: 1080px; margin: 24px auto 0; padding: 0 56px; }
+  .setup-head { text-align: center; margin-bottom: 32px; }
+  .setup-head h1 {
+    font-family: var(--serif); font-weight: 700; font-size: 44px;
+    letter-spacing: -0.028em; line-height: 1.1;
+  }
+  .setup-head p { font-size: 15.5px; color: var(--muted); margin: 14px auto 0; max-width: 560px; line-height: 1.65; }
+
+  .cam-layout {
+    display: grid; grid-template-columns: 1fr 1.3fr; gap: 28px;
+    margin-top: 28px;
+  }
+  .panel {
+    padding: 28px;
+    border-radius: var(--r-lg);
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--line);
+  }
+  .panel-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 18px;
+  }
+  .panel-head h3 {
+    font-family: var(--serif); font-weight: 600; font-size: 17px; letter-spacing: -0.018em;
+  }
+  .panel-head .pill { padding: 4px 10px; }
+
+  /* camera list */
+  .cam-list { display: grid; gap: 10px; }
+  .cam-item {
+    padding: 16px 18px; border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    cursor: pointer; display: flex; align-items: center; gap: 14px;
+    transition: all 200ms;
+  }
+  .cam-item:hover { border-color: rgba(255,255,255,0.18); }
+  .cam-item.selected {
+    background: color-mix(in oklab, var(--accent), transparent 90%);
+    border-color: color-mix(in oklab, var(--accent), transparent 50%);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent), transparent 88%);
+  }
+  .cam-icon {
+    width: 40px; height: 40px; border-radius: 10px; flex: none;
+    background: color-mix(in oklab, var(--primary), transparent 78%);
+    border: 1px solid color-mix(in oklab, var(--accent), transparent 65%);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent);
+  }
+  .cam-item.selected .cam-icon {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #04102E;
+    border-color: transparent;
+  }
+  .cam-info { flex: 1; min-width: 0; }
+  .cam-info .name {
+    font-family: var(--serif); font-weight: 600; font-size: 14.5px;
+    letter-spacing: -0.015em; color: #fff;
+  }
+  .cam-info .meta {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    color: var(--muted); margin-top: 4px;
+  }
+  .cam-item .radio {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.20);
+    display: flex; align-items: center; justify-content: center;
+    flex: none;
+  }
+  .cam-item.selected .radio {
+    border-color: var(--accent);
+  }
+  .cam-item.selected .radio::after {
+    content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  }
+
+  .refresh-btn {
+    margin-top: 14px; width: 100%;
+    background: transparent; color: var(--muted);
+    border: 1px dashed var(--line);
+    padding: 12px; border-radius: 10px; cursor: pointer;
+    font-size: 13px; font-weight: 500;
+    transition: all 160ms;
+  }
+  .refresh-btn:hover { color: #fff; border-color: rgba(255,255,255,0.18); }
+
+  /* preview */
+  .preview-box {
+    aspect-ratio: 16 / 10;
+    border-radius: 14px;
+    background: #03061a;
+    border: 1px solid var(--line);
+    position: relative; overflow: hidden;
+    margin-top: 4px;
+  }
+  .preview-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(63,182,255,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(63,182,255,0.07) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .preview-face {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .preview-face svg { filter: drop-shadow(0 0 12px color-mix(in oklab, var(--accent), transparent 60%)); }
+
+  .preview-meta {
+    position: absolute; top: 14px; left: 14px;
+    display: flex; gap: 8px;
+  }
+  .preview-meta .chip-sm {
+    padding: 5px 10px; border-radius: 8px;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+    border: 1px solid var(--line);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
+    color: var(--ink); display: inline-flex; align-items: center; gap: 6px;
+  }
+  .preview-meta .chip-sm .red {
+    width: 6px; height: 6px; border-radius: 50%; background: #FF4747;
+    animation: gaze-pulse 1.4s ease-in-out infinite;
+  }
+  .preview-meta .chip-sm .acc { color: var(--accent); }
+
+  .preview-corners::before, .preview-corners::after,
+  .preview-corners > span::before, .preview-corners > span::after {
+    content: ""; position: absolute; width: 20px; height: 20px;
+    border-color: rgba(63,182,255,0.6); border-style: solid; border-width: 0;
+  }
+  .preview-corners::before { top: 24px; left: 24px; border-top-width: 1.5px; border-left-width: 1.5px; }
+  .preview-corners::after { top: 24px; right: 24px; border-top-width: 1.5px; border-right-width: 1.5px; }
+  .preview-corners > span::before { content: ""; bottom: 24px; left: 24px; top: auto; border-bottom-width: 1.5px; border-left-width: 1.5px; position: absolute; }
+  .preview-corners > span::after { content: ""; bottom: 24px; right: 24px; top: auto; border-bottom-width: 1.5px; border-right-width: 1.5px; position: absolute; }
+
+  .preview-empty {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--muted-2); font-size: 14px; gap: 12px;
+  }
+
+  .preview-hint {
+    margin-top: 14px; font-size: 13.5px; color: var(--muted);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .preview-hint .good { color: var(--good); }
+  .preview-hint svg { flex: none; }
+
+  .next-row {
+    margin-top: 32px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .next-row .meta {
+    font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px;
+  }
+  .next-row .meta .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--good);
+    box-shadow: 0 0 10px var(--good);
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="aurora-bg"><div class="aurora"></div></div>
+
+  <!-- NAV -->
+  <nav class="top">
+    <div class="container">
+      <a class="brand" href="Home.html">
+        <div class="brand-mark">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2" />
+            <circle cx="12" cy="12" r="3" fill="#04102E" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">공소</div>
+          <div class="brand-mono">GONGSO · READING</div>
+        </div>
+      </a>
+      <div class="nav-links">
+        <span class="navbar-user"><span class="avatar">신</span>신민호님</span>
+        <a class="btn btn-line" href="ReadingList.html">건너뛰기</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Step bar -->
+  <div class="container"><div class="step-bar">
+    <div class="step-item active">
+      <div class="step-circle">1</div>
+      <span>카메라 선택</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item">
+      <div class="step-circle">2</div>
+      <span>시선 보정</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item">
+      <div class="step-circle">3</div>
+      <span>독서 시작</span>
+    </div>
+  </div></div>
+
+  <main>
+    <div class="setup-wrap">
+      <div class="setup-head">
+        <span class="eyebrow" style="margin-bottom: 18px;">STEP 01 · CAMERA</span>
+        <h1>시선을 비춰줄 <span class="grad-text">카메라를 골라주세요.</span></h1>
+        <p>웹캠은 시선 좌표만 측정하고, 영상은 어디에도 저장되지 않습니다.</p>
+      </div>
+
+      <div class="cam-layout">
+
+        <!-- Camera list -->
+        <div class="panel">
+          <div class="panel-head">
+            <h3>사용 가능한 카메라</h3>
+            <span class="pill">3 FOUND</span>
+          </div>
+
+          <div class="cam-list">
+            <div class="cam-item selected" data-cam="0">
+              <div class="cam-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M17 10l4-2v8l-4-2z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round" />
+                  <circle cx="10" cy="12" r="2.5" stroke="currentColor" stroke-width="1.6" />
+                </svg>
+              </div>
+              <div class="cam-info">
+                <div class="name">FaceTime HD Camera</div>
+                <div class="meta">1080P · 30FPS · BUILT-IN</div>
+              </div>
+              <div class="radio"></div>
+            </div>
+
+            <div class="cam-item" data-cam="1">
+              <div class="cam-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M17 10l4-2v8l-4-2z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round" />
+                  <circle cx="10" cy="12" r="2.5" stroke="currentColor" stroke-width="1.6" />
+                </svg>
+              </div>
+              <div class="cam-info">
+                <div class="name">Logitech BRIO 4K</div>
+                <div class="meta">4K · 60FPS · USB</div>
+              </div>
+              <div class="radio"></div>
+            </div>
+
+            <div class="cam-item" data-cam="2">
+              <div class="cam-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M17 10l4-2v8l-4-2z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round" />
+                  <circle cx="10" cy="12" r="2.5" stroke="currentColor" stroke-width="1.6" />
+                </svg>
+              </div>
+              <div class="cam-info">
+                <div class="name">iPhone 15 (Continuity)</div>
+                <div class="meta">1080P · 30FPS · WIRELESS</div>
+              </div>
+              <div class="radio"></div>
+            </div>
+          </div>
+
+          <button class="refresh-btn">↻ 목록 새로고침</button>
+        </div>
+
+        <!-- Preview -->
+        <div class="panel">
+          <div class="panel-head">
+            <h3>카메라 미리보기</h3>
+            <span class="pill pill-good">FACE DETECTED</span>
+          </div>
+
+          <div class="preview-box">
+            <div class="preview-grid"></div>
+            <div class="preview-corners"><span></span></div>
+
+            <div class="preview-meta">
+              <div class="chip-sm"><span class="red"></span>LIVE</div>
+              <div class="chip-sm"><span class="acc">FACETIME HD · 1080P</span></div>
+            </div>
+
+            <div class="preview-face">
+              <svg width="180" height="240" viewBox="0 0 180 240" fill="none">
+                <!-- bounding box -->
+                <rect x="38" y="44" width="104" height="140" rx="14" stroke="rgba(63,182,255,0.4)" stroke-width="1" stroke-dasharray="6 4" />
+                <!-- face outline -->
+                <ellipse cx="90" cy="120" rx="46" ry="62" stroke="rgba(63,182,255,0.7)" stroke-width="1.4" />
+                <!-- eyes -->
+                <circle cx="74" cy="108" r="3" fill="var(--accent)" />
+                <circle cx="74" cy="108" r="8" stroke="var(--accent)" stroke-opacity="0.4" fill="none" />
+                <circle cx="106" cy="108" r="3" fill="var(--accent)" />
+                <circle cx="106" cy="108" r="8" stroke="var(--accent)" stroke-opacity="0.4" fill="none" />
+                <!-- mouth -->
+                <path d="M76 152Q90 160 104 152" stroke="rgba(63,182,255,0.7)" stroke-width="1.4" stroke-linecap="round" />
+                <!-- landmark dots -->
+                <g fill="rgba(63,182,255,0.55)">
+                  <circle cx="58" cy="98" r="1.4" /><circle cx="122" cy="98" r="1.4" />
+                  <circle cx="56" cy="120" r="1.4" /><circle cx="124" cy="120" r="1.4" />
+                  <circle cx="62" cy="140" r="1.4" /><circle cx="118" cy="140" r="1.4" />
+                  <circle cx="90" cy="120" r="1.4" /><circle cx="90" cy="138" r="1.4" />
+                  <circle cx="80" cy="172" r="1.4" /><circle cx="100" cy="172" r="1.4" />
+                </g>
+                <!-- label tag -->
+                <g transform="translate(140, 50)">
+                  <rect width="42" height="14" rx="3" fill="rgba(63,182,255,0.15)" stroke="rgba(63,182,255,0.5)" />
+                  <text x="6" y="10" font-family="JetBrains Mono" font-size="8" fill="var(--accent)" letter-spacing="0.12em">99.2%</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          <div class="preview-hint">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="7.5" stroke="var(--good)" stroke-width="1.4" />
+              <path d="M5.5 9.5l2.5 2.5L12.5 6.5" stroke="var(--good)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            </svg>
+            <span><span class="good">얼굴 정렬 양호</span> · 두 눈이 또렷이 보입니다. 이대로 진행해도 좋아요.</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="next-row">
+        <div class="meta">
+          <span class="dot"></span>
+          현재 선택 · <span style="color: #fff; margin-left: 4px;">FaceTime HD Camera</span>
+        </div>
+        <button class="btn btn-primary btn-lg" onclick="location.href='Calibration.html'">
+          다음 · 시선 보정
+          <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="container">
+      <span>© 2026 GONGSO</span>
+      <span>WEBCAM PERMISSION GRANTED</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  document.querySelectorAll('.cam-item').forEach((it) => {
+    it.addEventListener('click', () => {
+      document.querySelectorAll('.cam-item').forEach((x) => x.classList.toggle('selected', x === it));
+    });
+  });
+</script>
+
+</body>
+</html>
