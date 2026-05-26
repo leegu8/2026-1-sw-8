@@ -117,13 +117,30 @@
             return Math.round(done / total * 100);
         }
 
-        // 독서시간: 세션 지속 시간 기반 참여도
-        // <20s→0-20점 / 20-60s→20-60점 / 60-120s→60-90점 / ≥120s(2분)→90-100점
-        function calcTimeScore(sec) {
-            if (sec >= 120) return Math.min(100, Math.round(90 + (sec - 120) / 60 * 10));
-            if (sec >= 60)  return Math.round(60 + (sec - 60)  / 60 * 30);
-            if (sec >= 20)  return Math.round(20 + (sec - 20)  / 40 * 40);
-            return Math.max(0, Math.round(sec / 20 * 20));
+        // 독서시간: 어절 수 기반 적정 시간 구간 점수
+        // 기준 WPM — 이경화 외 한국어 읽기 연구, 성인 정독 300–500 어절/분
+        // t_peak(350) 기준 정규분포형: 너무 빠르거나 느리면 감점
+        function calcTimeScore(sec, wc) {
+            if (!wc || wc === 0) {
+                // word_count 없는 구형 세션 폴백 — 절대 시간 기준
+                if (sec >= 120) return Math.min(100, Math.round(90 + (sec - 120) / 60 * 10));
+                if (sec >= 60)  return Math.round(60 + (sec - 60) / 60 * 30);
+                if (sec >= 20)  return Math.round(20 + (sec - 20) / 40 * 40);
+                return Math.max(0, Math.round(sec / 20 * 20));
+            }
+            const t1    = wc / 500 * 60;  // 너무 빠름 상한 (500 어절/분)
+            const t2    = wc / 400 * 60;  // 빠름-적정 경계 (400)
+            const tPeak = wc / 350 * 60;  // 최적 중심 100점 (350)
+            const t3    = wc / 270 * 60;  // 적정-약간 느림 경계 (270)
+            const t4    = wc / 200 * 60;  // 약간 느림-느림 경계 (200)
+            const t5    = wc / 125 * 60;  // 느림-매우 느림 경계 (125)
+            if (sec < t1)    return 10;
+            if (sec < t2)    return Math.round(10  + (sec - t1)    / (t2 - t1)    * 50);
+            if (sec < tPeak) return Math.round(60  + (sec - t2)    / (tPeak - t2) * 40);
+            if (sec < t3)    return Math.round(100 - (sec - tPeak) / (t3 - tPeak) * 15);
+            if (sec < t4)    return Math.round(85  - (sec - t3)    / (t4 - t3)    * 20);
+            if (sec < t5)    return Math.round(65  - (sec - t4)    / (t5 - t4)    * 35);
+            return Math.max(0, Math.round(30 - (sec - t5) / t5 * 30));
         }
 
         // ── 점수 계산 ─────────────────────────────────────────────
@@ -131,7 +148,7 @@
         const regScore   = calcRegScore(regRate);
         const wpmScore   = calcWpmScore(wpm);
         const depthScore = calcDepthScore(linesdone, totallines);
-        const timeScore  = calcTimeScore(totalSec);
+        const timeScore  = calcTimeScore(totalSec, wordCount);
 
         // 종합 점수 (가중 평균)
         const composite = Math.round(
@@ -222,6 +239,14 @@
             ? `${Math.floor(totalSec / 60)}분 ${totalSec % 60}초`
             : `${totalSec}초`;
 
+        function secToStr(s) {
+            s = Math.round(s);
+            return s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초` : `${s}초`;
+        }
+        const timeCriterion = wordCount > 0
+            ? `적정 ${secToStr(wordCount / 400 * 60)}~${secToStr(wordCount / 270 * 60)}`
+            : '≥2분→우수';
+
         document.getElementById('result-metrics').innerHTML = `
             <!-- 종합 점수 -->
             <div style="background:white;border-radius:16px;padding:28px 32px;
@@ -253,7 +278,7 @@
                     <div style="font-size:0.8rem;color:#aaa;margin-bottom:16px;
                         letter-spacing:0.05em;">지표별 상세</div>
                     ${metricBar('⏱', '독서시간',
-                        '≥2분→우수',
+                        timeCriterion,
                         timeScore, minuteStr)}
                     ${metricBar('✅', '완독률',
                         '줄 단위 방문 판정',
@@ -273,10 +298,22 @@
         // ── 텍스트 피드백 ─────────────────────────────────────────
         const goods = [], improvements = [];
 
-        if (timeScore >= 75)
+        localStorage.removeItem('last_time_issue');
+        if (timeScore >= 75) {
             goods.push(`${minuteStr} 동안 꾸준히 읽었습니다.`);
-        else if (totalSec < 60)
+        } else if (wordCount > 0) {
+            const tFastLimit = wordCount / 400 * 60;
+            const tSlowLimit = wordCount / 270 * 60;
+            if (totalSec < tFastLimit) {
+                improvements.push(`독서 속도가 너무 빠릅니다(${minuteStr}). 내용을 충분히 소화하며 읽어보세요.`);
+                localStorage.setItem('last_time_issue', 'fast');
+            } else if (totalSec > tSlowLimit) {
+                improvements.push(`독서 시간이 길었어요(${minuteStr}). 집중력을 유지하며 읽어보세요.`);
+                localStorage.setItem('last_time_issue', 'slow');
+            }
+        } else if (totalSec < 60) {
             improvements.push('독서 시간이 너무 짧아요. 충분히 읽은 후 완료 버튼을 눌러주세요.');
+        }
 
         if (depthScore >= 90)
             goods.push(`전체 ${totallines}줄을 모두 읽었습니다.`);
@@ -312,6 +349,12 @@
             goods.push(`독서 속도(${wpm} WPM)가 적정 범위입니다.`);
         else if (wpm > 0 && wpm <= 250 && wpmScore < 40)
             improvements.push('독서 속도가 느린 편이에요. 어절 단위로 묶어 읽는 연습을 해보세요.');
+
+        // 다음 독서 시 팝업 표시용으로 개선 포인트 저장
+        if (improvements.length > 0)
+            localStorage.setItem('last_improvements', JSON.stringify(improvements));
+        else
+            localStorage.removeItem('last_improvements');
 
         document.getElementById('result-feedback').innerHTML = `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
