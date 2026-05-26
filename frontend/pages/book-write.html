@@ -208,7 +208,7 @@
             </div>
           </div>
 
-          <div class="row three">
+          <div class="row">
             <div class="form-group">
               <label class="field-label" for="difficulty"><span>난이도<span class="required">*</span></span></label>
               <div class="field-select">
@@ -230,12 +230,6 @@
                   <option value="비문학">비문학</option>
                   <option value="시">시</option>
                 </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="field-label" for="author"><span>저자</span></label>
-              <div class="field-input">
-                <input type="text" id="author" placeholder="윤오영" />
               </div>
             </div>
           </div>
@@ -311,7 +305,6 @@
 
 <script>
   const title = document.getElementById('title');
-  const author = document.getElementById('author');
   const genre = document.getElementById('genre');
   const diff = document.getElementById('difficulty');
   const content = document.getElementById('content');
@@ -334,7 +327,7 @@
     const mins = Math.max(0, Math.round(wlen / 320));
 
     pTitle.textContent = t || '제목을 입력하세요';
-    const metaBits = [author.value.trim() || '저자 미지정', genre.value || '장르 미지정'].join(' · ');
+    const metaBits = [genre.value || '장르 미지정'].join(' · ');
     pMeta.textContent = metaBits;
     pWords.innerHTML = `${wlen}<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">자</span>`;
     pTime.innerHTML = `${mins}<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">분</span>`;
@@ -353,7 +346,7 @@
     tCount.textContent = `${t.length} / 60`;
     wCount.textContent = `${wlen}자 · ${lines}줄 · 예상 ${mins}분`;
   }
-  [title, author, genre, diff, content].forEach((el) => el.addEventListener('input', update));
+  [title, genre, diff, content].forEach((el) => el.addEventListener('input', update));
   diff.addEventListener('change', update);
   genre.addEventListener('change', update);
 
