@@ -38,6 +38,8 @@
             <div class="attendance-dots" id="attendance-dots"></div>
         </div>
 
+        <div id="growth-summary"></div>
+
         <div id="no-data" class="empty-state" style="display:none">
             아직 완독한 세션이 없습니다.<br>독서를 시작해보세요!
         </div>
@@ -45,23 +47,15 @@
         <div id="growth-content">
             <div class="session-list" id="session-list"></div>
 
-            <div class="chart-grid">
-                <div class="chart-card">
-                    <h4>독서 속도 (WPM)</h4>
-                    <canvas id="chart-wpm"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h4>집중도 점수</h4>
-                    <canvas id="chart-concentration"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h4>완독률 (%)</h4>
-                    <canvas id="chart-completion"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h4>역행 비율 (%)</h4>
-                    <canvas id="chart-regression"></canvas>
-                </div>
+            <div class="chart-card score-chart-card">
+                <h4>📈 종합점수 추세</h4>
+                <canvas id="chart-score"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <div class="metric-selector" id="metric-selector"></div>
+                <p class="metric-desc" id="metric-desc"></p>
+                <canvas id="chart-metric"></canvas>
             </div>
         </div>
 
