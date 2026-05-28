@@ -216,7 +216,7 @@
         if (!calMode || sending) return;
         sending = true;
         try {
-            await addCalibrationPoint(e.clientX, e.clientY, CLICK_COUNT);
+            await addCalibrationPoint(e.clientX, e.clientY, CLICK_COUNT, true);
         } finally {
             sending = false;
         }

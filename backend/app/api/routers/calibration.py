@@ -28,6 +28,8 @@ async def add_calibration(point: CalibrationPoint, request: Request):
         }
 
     tracker.calibration.add_samples(samples, point.x, point.y)
+    if point.user_key:
+        tracker.user_refined = True
     return {
         "success":      True,
         "sample_count": tracker.calibration.sample_count,

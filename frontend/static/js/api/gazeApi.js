@@ -1,8 +1,8 @@
-export async function addCalibrationPoint(x, y, count = 3) {
+export async function addCalibrationPoint(x, y, count = 3, userKey = false) {
     const res = await fetch('/api/calibrate', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ x, y, count }),
+        body:    JSON.stringify({ x, y, count, user_key: userKey }),
     });
     return res.json();
 }
