@@ -93,9 +93,10 @@ function initPagination() {
 
     _paginationTopPad = allLineList[0].top - areaRect.top;
     _paginationMaxH   = window.innerHeight
-        - header.getBoundingClientRect().bottom
+        - areaRect.top
+        - (nav ? nav.offsetHeight : 50)
         - controls.offsetHeight
-        - 70; // page-nav + 여백
+        - 36; // 여백
 
     const avgLineH = allLineList.length > 1
         ? (allLineList[allLineList.length - 1].bottom - allLineList[0].top) / allLineList.length
