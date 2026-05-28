@@ -28,8 +28,6 @@ async def add_calibration(point: CalibrationPoint, request: Request):
         }
 
     tracker.calibration.add_samples(samples, point.x, point.y)
-    if point.user_key:
-        tracker.user_refined = True
     return {
         "success":      True,
         "sample_count": tracker.calibration.sample_count,
@@ -41,6 +39,12 @@ async def add_calibration(point: CalibrationPoint, request: Request):
 async def clear_calibration(request: Request):
     _get_tracker(request).clear_calibration()
     return {"success": True}
+
+
+@router.post("/y-correction")
+async def set_y_correction(request: Request, active: bool):
+    _get_tracker(request).y_correction_active = active
+    return {"active": active}
 
 
 @router.get("/status")

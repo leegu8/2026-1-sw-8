@@ -1,10 +1,14 @@
-export async function addCalibrationPoint(x, y, count = 3, userKey = false) {
+export async function addCalibrationPoint(x, y, count = 3) {
     const res = await fetch('/api/calibrate', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ x, y, count, user_key: userKey }),
+        body:    JSON.stringify({ x, y, count }),
     });
     return res.json();
+}
+
+export async function setYCorrection(active) {
+    return (await fetch(`/api/calibrate/y-correction?active=${active}`, { method: 'POST' })).json();
 }
 
 export async function clearCalibration() {

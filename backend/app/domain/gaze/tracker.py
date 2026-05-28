@@ -84,7 +84,7 @@ class GazeTracker:
         self._out_y:       int   | None = None
         self._cap                       = None
         self._running                   = False
-        self.user_refined: bool         = False  # Q키 보정 사용 시 True → Y 자동 보정 비활성화
+        self.y_correction_active: bool  = True
 
     @property
     def calibration(self) -> CalibrationModel:
@@ -114,7 +114,6 @@ class GazeTracker:
         self._calibration.clear()
         self._kalman.reset()
         self._out_x = self._out_y = None
-        self.user_refined = False
 
     # ── 화면 좌표 반환 ────────────────────────────────────────
 
@@ -128,7 +127,7 @@ class GazeTracker:
                 print(f"⚠ 비정상 예측값: raw_x={raw_x}, raw_y={raw_y}")
                 return None
             smooth_x, smooth_y = self._kalman.update(raw_x, raw_y)
-            corrected_y = smooth_y if self.user_refined else smooth_y * np.exp(-Y_CORRECTION_K * max(0.0, smooth_y - 100))
+            corrected_y = smooth_y * np.exp(-Y_CORRECTION_K * max(0.0, smooth_y - 100)) if self.y_correction_active else smooth_y
             new_x, new_y = int(smooth_x), int(corrected_y)
         except Exception as e:
             print(f"⚠ get_screen_pos 예외: {type(e).__name__}: {e}")

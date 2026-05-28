@@ -583,10 +583,21 @@ function calcFocusRate(totalSec) {
 // ── 역행 비율 (연구 정의) ─────────────────────────────────
 // patternData 중 up + left 비율 — 연구의 regression saccade 비율과 같은 개념
 // 정상 범위: 15~25% (Rayner 1978, Taylor 1965)
+// 떨림 노이즈 제거: right-left-right 패턴의 단발 left는 제외
 function calcRegressionRate() {
-    const saccades = patternData.filter(p => p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down');
+    const saccades = patternData.filter(p =>
+        p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down'
+    );
     if (!saccades.length) return 0;
-    const regCount = saccades.filter(p => p.type === 'up' || p.type === 'left').length;
+    const regCount = saccades.filter((p, i) => {
+        if (p.type === 'up') {
+            // 앞뒤 모두 down → 떨림으로 간주, 제외
+            return !(saccades[i - 1]?.type === 'down' && saccades[i + 1]?.type === 'down');
+        }
+        if (p.type !== 'left') return false;
+        // 앞뒤 모두 right → 떨림으로 간주, 제외
+        return !(saccades[i - 1]?.type === 'right' && saccades[i + 1]?.type === 'right');
+    }).length;
     return Math.round(regCount / saccades.length * 100);
 }
 

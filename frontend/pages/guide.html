@@ -177,7 +177,7 @@
     ">🖱 마우스 보정 모드 &nbsp;|&nbsp; Q 로 해제</div>
 
     <script type="module">
-    import { addCalibrationPoint, clearCalibration } from '/static/js/api/gazeApi.js';
+    import { addCalibrationPoint, clearCalibration, setYCorrection } from '/static/js/api/gazeApi.js';
 
     document.getElementById('reset-cal-btn').addEventListener('click', async () => {
         const btn = document.getElementById('reset-cal-btn');
@@ -210,13 +210,14 @@
         calMode = !calMode;
         badge.style.display        = calMode ? 'block' : 'none';
         document.body.style.cursor = calMode ? 'crosshair' : '';
+        setYCorrection(!calMode); // Q모드 ON → Y보정 OFF, Q모드 OFF → Y보정 ON
     });
 
     document.addEventListener('click', async (e) => {
         if (!calMode || sending) return;
         sending = true;
         try {
-            await addCalibrationPoint(e.clientX, e.clientY, CLICK_COUNT, true);
+            await addCalibrationPoint(e.clientX, e.clientY, CLICK_COUNT);
         } finally {
             sending = false;
         }
