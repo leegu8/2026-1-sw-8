@@ -210,6 +210,19 @@
 
           <div class="row">
             <div class="form-group">
+              <label class="field-label" for="difficulty">
+                <span>난이도<span class="required">*</span></span>
+              </label>
+              <div class="field-select">
+                <select id="difficulty" required>
+                  <option value="" disabled selected>선택</option>
+                  <option value="초등">초등</option>
+                  <option value="중등">중등</option>
+                  <option value="고등">고등</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
               <label class="field-label" for="genre"><span>장르</span></label>
               <div class="field-select">
                 <select id="genre">
@@ -289,9 +302,10 @@
 </div>
 
 <script>
-  const title = document.getElementById('title');
-  const genre = document.getElementById('genre');
-  const content = document.getElementById('content');
+  const title      = document.getElementById('title');
+  const difficulty = document.getElementById('difficulty');
+  const genre      = document.getElementById('genre');
+  const content    = document.getElementById('content');
 
   const pTitle = document.getElementById('p-title');
   const pMeta = document.getElementById('p-meta');
@@ -328,17 +342,17 @@
     tCount.textContent = `${t.length} / 60`;
     wCount.textContent = `${wlen}자 · ${lines}줄 · 예상 ${mins}분`;
   }
-  [title, genre, content].forEach((el) => el.addEventListener('input', update));
-  genre.addEventListener('change', update);
+  [title, content].forEach((el) => el.addEventListener('input', update));
+  [genre, difficulty].forEach((el) => el.addEventListener('change', update));
 
   // submit
   document.getElementById('book-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('msg');
     const submitBtn = document.getElementById('submit-btn');
-    if (!title.value.trim() || !content.value.trim()) {
+    if (!title.value.trim() || !difficulty.value || !content.value.trim()) {
       msg.className = 'msg bad show';
-      msg.textContent = '필수 항목(제목, 본문)을 모두 채워주세요.';
+      msg.textContent = '필수 항목(제목, 난이도, 본문)을 모두 채워주세요.';
       return;
     }
     submitBtn.disabled = true;
@@ -348,9 +362,10 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: title.value.trim(),
-          content: content.value.trim(),
-          genre: genre.value || null,
+          title:      title.value.trim(),
+          content:    content.value.trim(),
+          difficulty: difficulty.value,
+          genre:      genre.value || null,
         }),
       });
       if (!res.ok) {

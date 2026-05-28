@@ -193,6 +193,99 @@
     line-height: 1.8;
 }
 
+/* ── 성장 요약 카드 ── */
+.growth-summary-card {
+    background: white;
+    border-radius: 14px;
+    border: 1px solid #e8ecef;
+    padding: 20px 28px;
+    margin-bottom: 28px;
+}
+
+.summary-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 14px;
+}
+
+.summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.summary-good    { background: #eafaf1; }
+.summary-bad     { background: #fef9e7; }
+.summary-neutral { background: #f4f6f7; }
+
+.summary-icon { font-size: 1.05rem; flex-shrink: 0; }
+
+.summary-good    .summary-text { color: #1e8449; }
+.summary-bad     .summary-text { color: #7d6608; }
+.summary-neutral .summary-text { color: #555; }
+
+/* ── 직전 대비 델타 ── */
+.stat-delta {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-top: 1px;
+}
+
+/* ── 종합점수 추세 차트 (전폭) ── */
+.score-chart-card {
+    margin-bottom: 20px;
+}
+
+/* ── 지표 선택 버튼 ── */
+.metric-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.metric-btn {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #dce1e7;
+    background: white;
+    color: #7f8c8d;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.metric-btn:hover {
+    border-color: #aab4be;
+    color: #2c3e50;
+}
+
+.metric-btn.active {
+    background: #2c3e50;
+    border-color: #2c3e50;
+    color: white;
+}
+
+/* ── 지표 기준 설명 ── */
+.metric-desc {
+    margin: -4px 0 12px;
+    font-size: 0.78rem;
+    color: #95a5a6;
+}
+
 @media (max-width: 640px) {
     .chart-grid { grid-template-columns: 1fr; }
     .session-stats { display: none; }

@@ -242,6 +242,51 @@
         <div class="callout-box"></div>
     </div>
 
+    <!-- 이전 독서 개선 포인트 팝업 -->
+    <div id="improvement-popup" style="display:none; position:fixed; inset:0;
+        background:rgba(0,0,0,0.55); z-index:10000; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:32px 28px;
+            max-width:460px; width:90%; box-shadow:0 8px 40px rgba(0,0,0,0.25);">
+            <div style="font-size:1.15rem; font-weight:700; color:#2c3e50; margin-bottom:6px;">
+                📋 이번 독서에 신경써주세요
+            </div>
+            <div style="font-size:0.83rem; color:#aaa; margin-bottom:20px;">
+                지난 독서에서 발견된 개선 포인트예요
+            </div>
+            <div id="popup-improvement-list"
+                style="background:#fef9e7; border-radius:10px; padding:16px 18px; margin-bottom:24px;">
+            </div>
+            <button onclick="closeImprovementPopup()" class="btn btn-primary"
+                style="width:100%; font-size:0.95rem;">
+                확인, 시작할게요!
+            </button>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        const raw = localStorage.getItem('last_improvements');
+        if (!raw) return;
+        let items;
+        try { items = JSON.parse(raw); } catch { return; }
+        if (!Array.isArray(items) || items.length === 0) return;
+
+        const list = document.getElementById('popup-improvement-list');
+        list.innerHTML = items.map((t, i) =>
+            `<p style="font-size:0.88rem;color:#444;line-height:1.65;
+                margin:0 0 ${i < items.length - 1 ? '8px' : '0'};">· ${t}</p>`
+        ).join('');
+
+        const popup = document.getElementById('improvement-popup');
+        popup.style.display = 'flex';
+    })();
+
+    function closeImprovementPopup() {
+        document.getElementById('improvement-popup').style.display = 'none';
+        localStorage.removeItem('last_improvements');
+    }
+    </script>
+
     <script src="/static/js/reading-admin.js" defer></script>
 </body>
 </html>

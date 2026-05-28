@@ -16,6 +16,21 @@ let readingAreaRect = null; // reading-area 경계 캐시 (좌우 이탈 판정�
     ).join('');
     bookWordCount = document.querySelector('.reading-text').innerText
         .trim().split(/\s+/).filter(w => w.length > 0).length;
+
+    const timeIssue = localStorage.getItem('last_time_issue');
+    if (timeIssue && bookWordCount > 0) {
+        const popup = document.getElementById('improvement-popup');
+        if (popup && popup.style.display === 'flex') {
+            const fmt = s => { s = Math.round(s); return s >= 60 ? `${Math.floor(s/60)}분 ${s%60}초` : `${s}초`; };
+            const optRange = `${fmt(bookWordCount / 400 * 60)} ~ ${fmt(bookWordCount / 270 * 60)}`;
+            const note = document.createElement('p');
+            note.style.cssText = 'font-size:0.85rem;color:#2980b9;font-weight:600;margin:10px 0 0;padding:10px 0 0;border-top:1px solid #dce8f5;line-height:1.6;';
+            note.textContent = `📖 이 글의 적정 독서 시간: ${optRange}`;
+            document.getElementById('popup-improvement-list').appendChild(note);
+        }
+        localStorage.removeItem('last_time_issue');
+    }
+
     buildLineList();
     await createSession(bookId);
 })();

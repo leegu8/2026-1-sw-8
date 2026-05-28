@@ -174,6 +174,35 @@ html, body {
 /* ── 성장일지 ── */
 .growth-header h2 { color: #E8EEFF !important; }
 .growth-header p  { color: rgba(232,238,255,0.6) !important; }
+.growth-summary-card {
+    background: rgba(8, 14, 42, 0.72) !important;
+    border: 1px solid rgba(255,255,255,0.11) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45) !important;
+}
+.summary-title { color: #E8EEFF !important; }
+.summary-good    { background: rgba(39,174,96,0.12) !important; }
+.summary-bad     { background: rgba(243,156,18,0.12) !important; }
+.summary-neutral { background: rgba(255,255,255,0.06) !important; }
+.summary-good    .summary-text { color: #2ecc71 !important; }
+.summary-bad     .summary-text { color: #f39c12 !important; }
+.summary-neutral .summary-text { color: rgba(232,238,255,0.7) !important; }
+.metric-btn {
+    background: rgba(255,255,255,0.05) !important;
+    border-color: rgba(255,255,255,0.12) !important;
+    color: rgba(232,238,255,0.55) !important;
+}
+.metric-btn:hover {
+    border-color: rgba(63,182,255,0.3) !important;
+    color: rgba(232,238,255,0.85) !important;
+}
+.metric-btn.active {
+    background: rgba(63,182,255,0.18) !important;
+    border-color: rgba(63,182,255,0.45) !important;
+    color: #3FB6FF !important;
+}
+.metric-desc { color: rgba(232,238,255,0.4) !important; }
 .streak-num       { color: #f39c12 !important; }
 .streak-label, .attendance-total { color: rgba(232,238,255,0.6) !important; }
 .attendance-total strong { color: #E8EEFF !important; }
