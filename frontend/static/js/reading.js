@@ -133,7 +133,6 @@ const rereadingEvents = []; // 재독 확정 타임스탬프 배열
 
 let blurEventSent      = false;
 let highlightEventSent = false;
-let boxEventSent       = false;
 const pendingCorrectionEvents = [];
 
 function sendCorrectionEvent(type, lineIndex) {
@@ -142,7 +141,6 @@ function sendCorrectionEvent(type, lineIndex) {
 
 const REREAD_WINDOW_MS  = 30_000; // 슬라이딩 윈도우 30초
 const REREAD_BLUR_ON    = 3;      // 발동 임계값: 30초 안에 3회 (한번 발동 시 자동 해제 없음)
-const ADVANCE_DWELL     = 2;      // 전진 확정 샘플 수 (200ms)
 const REGRESS_DWELL     = 4;      // 역행 확정 샘플 수 (400ms) — 떨림/깜박임 노이즈 방어
 let   startTime         = null;
 let   lastValidLine          = -1;   // line >= 0 인 최신 줄 인덱스
@@ -154,12 +152,10 @@ let   oobSince          = null;
 // ── 줄 기반 역행 추적 ─────────────────────────────────────
 let   currentReadingLine  = -1; // 현재 독서 헤드 — 재독 시 뒤로 이동 가능
 let   maxReadingLine      = -1; // 지금까지 도달한 최고 줄 — 절대 감소하지 않음 (블러 경계)
-let   lineDwellLine         = -1; // 줄 확정 버퍼
-let   lineDwellCount        = 0;  // 연속 샘플 수
-let   lineDwellMinX         = 0;  // 이 줄 방문 중 가장 왼쪽 x (귀환 시선 반영용)
-let   lineDwellHasRight        = false; // 이 줄 방문 중 right 패턴 발생 여부
-let   baselineLastChangedTime  = 0;     // currentReadingLine 마지막 변경 시각
-let   skimAlertActive          = false; // 줄박스 경고 활성 — 완독 전진 시에만 해제
+let   lineDwellLine            = -1;    // 줄 확정 버퍼
+let   lineDwellCount           = 0;    // 연속 샘플 수
+let   lineDwellRightCount      = 0;     // 이 줄에서 right 패턴 발생 횟수
+let   baselineLastChangedTime  = 0;    // currentReadingLine 마지막 변경 시각
 const lineSegmentsVisited = new Map(); // lineIndex → Set<segIndex>
 
 const gazeDot = document.getElementById('gaze-dot');
@@ -229,8 +225,9 @@ if (DEV_MODE) {
             }
             case 'baseLine': {
                 if (currentReadingLine < 0) return '--';
-                const maxSeg = lineSegmentsVisited.get(currentReadingLine) ?? -1;
-                const maxStr = maxReadingLine >= 0 ? `↑${maxReadingLine + 1}` : '';
+                const segsSet = lineSegmentsVisited.get(currentReadingLine);
+                const maxSeg  = segsSet?.size > 0 ? Math.max(...segsSet) : -1;
+                const maxStr  = maxReadingLine >= 0 ? `↑${maxReadingLine + 1}` : '';
                 return `${currentReadingLine + 1}줄 (${maxSeg + 1}/5) ${maxStr}`;
             }
             case 'behavior': {
@@ -353,12 +350,10 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
         lineSegmentsVisited.clear();
         currentReadingLine  = -1;
         maxReadingLine      = -1;
-        lineDwellLine       = -1;
-        lineDwellCount      = 0;
-        lineDwellMinX           = 0;
-        lineDwellHasRight       = false;
+        lineDwellLine           = -1;
+        lineDwellCount          = 0;
+        lineDwellRightCount     = 0;
         baselineLastChangedTime = Date.now();
-        skimAlertActive         = false;
         lastValidLine          = -1;
         lastValidLineTime      = 0;
         oobSince            = null;
@@ -372,6 +367,8 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
     const rawFiltered = rawLine >= 0 ? rawLine
                       : (lastValidLine >= 0 && now - lastValidLineTime < 300) ? lastValidLine
                       : -1;
+
+    updateGazeLineHighlight(currentReadingLine);
 
     // 블러 활성 상태에서 블러 구간(기준 줄 위)으로 시선 → 이탈로 간주
     // 실제로 블러된 줄(blurLine 위)만 이탈로 처리 — blurLine과 OOB 범위 일치
@@ -520,16 +517,18 @@ function analyzeReading() {
 }
 
 // ── 완독률 ────────────────────────────────────────────────
-// lineSegmentsVisited 공유 — 4/5 세그먼트 이상 방문한 줄을 완독으로 처리
+// 방문한 세그먼트 합 / 전체 세그먼트(줄 수 × 5)
+// 예) 3줄 글에서 1번줄 3세그먼트 + 3번줄 2세그먼트 = 5/15
 function calcCompletion() {
     const totalLines = lineList.length;
     if (!totalLines) return { visitedLines: 0, totalLines: 0, completionRate: 0 };
 
-    let visited = 0;
+    let visitedSegs = 0;
     for (let i = 0; i < totalLines; i++) {
-        if ((lineSegmentsVisited.get(i) ?? -1) >= 3) visited++;
+        visitedSegs += lineSegmentsVisited.get(i)?.size ?? 0;
     }
-    return { visitedLines: visited, totalLines, completionRate: Math.round(visited / totalLines * 100) };
+    const totalSegs = totalLines * 5;
+    return { visitedLines: visitedSegs, totalLines: totalSegs, completionRate: Math.round(visitedSegs / totalSegs * 100) };
 }
 
 
@@ -613,15 +612,15 @@ function updateLineTracking(x, line, type = 'still') {
         if (line > maxReadingLine) maxReadingLine = line;
     }
 
-    // 세그먼트 방문 기록 — 현재 기준 줄만, 오른쪽으로만 증가
-    if (line === currentReadingLine) {
+    // 세그먼트 방문 기록 — 시선이 닿는 모든 줄, Set으로 개별 추적
+    if (line >= 0) {
         const l = lineList[line];
         if (l) {
             const sw = (l.xMax - l.xMin) / 5;
             if (sw > 0) {
-                const seg  = Math.max(0, Math.min(4, Math.floor((x - l.xMin) / sw)));
-                const prev = lineSegmentsVisited.get(line) ?? -1;
-                if (seg > prev) lineSegmentsVisited.set(line, seg);
+                const seg = Math.max(0, Math.min(4, Math.floor((x - l.xMin) / sw)));
+                if (!lineSegmentsVisited.has(line)) lineSegmentsVisited.set(line, new Set());
+                lineSegmentsVisited.get(line).add(seg);
             }
         }
     }
@@ -629,34 +628,23 @@ function updateLineTracking(x, line, type = 'still') {
     // 줄 확정 (dwell 카운트)
     if (line === lineDwellLine) {
         lineDwellCount++;
-        if (x < lineDwellMinX) lineDwellMinX = x;
-        if (type === 'right') lineDwellHasRight = true;
+        if (type === 'right') lineDwellRightCount++;
     } else {
-        lineDwellLine     = line;
-        lineDwellCount    = 1;
-        lineDwellMinX     = x;
-        lineDwellHasRight = (type === 'right');
+        lineDwellLine       = line;
+        lineDwellCount      = 1;
+        lineDwellRightCount = (type === 'right') ? 1 : 0;
     }
 
-    if (lineDwellCount >= ADVANCE_DWELL && lineDwellHasRight) {
-        if (line <= maxReadingLine) {
-            if (line < currentReadingLine) rereadingEvents.push(Date.now());
-            if (line !== currentReadingLine) baselineLastChangedTime = Date.now();
+    // right 패턴 3회 이상 감지된 줄만 현재 독서 줄로 인정
+    if (lineDwellRightCount >= 3) {
+        if (line < currentReadingLine) {
+            rereadingEvents.push(Date.now());
+            baselineLastChangedTime = Date.now();
             currentReadingLine = line;
-        } else if (line === currentReadingLine + 1) {
-            // 새 구간 전진 — 4/5 완독 + 왼쪽 절반 착지 확인
-            const maxSeg = lineSegmentsVisited.get(currentReadingLine) ?? -1;
-            if (maxSeg >= 3) {
-                const nextL      = lineList[line];
-                const lineWidth  = nextL ? nextL.xMax - nextL.xMin : 0;
-                const landedLeft = lineWidth > 0 && lineDwellMinX <= nextL.xMin + lineWidth * 0.5;
-                if (landedLeft) {
-                    currentReadingLine      = line;
-                    maxReadingLine          = line;
-                    baselineLastChangedTime = Date.now();
-                    skimAlertActive         = false;
-                }
-            }
+        } else if (line > currentReadingLine) {
+            baselineLastChangedTime = Date.now();
+            currentReadingLine = line;
+            if (line > maxReadingLine) maxReadingLine = line;
         }
     }
 }
@@ -708,6 +696,21 @@ function hideOverlay(el) {
     setTimeout(() => { if (el.style.opacity === '0') el.style.display = 'none'; }, 450);
 }
 
+// ── 현재 응시 줄 주황색 하이라이트 ──────────────────────────
+const _gazeLineHighlight = document.getElementById('current-line-highlight');
+
+function updateGazeLineHighlight(lineIdx) {
+    if (!lineList.length || lineIdx < 0 || lineIdx >= lineList.length) {
+        _gazeLineHighlight.style.display = 'none';
+        return;
+    }
+    const areaTop = document.querySelector('.reading-area').getBoundingClientRect().top + window.scrollY;
+    const ln = lineList[lineIdx];
+    _gazeLineHighlight.style.top    = (ln.top - areaTop) + 'px';
+    _gazeLineHighlight.style.height = (ln.bottom - ln.top + 4) + 'px';
+    _gazeLineHighlight.style.display = 'block';
+}
+
 // Y가 줄 top~bottom 안에 정확히 있을 때만 인덱스 반환 (하이라이트 전용)
 function getLineIndexStrict(y) {
     if (!lineList.length) return -1;
@@ -720,7 +723,6 @@ function getLineIndexStrict(y) {
 
 // ── 라인 콜아웃 말풍선 ───────────────────────────────────
 const _calloutFocus = document.getElementById('callout-focus');
-const _calloutSkim  = document.getElementById('callout-skim');
 
 function _positionCallout(el, lineIdx, side) {
     if (lineIdx < 0 || lineIdx >= lineList.length) return;
@@ -744,15 +746,6 @@ function showFocusCallout(lineIdx) {
 }
 function hideFocusCallout() { _calloutFocus.classList.remove('show'); }
 
-function showSkimCallout(lineIdx) {
-    if (lineIdx < 0 || lineIdx >= lineList.length) { hideSkimCallout(); return; }
-    _calloutSkim.querySelector('.callout-box').textContent = '↩ 이곳부터 다시 읽으세요';
-    _calloutSkim.classList.add('show');
-    _positionCallout(_calloutSkim, lineIdx, 'right');
-}
-function hideSkimCallout() { _calloutSkim.classList.remove('show'); }
-
-
 // lineIdx 줄에 하이라이트 바 위치 지정
 function updateHighlightBar(lineIdx) {
     const bar = document.getElementById('line-highlight-bar');
@@ -762,17 +755,6 @@ function updateHighlightBar(lineIdx) {
     bar.style.top    = (ln.top - areaTop) + 'px';
     bar.style.height = (ln.bottom - ln.top + 4) + 'px';
     showOverlay(bar);
-}
-
-// lineIdx 줄에 박스 오버레이 위치 지정
-function updateLineBox(lineIdx) {
-    const box = document.getElementById('line-box');
-    if (lineIdx < 0 || lineIdx >= lineList.length) { hideOverlay(box); return; }
-    const areaTop = document.querySelector('.reading-area').getBoundingClientRect().top + window.scrollY;
-    const ln = lineList[lineIdx];
-    box.style.top    = (ln.top - areaTop - 2) + 'px';
-    box.style.height = (ln.bottom - ln.top + 4) + 'px';
-    showOverlay(box);
 }
 
 // ── 하이라이트 개입 ───────────────────────────────────────
@@ -795,31 +777,3 @@ setInterval(() => {
     }
 }, 500);
 
-// ── 줄 박스 개입 ─────────────────────────────────────────
-// 트리거: 기준 줄이 5초 이상 고정 + 시선이 기준 줄 위에서 정상독서 중
-//         → 현재 기준 줄 끝까지 안 읽고 넘어간 것 → 오른쪽 콜아웃 "이곳부터 다시 읽으세요"
-// 소거: 기준 줄이 정상 완독 규칙으로 전진하면 사라짐
-const SKIM_ALERT_MS = 5000;
-const ivBoxCheck = document.getElementById('iv-box-check');
-setInterval(() => {
-    const box = document.getElementById('line-box');
-    if (!startTime || !ivBoxCheck.checked) { hideOverlay(box); skimAlertActive = false; hideSkimCallout(); return; }
-    const skimDetected =
-        currentReadingLine >= 0 &&
-        lastValidLine > currentReadingLine &&
-        getReadingBehavior() === 'reading' &&
-        Date.now() - baselineLastChangedTime > SKIM_ALERT_MS;
-    if (skimDetected) skimAlertActive = true;
-    if (skimAlertActive) {
-        updateLineBox(currentReadingLine);
-        showSkimCallout(currentReadingLine);
-        if (!boxEventSent) {
-            boxEventSent = true;
-            sendCorrectionEvent('BOX', currentReadingLine);
-        }
-    } else {
-        hideOverlay(box);
-        hideSkimCallout();
-        boxEventSent = false;
-    }
-}, 500);

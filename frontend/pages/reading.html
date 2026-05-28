@@ -8,6 +8,21 @@
     <script src="/static/js/auth-guard.js"></script>
     <style>
         .reading-area   { position: relative; }
+        .reading-wrapper { position: relative; }
+        #book-title {
+            position: absolute;
+            right: calc(100% + 0.8rem);
+            top: 0;
+            font-size: 1rem !important;
+            color: #bbb;
+            line-height: 1.5;
+            word-break: keep-all;
+            width: 90px;
+            margin: 0 !important;
+            padding: 0 !important;
+            border-bottom: none !important;
+            text-align: right;
+        }
         #line-highlight-bar {
             position: absolute; left: 0; right: 0;
             background: rgba(52, 152, 219, 0.13);
@@ -51,7 +66,7 @@
         .reading-text   { position: relative; z-index: 1; font-size: 1.12rem; line-height: 2; }
         .reading-text p { margin: 0 0 1.2em; }
         .word           { display: inline; transition: filter 0.25s; }
-        .word-blur      { filter: blur(2px); opacity: 0.55; user-select: none; }
+        .word-blur      { filter: blur(4px); opacity: 0.3; user-select: none; }
 
         /* 독서 보조 개입 패널 */
         #intervention-panel {
@@ -133,19 +148,6 @@
             font-size: 0.83rem;
         }
 
-        /* 줄 박스 */
-        #line-box {
-            position: absolute;
-            left: -4px; right: -4px;
-            border: 2px solid rgba(250, 160, 50, 0.85);
-            border-radius: 4px;
-            pointer-events: none;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.4s ease;
-            z-index: 2;
-        }
-
         /* 현재 읽는 줄 가벼운 하이라이트 */
         #current-line-highlight {
             position: absolute; left: 0; right: 0;
@@ -180,12 +182,13 @@
     </header>
 
     <div class="page-content">
-        <div class="reading-area">
-            <div id="current-line-highlight"></div>
-            <div id="line-highlight-bar"></div>
-            <div id="line-box"></div>
+        <div class="reading-wrapper">
             <h2 id="book-title">📖 불러오는 중...</h2>
-            <div class="reading-text"></div>
+            <div class="reading-area">
+                <div id="current-line-highlight"></div>
+                <div id="line-highlight-bar"></div>
+                <div class="reading-text"></div>
+            </div>
         </div>
 
         <div class="reading-controls">
@@ -223,20 +226,12 @@
             <input type="checkbox" id="iv-highlight-check" class="iv-check" checked>
             <label class="iv-label" for="iv-highlight-check">하이라이트</label>
         </div>
-        <div class="iv-row">
-            <input type="checkbox" id="iv-box-check" class="iv-check" checked>
-            <label class="iv-label" for="iv-box-check">줄 박스</label>
-        </div>
     </div>
 
     <!-- 라인 콜아웃 말풍선 -->
     <div id="callout-focus">  <!-- 왼쪽: 집중하세요 -->
         <div class="callout-box"></div>
         <div class="callout-arrow"></div>
-    </div>
-    <div id="callout-skim">   <!-- 오른쪽: 이곳부터 다시 읽으세요 -->
-        <div class="callout-arrow"></div>
-        <div class="callout-box"></div>
     </div>
 
     <!-- 이전 독서 개선 포인트 팝업 -->
