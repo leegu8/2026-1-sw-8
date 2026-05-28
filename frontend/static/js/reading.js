@@ -1,6 +1,12 @@
 // ── 책 로드 ──────────────────────────────────────────────
-let lineList    = []; // [{top, bottom, xMin, xMax}] — document y, viewport x
+let lineList    = []; // [{top, bottom, xMin, xMax}] — 현재 페이지 기준 viewport 좌표
+let allLineList = []; // 전체 줄 — buildLineList() 최초 1회 저장, 페이지 이동 후에도 유지
 let readingAreaRect = null; // reading-area 경계 캐시 (좌우 이탈 판정용)
+let currentPage       = 0;
+let totalPages        = 1;
+let linesPerPage      = 10;
+let _paginationTopPad = 0; // area 내부 상단 여백 (불변)
+let _paginationMaxH   = 0; // area 허용 최대 높이 (불변)
 
 (async () => {
     const bookId = +new URLSearchParams(location.search).get('book_id');
@@ -32,6 +38,8 @@ let readingAreaRect = null; // reading-area 경계 캐시 (좌우 이탈 판정�
     }
 
     buildLineList();
+    allLineList = lineList.map(l => ({ ...l }));
+    initPagination();
     await createSession(bookId);
 })();
 
@@ -71,6 +79,70 @@ function buildLineList() {
         const top = Math.round(w.getBoundingClientRect().top + window.scrollY);
         w.dataset.line = topToIdx.get(top) ?? -1;
     });
+}
+
+// ── 페이지네이션 ──────────────────────────────────────────
+function initPagination() {
+    if (!allLineList.length) return;
+
+    const area     = document.querySelector('.reading-area');
+    const header   = document.querySelector('.page-header');
+    const controls = document.querySelector('.reading-controls');
+    const nav      = document.getElementById('page-nav');
+    const areaRect = area.getBoundingClientRect();
+
+    _paginationTopPad = allLineList[0].top - areaRect.top;
+    _paginationMaxH   = window.innerHeight
+        - header.getBoundingClientRect().bottom
+        - controls.offsetHeight
+        - 70; // page-nav + 여백
+
+    const avgLineH = allLineList.length > 1
+        ? (allLineList[allLineList.length - 1].bottom - allLineList[0].top) / allLineList.length
+        : 50;
+
+    linesPerPage = Math.max(3, Math.floor((_paginationMaxH - _paginationTopPad) / avgLineH));
+    totalPages   = Math.ceil(allLineList.length / linesPerPage);
+
+    area.style.overflow   = 'hidden';
+    document.body.style.overflowY = 'hidden';
+    if (nav) nav.style.display = totalPages > 1 ? 'flex' : 'none';
+
+    goToPage(0);
+}
+
+function goToPage(page) {
+    if (page < 0 || page >= totalPages) return;
+    currentPage = page;
+
+    const startIdx = page * linesPerPage;
+    const endIdx   = Math.min((page + 1) * linesPerPage, allLineList.length) - 1;
+    const translateY = allLineList[0].top - allLineList[startIdx].top;
+
+    document.querySelector('.reading-text').style.transform = `translateY(${translateY}px)`;
+
+    // 이 페이지 실제 줄 높이로 area 정확히 조정 (다음 페이지 첫 줄 노출 방지)
+    const pageContentH = allLineList[endIdx].bottom - allLineList[startIdx].top;
+    const area = document.querySelector('.reading-area');
+    area.style.height = Math.min(_paginationTopPad + pageContentH, _paginationMaxH) + 'px';
+
+    lineList = allLineList.map(l => ({
+        ...l,
+        top:    l.top    + translateY,
+        bottom: l.bottom + translateY,
+    }));
+
+    readingAreaRect = area.getBoundingClientRect();
+    updatePageNav();
+}
+
+function updatePageNav() {
+    const prevBtn   = document.getElementById('prev-page-btn');
+    const nextBtn   = document.getElementById('next-page-btn');
+    const indicator = document.getElementById('page-indicator');
+    if (prevBtn)   prevBtn.disabled   = currentPage <= 0;
+    if (nextBtn)   nextBtn.disabled   = currentPage >= totalPages - 1;
+    if (indicator) indicator.textContent = `${currentPage + 1} / ${totalPages}`;
 }
 
 // 뷰포트 y → 줄 인덱스 — 확장된 경계 기반, gap 없음
@@ -458,6 +530,9 @@ document.getElementById('done-btn').addEventListener('click', async () => {
 document.getElementById('recal-btn').addEventListener('click', () => {
     window.location.href = '/guide.html';
 });
+
+document.getElementById('prev-page-btn')?.addEventListener('click', () => goToPage(currentPage - 1));
+document.getElementById('next-page-btn')?.addEventListener('click', () => goToPage(currentPage + 1));
 
 // ── 역행 블러 ─────────────────────────────────────────────
 // 트리거: 30초 안에 재독 3회 이상 (Varao-Sousa et al., 2017 근거)

@@ -63,7 +63,7 @@
         #callout-skim  .callout-arrow { border-right: 8px solid rgba(250,160,50,0.95); }
         #callout-skim  .callout-box   { background: rgba(250,160,50,0.95); color: #fff; }
         #book-title     { font-size: 1.9rem; }
-        .reading-text   { position: relative; z-index: 1; font-size: 1.12rem; line-height: 2; }
+        .reading-text   { position: relative; z-index: 1; font-size: 1.35rem; line-height: 2.2; }
         .reading-text p { margin: 0 0 1.2em; }
         .word           { display: inline; transition: filter 0.25s; }
         .word-blur      { filter: blur(4px); opacity: 0.3; user-select: none; }
@@ -189,6 +189,12 @@
                 <div id="line-highlight-bar"></div>
                 <div class="reading-text"></div>
             </div>
+        </div>
+
+        <div id="page-nav" style="display:none; justify-content:center; align-items:center; gap:16px; margin-bottom:0.75rem;">
+            <button id="prev-page-btn" class="btn" style="padding:0.4rem 1.2rem; font-size:0.9rem;">← 이전</button>
+            <span id="page-indicator" style="color:#666; font-size:0.9rem; min-width:60px; text-align:center;">1 / 1</span>
+            <button id="next-page-btn" class="btn" style="padding:0.4rem 1.2rem; font-size:0.9rem;">다음 →</button>
         </div>
 
         <div class="reading-controls">
