@@ -449,20 +449,29 @@ function calcFocusRate(totalSec) {
     return Math.round(Math.max(0, (gazeSpanMs - unfocusedMs) / gazeSpanMs * 100));
 }
 
-// ── 역행비율 — 노이즈 필터 적용 (right-left-right, down-up-down 제외) ──
+// ── 역행비율 — 노이즈 필터 적용 ──────────────────────────
+// 분모: 방향 전환 + 정지 (still 포함)
+// 분자: 노이즈 제거된 left + up
+//   제외: right-left-right(떨림), down-up-down(떨림), left→down(줄바꿈)
 function calcRegressionRate() {
+    const allMoves = patternData.filter(p =>
+        p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down' || p.type === 'still'
+    );
+    if (!allMoves.length) return 0;
+
     const saccades = patternData.filter(p =>
         p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down'
     );
-    if (!saccades.length) return 0;
     const regCount = saccades.filter((p, i) => {
         if (p.type === 'up') {
             return !(saccades[i - 1]?.type === 'down' && saccades[i + 1]?.type === 'down');
         }
         if (p.type !== 'left') return false;
-        return !(saccades[i - 1]?.type === 'right' && saccades[i + 1]?.type === 'right');
+        if (saccades[i - 1]?.type === 'right' && saccades[i + 1]?.type === 'right') return false;
+        if (saccades[i + 1]?.type === 'down') return false;
+        return true;
     }).length;
-    return Math.round(regCount / saccades.length * 100);
+    return Math.round(regCount / allMoves.length * 100);
 }
 
 function calcRegressions(totalSec = 0) {

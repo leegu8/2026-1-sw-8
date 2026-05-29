@@ -674,24 +674,34 @@ function calcFocusRate(totalSec) {
 }
 
 // ── 역행 비율 (연구 정의) ─────────────────────────────────
-// patternData 중 up + left 비율 — 연구의 regression saccade 비율과 같은 개념
+// 분자: left + up (노이즈 제거 후)
+// 분모: right + left + up + down + still (정지 포함 — 고정 구간도 독서 행동으로 산정)
 // 정상 범위: 15~25% (Rayner 1978, Taylor 1965)
-// 떨림 노이즈 제거: right-left-right 패턴의 단발 left는 제외
+// 노이즈 제거:
+//   1) right-left-right → 떨림
+//   2) down-up-down     → 떨림
+//   3) left 뒤에 down   → 줄바꿈 return sweep (역행 아님)
 function calcRegressionRate() {
+    // 분모: 방향 전환 + 정지
+    const allMoves = patternData.filter(p =>
+        p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down' || p.type === 'still'
+    );
+    if (!allMoves.length) return 0;
+
+    // 분자 노이즈 필터는 방향 전환끼리 컨텍스트 체크
     const saccades = patternData.filter(p =>
         p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down'
     );
-    if (!saccades.length) return 0;
     const regCount = saccades.filter((p, i) => {
         if (p.type === 'up') {
-            // 앞뒤 모두 down → 떨림으로 간주, 제외
             return !(saccades[i - 1]?.type === 'down' && saccades[i + 1]?.type === 'down');
         }
         if (p.type !== 'left') return false;
-        // 앞뒤 모두 right → 떨림으로 간주, 제외
-        return !(saccades[i - 1]?.type === 'right' && saccades[i + 1]?.type === 'right');
+        if (saccades[i - 1]?.type === 'right' && saccades[i + 1]?.type === 'right') return false;
+        if (saccades[i + 1]?.type === 'down') return false;
+        return true;
     }).length;
-    return Math.round(regCount / saccades.length * 100);
+    return Math.round(regCount / allMoves.length * 100);
 }
 
 // ── 재독 분석 (본 시스템 정의) ────────────────────────────
