@@ -382,6 +382,7 @@
 
   async function selectCamera(index, name) {
     selectedIndex = index;
+    localStorage.setItem('cameraIndex', String(index));
     document.getElementById('selected-name').textContent = name;
     document.getElementById('selected-meta').style.display = 'flex';
     document.getElementById('no-select-meta').style.display = 'none';

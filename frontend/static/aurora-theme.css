@@ -1,6 +1,20 @@
 /* ── aurora-theme.css — 오로라 다크 테마 오버라이드 ── */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
+/* ── 프로필 아바타 ── */
+.navbar-user {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; color: rgba(232,238,255,0.6);
+}
+.avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #1E5BE0, #3FB6FF);
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Space Grotesk", "Pretendard", sans-serif;
+    font-weight: 600; font-size: 12px; color: #04102E;
+    flex-shrink: 0;
+}
+
 /* ── 브랜드 로고 ── */
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
 .brand-mark {

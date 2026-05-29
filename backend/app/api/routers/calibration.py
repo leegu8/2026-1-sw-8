@@ -41,6 +41,12 @@ async def clear_calibration(request: Request):
     return {"success": True}
 
 
+@router.post("/y-correction")
+async def set_y_correction(request: Request, active: bool):
+    _get_tracker(request).y_correction_active = active
+    return {"active": active}
+
+
 @router.get("/status")
 async def calibration_status(request: Request):
     tracker = _get_tracker(request)

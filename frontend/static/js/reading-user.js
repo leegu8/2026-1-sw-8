@@ -5,18 +5,29 @@ let readingAreaRect = null;
 let pages       = [];   // 페이지별 단락 HTML 배열
 let currentPage = 0;
 
-function paraToHtml(para) {
-    return `<p>${para.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`;
+function paraToHtml(text, isParaStart = false) {
+    const cls = isParaStart ? ' class="para-start"' : '';
+    return `<p${cls}>${text.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`;
+}
+
+function contentToParas(content) {
+    return content.split(/\n+/).map(s => s.trim()).filter(Boolean)
+        .flatMap((para, paraIdx) => {
+            const sents = para.split(/(?<=[.!?。！？])\s+/).filter(Boolean);
+            const items = sents.length > 1 ? sents : [para];
+            return items.map((s, i) => ({ text: s, paraStart: i === 0 && paraIdx > 0 }));
+        });
 }
 
 function calcAvailableHeight() {
-    const header   = document.querySelector('.page-header');
-    const controls = document.querySelector('.reading-controls');
-    const padding  = 32; // 1rem top + bottom
-    return window.innerHeight
-        - (header   ? header.offsetHeight   : 0)
-        - (controls ? controls.offsetHeight : 0)
-        - padding;
+    const area = document.querySelector('.reading-area');
+    if (area) {
+        const s = getComputedStyle(area);
+        return area.clientHeight
+            - (parseFloat(s.paddingTop)    || 0)
+            - (parseFloat(s.paddingBottom) || 0);
+    }
+    return 500;
 }
 
 function buildPages(paraHtmlList) {
@@ -87,7 +98,7 @@ function showPage(n) {
     if (!book) return;
     document.getElementById('book-title').textContent = book.title;
     document.title = `${book.title} - 독서 아이트래킹`;
-    const paraHtmlList = book.content.split(/\n+/).map(s => s.trim()).filter(Boolean).map(paraToHtml);
+    const paraHtmlList = contentToParas(book.content).map(p => paraToHtml(p.text, p.paraStart));
     bookWordCount = paraHtmlList.join('').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(w => w.length > 0).length;
     pages = buildPages(paraHtmlList);
     showPage(0);
@@ -417,10 +428,22 @@ function calcFocusRate(totalSec) {
 }
 
 function calcRegressionRate() {
-    const saccades = patternData.filter(p => ['right','left','up','down'].includes(p.type));
-    if (!saccades.length) return 0;
-    const regCount = saccades.filter(p => p.type === 'up' || p.type === 'left').length;
-    return Math.round(regCount / saccades.length * 100);
+    const allMoves = patternData.filter(p =>
+        p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down' || p.type === 'still'
+    );
+    if (!allMoves.length) return 0;
+    const saccades = patternData.filter(p =>
+        p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down'
+    );
+    const regCount = saccades.filter((p, i) => {
+        if (p.type === 'up')
+            return !(saccades[i - 1]?.type === 'down' && saccades[i + 1]?.type === 'down');
+        if (p.type !== 'left') return false;
+        if (saccades[i - 1]?.type === 'right' && saccades[i + 1]?.type === 'right') return false;
+        if (saccades[i + 1]?.type === 'down') return false;
+        return true;
+    }).length;
+    return Math.round(regCount / allMoves.length * 100);
 }
 
 function calcRegressions(totalSec = 0) {

@@ -514,13 +514,39 @@
     }
   }
 
+  async function sendCalibrationPoint(el) {
+    const r = el.getBoundingClientRect();
+    const x = Math.round(r.left + r.width / 2);
+    const y = Math.round(r.top  + r.height / 2);
+    try {
+      await fetch('/api/calibrate', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ x, y, count: 25 }),
+      });
+    } catch {}
+  }
+
+  let sending = false;
+
+  async function handleDotAction() {
+    if (sending || current >= 9) return;
+    sending = true;
+    const d = dots[current];
+    d.style.pointerEvents = 'none';
+    await sendCalibrationPoint(d);
+    d.style.pointerEvents = '';
+    sending = false;
+    advance();
+  }
+
   document.getElementById('start-btn').addEventListener('click', start);
   document.getElementById('cal-close').addEventListener('click', () => overlay.classList.remove('active'));
-  dots.forEach((d, i) => d.addEventListener('click', () => { if (i === current) advance(); }));
+  dots.forEach((d, i) => d.addEventListener('click', () => { if (i === current) handleDotAction(); }));
   document.addEventListener('keydown', (e) => {
     if (!overlay.classList.contains('active')) return;
     if (e.key === 'Escape') overlay.classList.remove('active');
-    if (e.key === ' ' && current < 9) { e.preventDefault(); advance(); }
+    if (e.key === ' ' && current < 9) { e.preventDefault(); handleDotAction(); }
   });
 
   // 드래그 이동

@@ -13,6 +13,7 @@ MODEL_URL     = (
 
 SMOOTH_ALPHA    = 0.10
 DEADZONE_PX     = 6
+Y_CORRECTION_K  = 0.00004   # Y축 하향 편향 보정 계수 — corrected_y = y × exp(-k × y)
 Y_GAIN          = 1.5
 SAMPLE_COUNT    = 25
 SAMPLE_INTERVAL = 0.02

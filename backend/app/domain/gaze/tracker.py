@@ -6,7 +6,7 @@ import numpy as np
 from .feature_extractor import GazeFeatureExtractor
 from .calibration import CalibrationModel
 from .visualizer import FaceMeshVisualizer
-from ...core.config import DEADZONE_PX
+from ...core.config import DEADZONE_PX, Y_CORRECTION_K
 
 # 칼만 필터 파라미터 (값이 클수록 해당 노이즈를 크게 가정)
 _PROCESS_NOISE     = 50.0   # 상태 변화 노이즈 (클수록 빠른 움직임에 민감)
@@ -84,6 +84,7 @@ class GazeTracker:
         self._out_y:       int   | None = None
         self._cap                       = None
         self._running                   = False
+        self.y_correction_active: bool  = True
 
     @property
     def calibration(self) -> CalibrationModel:
@@ -126,7 +127,8 @@ class GazeTracker:
                 print(f"⚠ 비정상 예측값: raw_x={raw_x}, raw_y={raw_y}")
                 return None
             smooth_x, smooth_y = self._kalman.update(raw_x, raw_y)
-            new_x, new_y = int(smooth_x), int(smooth_y)
+            corrected_y = smooth_y * np.exp(-Y_CORRECTION_K * max(0.0, smooth_y - 100)) if self.y_correction_active else smooth_y
+            new_x, new_y = int(smooth_x), int(corrected_y)
         except Exception as e:
             print(f"⚠ get_screen_pos 예외: {type(e).__name__}: {e}")
             return None
