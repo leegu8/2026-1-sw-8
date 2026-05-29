@@ -1,45 +1,116 @@
-// ── 책 로드 ──────────────────────────────────────────────
+// ── 책 로드 & 페이지네이션 ────────────────────────────────
 let lineList        = [];
-let allLineList     = [];
 let readingAreaRect = null;
-let currentPage       = 0;
-let totalPages        = 1;
-let pageBoundaries    = [];
-let _paginationTopPad = 0;
-let _paginationMaxH   = 0;
+
+let pages       = [];   // 페이지별 단락 HTML 배열
+let currentPage = 0;
+
+function paraToHtml(text, isParaStart = false) {
+    const cls = isParaStart ? ' class="para-start"' : '';
+    return `<p${cls}>${text.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`;
+}
+
+function contentToParas(content) {
+    return content.split(/\n+/).map(s => s.trim()).filter(Boolean)
+        .flatMap((para, paraIdx) => {
+            const sents = para.split(/(?<=[.!?。！？])\s+/).filter(Boolean);
+            const items = sents.length > 1 ? sents : [para];
+            return items.map((s, i) => ({ text: s, paraStart: i === 0 && paraIdx > 0 }));
+        });
+}
+
+function calcAvailableHeight() {
+    const area = document.querySelector('.reading-area');
+    if (area) {
+        const s = getComputedStyle(area);
+        return area.clientHeight
+            - (parseFloat(s.paddingTop)    || 0)
+            - (parseFloat(s.paddingBottom) || 0);
+    }
+    return 500;
+}
+
+function buildPages(paraHtmlList) {
+    const area      = document.querySelector('.reading-text');
+    const available = calcAvailableHeight();
+    const result    = [];
+    let   bucket    = [];
+
+    for (const html of paraHtmlList) {
+        bucket.push(html);
+        area.innerHTML = bucket.join('');
+        if (area.scrollHeight > available && bucket.length > 1) {
+            result.push(bucket.slice(0, -1).join(''));
+            bucket = [html];
+        }
+    }
+    if (bucket.length) result.push(bucket.join(''));
+    return result;
+}
+
+function showPage(n) {
+    currentPage = n;
+    const area = document.querySelector('.reading-text');
+    area.innerHTML = pages[n];
+
+    const indicator = document.getElementById('page-indicator');
+    indicator.textContent = `${n + 1} / ${pages.length}`;
+
+    const isFirst = n === 0;
+    const isLast  = n === pages.length - 1;
+    document.getElementById('prev-page-btn').style.display = isFirst ? 'none' : '';
+    document.getElementById('next-page-btn').style.display = isLast  ? 'none' : '';
+    document.getElementById('done-btn').style.display      = isLast  ? ''     : 'none';
+
+    // 시선 추적 상태 초기화
+    lineList = [];
+    startTime              = null;
+    gazeData.length        = 0;
+    patternData.length     = 0;
+    rereadingEvents.length = 0;
+    lineSegmentsVisited.clear();
+    currentReadingLine       = -1;
+    maxReadingLine           = -1;
+    lineDwellLine            = -1;
+    lineDwellCount           = 0;
+    lineDwellMinX            = 0;
+    lineDwellHasRight        = false;
+    baselineLastChangedTime  = Date.now();
+    skimAlertActive          = false;
+    lastValidLine            = -1;
+    lastValidLineTime        = 0;
+    blurActive               = false;
+    blurLine                 = -1;
+    blurEventSent            = false;
+    highlightEventSent       = false;
+    oobSince                 = null;
+    hideFocusCallout();
+    const bar = document.getElementById('line-highlight-bar');
+    if (bar) { bar.style.opacity = '0'; bar.style.display = 'none'; }
+
+    buildLineList();
+}
 
 (async () => {
     const bookId = +new URLSearchParams(location.search).get('book_id');
     if (!bookId) return;
     const book = await fetch(`/api/db/books/${bookId}`).then(r => r.ok ? r.json() : null);
     if (!book) return;
-    document.getElementById('book-title').textContent = `📖 ${book.title}`;
+    document.getElementById('book-title').textContent = book.title;
     document.title = `${book.title} - 독서 아이트래킹`;
-    const paras = book.content.split(/\n+/).map(s => s.trim()).filter(Boolean);
-    document.querySelector('.reading-text').innerHTML = paras.map(para =>
-        `<p>${para.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`
-    ).join('');
-    bookWordCount = document.querySelector('.reading-text').innerText
-        .trim().split(/\s+/).filter(w => w.length > 0).length;
-    const timeIssue = localStorage.getItem('last_time_issue');
-    if (timeIssue && bookWordCount > 0) {
-        const popup = document.getElementById('improvement-popup');
-        if (popup && popup.style.display === 'flex') {
-            const fmt = s => { s = Math.round(s); return s >= 60 ? `${Math.floor(s/60)}분 ${s%60}초` : `${s}초`; };
-            const optRange = `${fmt(bookWordCount / 400 * 60)} ~ ${fmt(bookWordCount / 270 * 60)}`;
-            const note = document.createElement('p');
-            note.style.cssText = 'font-size:0.85rem;color:#2980b9;font-weight:600;margin:10px 0 0;padding:10px 0 0;border-top:1px solid #dce8f5;line-height:1.6;';
-            note.textContent = `📖 이 글의 적정 독서 시간: ${optRange}`;
-            document.getElementById('popup-improvement-list').appendChild(note);
-        }
-        localStorage.removeItem('last_time_issue');
-    }
-
-    buildLineList();
-    allLineList = lineList.map(l => ({ ...l }));
-    initPagination();
+    const paraHtmlList = contentToParas(book.content).map(p => paraToHtml(p.text, p.paraStart));
+    bookWordCount = paraHtmlList.join('').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(w => w.length > 0).length;
+    pages = buildPages(paraHtmlList);
+    showPage(0);
     await createSession(bookId);
 })();
+
+document.getElementById('prev-page-btn').addEventListener('click', () => {
+    if (currentPage > 0) showPage(currentPage - 1);
+});
+document.getElementById('next-page-btn').addEventListener('click', () => {
+    if (currentPage < pages.length - 1) showPage(currentPage + 1);
+});
 
 function buildLineList() {
     const map = new Map();
@@ -71,85 +142,6 @@ function buildLineList() {
         const top = Math.round(w.getBoundingClientRect().top + window.scrollY);
         w.dataset.line = topToIdx.get(top) ?? -1;
     });
-}
-
-// ── 페이지네이션 ──────────────────────────────────────────
-function initPagination() {
-    if (!allLineList.length) return;
-
-    const area     = document.querySelector('.reading-area');
-    const controls = document.querySelector('.reading-controls');
-    const nav      = document.getElementById('page-nav');
-    const areaRect = area.getBoundingClientRect();
-
-    _paginationTopPad = allLineList[0].top - areaRect.top;
-    _paginationMaxH   = window.innerHeight
-        - areaRect.top
-        - 50
-        - controls.offsetHeight
-        - 36;
-
-    const bottomPad   = parseFloat(getComputedStyle(area).paddingBottom) || _paginationTopPad;
-    const maxContentH = _paginationMaxH - _paginationTopPad - bottomPad;
-
-    pageBoundaries = [];
-    let s = 0;
-    while (s < allLineList.length) {
-        let e = s, h = 0;
-        while (e < allLineList.length) {
-            const lh = allLineList[e].bottom - allLineList[e].top;
-            if (h + lh > maxContentH && e > s) break;
-            h += lh;
-            e++;
-        }
-        pageBoundaries.push({ start: s, end: e - 1 });
-        s = e;
-    }
-    totalPages = pageBoundaries.length;
-
-    const clip = document.getElementById('reading-clip');
-    if (clip) {
-        clip.style.overflow = 'hidden';
-        clip.style.height   = maxContentH + 'px';
-    }
-
-    area.style.overflow        = 'hidden';
-    area.style.height          = _paginationMaxH + 'px';
-    document.body.style.overflowY = 'hidden';
-    if (nav) nav.style.display = totalPages > 1 ? 'flex' : 'none';
-
-    goToPage(0);
-}
-
-function goToPage(page) {
-    if (page < 0 || page >= totalPages) return;
-    currentPage = page;
-
-    const { start: startIdx } = pageBoundaries[page];
-    const translateY = allLineList[0].top - allLineList[startIdx].top;
-
-    document.querySelector('.reading-text').style.transform = `translateY(${translateY}px)`;
-
-    const area = document.querySelector('.reading-area');
-    area.style.height = _paginationMaxH + 'px';
-
-    lineList = allLineList.map(l => ({
-        ...l,
-        top:    l.top    + translateY,
-        bottom: l.bottom + translateY,
-    }));
-
-    readingAreaRect = area.getBoundingClientRect();
-    updatePageNav();
-}
-
-function updatePageNav() {
-    const prevBtn   = document.getElementById('prev-page-btn');
-    const nextBtn   = document.getElementById('next-page-btn');
-    const indicator = document.getElementById('page-indicator');
-    if (prevBtn)   prevBtn.disabled   = currentPage <= 0;
-    if (nextBtn)   nextBtn.disabled   = currentPage >= totalPages - 1;
-    if (indicator) indicator.textContent = `${currentPage + 1} / ${totalPages}`;
 }
 
 function getLineIndex(y) {
@@ -220,13 +212,12 @@ let   lineDwellMinX          = 0;
 let   lineDwellHasRight      = false;
 let   baselineLastChangedTime = 0;
 let   skimAlertActive        = false;
-const lineSegmentsVisited    = new Map(); // lineIndex → Set<segIndex>
+const lineSegmentsVisited    = new Map();
 
-document.getElementById('reading-status').textContent = '👁 시선 추적 중';
+document.getElementById('reading-status').textContent = '시선 추적 중';
 
 // ── 시선 이벤트 수집 ──────────────────────────────────────
 window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
-    if (document.getElementById('improvement-popup')?.style.display === 'flex') return;
     if (!startTime && isReadingStart(x, y)) {
         startTime = Date.now();
         gazeData.length        = 0;
@@ -339,16 +330,12 @@ document.getElementById('done-btn').addEventListener('click', async () => {
             }
         } catch {}
     }
-    localStorage.setItem('max_rereadings_30s', calcMaxRereadingsIn30s());
     window.location.href = `/result.html?session_id=${sessionId ?? ''}`;
 });
 
 document.getElementById('recal-btn').addEventListener('click', () => {
     window.location.href = '/guide.html';
 });
-
-document.getElementById('prev-page-btn')?.addEventListener('click', () => goToPage(currentPage - 1));
-document.getElementById('next-page-btn')?.addEventListener('click', () => goToPage(currentPage + 1));
 
 // ── 역행 블러 (항상 활성) ─────────────────────────────────
 function applyRegressionBlur() {
@@ -363,14 +350,8 @@ function clearRegressionBlur() {
     document.querySelectorAll('.word-blur').forEach(w => w.classList.remove('word-blur'));
 }
 
-const ivBlurCheck      = document.getElementById('iv-blur-check');
-const ivHighlightCheck = document.getElementById('iv-highlight-check');
-
 setInterval(() => {
-    if (!startTime || !ivBlurCheck.checked) {
-        if (blurActive) { blurActive = false; blurLine = -1; clearRegressionBlur(); blurEventSent = false; }
-        return;
-    }
+    if (!startTime) return;
     const rereadCount = rereadingsInWindow();
     if (!blurActive && rereadCount >= REREAD_BLUR_ON) {
         blurActive = true;
@@ -401,17 +382,14 @@ function analyzeReading() {
     return { totalSec, completionRate, focusRate, regressionCount, regRate, regressionRate, wpm, visitedLines, totalLines, error: false };
 }
 
-// ── 완독률 — 방문한 세그먼트 합 / 전체 세그먼트(줄 수 × 5) ──
 function calcCompletion() {
     const totalLines = lineList.length;
     if (!totalLines) return { visitedLines: 0, totalLines: 0, completionRate: 0 };
-
-    let visitedSegs = 0;
+    let visited = 0;
     for (let i = 0; i < totalLines; i++) {
-        visitedSegs += lineSegmentsVisited.get(i)?.size ?? 0;
+        if ((lineSegmentsVisited.get(i) ?? -1) >= 3) visited++;
     }
-    const totalSegs = totalLines * 5;
-    return { visitedLines: visitedSegs, totalLines: totalSegs, completionRate: Math.round(visitedSegs / totalSegs * 100) };
+    return { visitedLines: visited, totalLines, completionRate: Math.round(visited / totalLines * 100) };
 }
 
 function calcFocusRate(totalSec) {
@@ -449,23 +427,17 @@ function calcFocusRate(totalSec) {
     return Math.round(Math.max(0, (gazeSpanMs - unfocusedMs) / gazeSpanMs * 100));
 }
 
-// ── 역행비율 — 노이즈 필터 적용 ──────────────────────────
-// 분모: 방향 전환 + 정지 (still 포함)
-// 분자: 노이즈 제거된 left + up
-//   제외: right-left-right(떨림), down-up-down(떨림), left→down(줄바꿈)
 function calcRegressionRate() {
     const allMoves = patternData.filter(p =>
         p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down' || p.type === 'still'
     );
     if (!allMoves.length) return 0;
-
     const saccades = patternData.filter(p =>
         p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down'
     );
     const regCount = saccades.filter((p, i) => {
-        if (p.type === 'up') {
+        if (p.type === 'up')
             return !(saccades[i - 1]?.type === 'down' && saccades[i + 1]?.type === 'down');
-        }
         if (p.type !== 'left') return false;
         if (saccades[i - 1]?.type === 'right' && saccades[i + 1]?.type === 'right') return false;
         if (saccades[i + 1]?.type === 'down') return false;
@@ -491,14 +463,15 @@ function updateLineTracking(x, line, type = 'still') {
         if (line > maxReadingLine) maxReadingLine = line;
     }
 
-    // 세그먼트 방문 기록 — 시선이 닿는 모든 줄, Set으로 개별 추적
-    const l = lineList[line];
-    if (l) {
-        const sw = (l.xMax - l.xMin) / 5;
-        if (sw > 0) {
-            const seg = Math.max(0, Math.min(4, Math.floor((x - l.xMin) / sw)));
-            if (!lineSegmentsVisited.has(line)) lineSegmentsVisited.set(line, new Set());
-            lineSegmentsVisited.get(line).add(seg);
+    if (line === currentReadingLine) {
+        const l = lineList[line];
+        if (l) {
+            const sw = (l.xMax - l.xMin) / 5;
+            if (sw > 0) {
+                const seg  = Math.max(0, Math.min(4, Math.floor((x - l.xMin) / sw)));
+                const prev = lineSegmentsVisited.get(line) ?? -1;
+                if (seg > prev) lineSegmentsVisited.set(line, seg);
+            }
         }
     }
 
@@ -519,7 +492,7 @@ function updateLineTracking(x, line, type = 'still') {
             if (line !== currentReadingLine) baselineLastChangedTime = Date.now();
             currentReadingLine = line;
         } else if (line === currentReadingLine + 1) {
-            const maxSeg = lineSegmentsVisited.get(currentReadingLine)?.size ?? 0;
+            const maxSeg = lineSegmentsVisited.get(currentReadingLine) ?? -1;
             if (maxSeg >= 3) {
                 const nextL     = lineList[line];
                 const lineWidth = nextL ? nextL.xMax - nextL.xMin : 0;
@@ -540,18 +513,6 @@ function rereadingsInWindow(windowMs = REREAD_WINDOW_MS) {
     return rereadingEvents.filter(t => t >= cutoff).length;
 }
 
-function calcMaxRereadingsIn30s() {
-    if (!rereadingEvents.length) return 0;
-    const W = 30000;
-    let max = 0;
-    for (let i = 0; i < rereadingEvents.length; i++) {
-        let count = 0;
-        for (let j = i; j < rereadingEvents.length && rereadingEvents[j] - rereadingEvents[i] <= W; j++) count++;
-        max = Math.max(max, count);
-    }
-    return max;
-}
-
 // ── 집중 이탈 판정 ────────────────────────────────────────
 function isLostFocus() {
     if (!startTime || patternData.length < 3) return false;
@@ -561,37 +522,53 @@ function isLostFocus() {
     return recent.every(p => p.type === 'oob' || p.type === 'still');
 }
 
-// ── 하이라이트 바 ─────────────────────────────────────────
-function showOverlay(el) {
-    el.style.display = 'block';
-    requestAnimationFrame(() => { el.style.opacity = '1'; });
-}
-function hideOverlay(el) {
-    el.style.opacity = '0';
-    setTimeout(() => { if (el.style.opacity === '0') el.style.display = 'none'; }, 450);
-}
-
+// ── 하이라이트 바 & 콜아웃 ───────────────────────────────
 function updateHighlightBar(lineIdx) {
     const bar = document.getElementById('line-highlight-bar');
-    if (lineIdx < 0 || lineIdx >= lineList.length) { hideOverlay(bar); return; }
+    if (!bar) return;
+    if (lineIdx < 0 || lineIdx >= lineList.length) {
+        bar.style.opacity = '0';
+        setTimeout(() => { if (bar.style.opacity === '0') bar.style.display = 'none'; }, 450);
+        return;
+    }
     const areaTop = document.querySelector('.reading-area').getBoundingClientRect().top + window.scrollY;
     const ln = lineList[lineIdx];
     bar.style.top    = (ln.top - areaTop) + 'px';
     bar.style.height = (ln.bottom - ln.top + 4) + 'px';
-    showOverlay(bar);
+    bar.style.display = 'block';
+    requestAnimationFrame(() => { bar.style.opacity = '1'; });
 }
 
+function showFocusCallout(lineIdx) {
+    const el = document.getElementById('callout-focus');
+    if (!el || lineIdx < 0 || lineIdx >= lineList.length) { hideFocusCallout(); return; }
+    el.querySelector('.callout-box').textContent = '집중하세요';
+    const ln = lineList[lineIdx];
+    const centerY = (ln.top + ln.bottom) / 2 - window.scrollY;
+    const areaLeft = readingAreaRect ? readingAreaRect.left : 0;
+    el.style.right = (window.innerWidth - areaLeft + 6) + 'px';
+    el.style.left  = '';
+    el.style.top   = (centerY - 14) + 'px';
+    el.classList.add('show');
+}
+function hideFocusCallout() {
+    const el = document.getElementById('callout-focus');
+    if (el) el.classList.remove('show');
+}
+
+// ── 하이라이트 개입 (집중 이탈 2초+ 시 발동) ─────────────
 setInterval(() => {
-    const bar = document.getElementById('line-highlight-bar');
-    if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); highlightEventSent = false; return; }
+    if (!startTime) { updateHighlightBar(-1); hideFocusCallout(); return; }
     if (isLostFocus()) {
         updateHighlightBar(currentReadingLine);
+        showFocusCallout(currentReadingLine);
         if (!highlightEventSent) {
             highlightEventSent = true;
             sendCorrectionEvent('HIGHLIGHT', currentReadingLine);
         }
     } else {
-        hideOverlay(bar);
+        updateHighlightBar(-1);
+        hideFocusCallout();
         highlightEventSent = false;
     }
 }, 500);

@@ -2,7 +2,7 @@ import { startWebcam, stopWebcam, getSystemStatus } from '../api/gazeApi.js';
 
 const _HTML = `
 <div id="gw-header">
-    <span>👁 시선 추적</span>
+    <span>시선 추적</span>
     <button id="gw-minimize" title="최소화">▲</button>
 </div>
 <div id="gw-body">
@@ -28,8 +28,9 @@ const _CSS = `
 }
 #gw-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 12px; background: #16213e; cursor: pointer; user-select: none;
+    padding: 8px 12px; background: #16213e; cursor: grab; user-select: none;
 }
+#gw-header.dragging { cursor: grabbing; }
 #gw-header span { color: white; font-size: 0.82rem; font-weight: bold; }
 #gw-minimize {
     background: none; border: none; color: #aaa; cursor: pointer;
@@ -149,8 +150,41 @@ export class GazeWidget {
             location.href = '/guide.html';
         });
 
-        document.getElementById('gw-header').addEventListener('click', (e) => {
-            if (e.target.closest('#gw-buttons')) return;
+        const header = document.getElementById('gw-header');
+        let dragging = false, ox = 0, oy = 0, moved = false;
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button')) return;
+            dragging = true;
+            moved    = false;
+            const r  = this.#root.getBoundingClientRect();
+            ox = e.clientX - r.left;
+            oy = e.clientY - r.top;
+            this.#root.style.right  = '';
+            this.#root.style.bottom = '';
+            this.#root.style.left   = r.left + 'px';
+            this.#root.style.top    = r.top  + 'px';
+            header.classList.add('dragging');
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!dragging) return;
+            moved = true;
+            const x = Math.min(Math.max(e.clientX - ox, 0), window.innerWidth  - this.#root.offsetWidth);
+            const y = Math.min(Math.max(e.clientY - oy, 0), window.innerHeight - this.#root.offsetHeight);
+            this.#root.style.left = x + 'px';
+            this.#root.style.top  = y + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!dragging) return;
+            dragging = false;
+            header.classList.remove('dragging');
+        });
+
+        header.addEventListener('click', (e) => {
+            if (e.target.closest('button') || moved) return;
             this.#root.classList.toggle('minimized');
         });
     }

@@ -39,6 +39,7 @@ async function loadBooks() {
 }
 
 function setupBanner() {
+    document.getElementById('navbar-user').textContent = USER_NICK;
     document.getElementById('banner-greeting').textContent = `안녕하세요, ${USER_NICK}님!`;
     document.getElementById('banner-level-desc').textContent =
         `현재 레벨: ${USER_LEVEL} | 레벨에 맞는 커리큘럼을 확인하세요`;
@@ -109,7 +110,7 @@ function bookCardHTML(book, num, isCurriculum, isRead = false) {
             <div class="book-title">${book.title}</div>
             <div class="book-genre">${book.genre || ''}</div>
             <button class="book-card-btn" data-id="${book.id}">독서 시작 →</button>
-            <button class="book-card-btn-dev" data-id="${book.id}">🖱 개발자 모드로 시작</button>
+            <button class="book-card-btn-dev" data-id="${book.id}">🛠 개발자 모드로 시작</button>
             <button class="book-card-btn-del" data-id="${book.id}">🗑 삭제</button>
         </div>
     `;
@@ -123,7 +124,7 @@ function bindStartButtons(container) {
     });
     container.querySelectorAll('.book-card-btn-dev').forEach(btn => {
         btn.addEventListener('click', () => {
-            location.href = `/reading.html?book_id=${btn.dataset.id}&dev=true`;
+            location.href = `/reading-admin.html?book_id=${btn.dataset.id}&dev=true`;
         });
     });
     container.querySelectorAll('.book-card-btn-del').forEach(btn => {

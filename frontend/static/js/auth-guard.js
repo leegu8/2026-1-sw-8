@@ -1,6 +1,6 @@
 (function () {
     const path    = location.pathname;
-    const userId  = localStorage.getItem('user_id');
+    const userId  = localStorage.getItem('user_id') || sessionStorage.getItem('user_id');
     const isDev   = userId === '100';
 
     // 공개 페이지 — 인증 불필요
@@ -15,9 +15,9 @@
 
     // 개발자 전용 페이지 — 일반 사용자 접근 시 사용자용으로 이동
     const DEV_ONLY = {
-        '/reading.html':      '/reading-user.html',
-        '/reading-list.html': '/reading-list-user.html',
-        '/book-write.html':   '/reading-list-user.html',
+        '/reading-admin.html':      '/reading.html',
+        '/reading-list-admin.html': '/reading-list.html',
+        '/book-write-admin.html':   '/reading-list.html',
     };
     for (const [devPage, redirect] of Object.entries(DEV_ONLY)) {
         if (path.endsWith(devPage) && !isDev) {

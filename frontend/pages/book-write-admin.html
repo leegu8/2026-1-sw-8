@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>독서 아이트래킹 · 도서 등록</title>
+<link rel="stylesheet" href="/static/base.css" />
+<style>
+  .page { position: relative; min-height: 100vh; }
+  main { position: relative; z-index: 1; padding: 32px 0 80px; }
+  .aurora-bg { position: fixed; inset: 0; pointer-events: none; opacity: 0.45; }
+
+  .write-wrap { max-width: 1100px; margin: 0 auto; padding: 0 56px; }
+
+  .write-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin: 24px 0 36px;
+  }
+  .write-head h1 {
+    font-family: var(--serif); font-weight: 700; font-size: 44px;
+    letter-spacing: -0.028em; line-height: 1.1;
+  }
+  .write-head p {
+    font-size: 14.5px; color: var(--muted); margin-top: 10px;
+  }
+
+  /* split: form (left) + preview (right) */
+  .write-grid {
+    display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 28px;
+    align-items: flex-start;
+  }
+
+  .write-card, .preview-card {
+    padding: 32px; border-radius: var(--r-lg);
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--line);
+  }
+  .write-card h2, .preview-card h2 {
+    font-family: var(--serif); font-weight: 600; font-size: 17px;
+    letter-spacing: -0.018em;
+    margin-bottom: 4px;
+  }
+  .write-card .desc, .preview-card .desc {
+    font-size: 13px; color: var(--muted); margin: 0 0 22px;
+  }
+
+  /* form */
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { margin-bottom: 16px; }
+  .required { color: var(--accent); margin-left: 4px; }
+
+  textarea.body-input {
+    min-height: 320px; font-family: var(--serif);
+    font-size: 16px; line-height: 1.85;
+  }
+
+  .actions {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px; padding-top: 22px; border-top: 1px solid var(--line);
+  }
+  .actions .help {
+    font-size: 12.5px; color: var(--muted-2); font-family: var(--mono); letter-spacing: 0.08em;
+  }
+  .actions .buttons { display: flex; gap: 10px; }
+
+  .msg {
+    margin-top: 14px; padding: 12px 16px; border-radius: 12px;
+    font-size: 13.5px;
+    display: none;
+  }
+  .msg.show { display: block; }
+  .msg.ok {
+    background: color-mix(in oklab, var(--good), transparent 88%);
+    border: 1px solid color-mix(in oklab, var(--good), transparent 65%);
+    color: var(--good);
+  }
+  .msg.bad {
+    background: color-mix(in oklab, var(--bad), transparent 88%);
+    border: 1px solid color-mix(in oklab, var(--bad), transparent 65%);
+    color: var(--bad);
+  }
+
+  /* preview */
+  .preview-cover {
+    aspect-ratio: 3 / 4; max-width: 200px;
+    margin: 0 auto 22px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--bg-2), #1B3A8B);
+    border: 1px solid var(--line);
+    position: relative; overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
+  .preview-cover::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(135deg,
+      color-mix(in oklab, var(--accent), transparent 75%) 0%, transparent 50%);
+  }
+  .preview-cover::after {
+    content: ""; position: absolute; left: 14px; right: 14px; top: 16px;
+    height: 1px; background: rgba(255,255,255,0.10);
+    box-shadow:
+      0 12px 0 rgba(255,255,255,0.06),
+      0 24px 0 rgba(255,255,255,0.04),
+      0 36px 0 rgba(255,255,255,0.04),
+      0 48px 0 rgba(255,255,255,0.04);
+  }
+  .preview-title {
+    text-align: center; font-family: var(--serif); font-weight: 700;
+    font-size: 22px; letter-spacing: -0.022em; line-height: 1.25;
+    margin-bottom: 6px;
+  }
+  .preview-meta {
+    text-align: center; font-size: 12.5px; color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .preview-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 18px;
+  }
+  .preview-stats .s { text-align: center; }
+  .preview-stats .s .v {
+    font-family: var(--serif); font-weight: 600;
+    font-size: 18px; letter-spacing: -0.02em;
+  }
+  .preview-stats .s .k {
+    font-size: 10.5px; font-family: var(--mono);
+    letter-spacing: 0.16em; color: var(--muted); margin-top: 4px;
+  }
+
+  .preview-body {
+    font-family: var(--serif); font-size: 13.5px; line-height: 1.8;
+    color: rgba(232,238,255,0.85);
+    max-height: 200px; overflow: hidden;
+    position: relative;
+    padding: 4px 2px;
+  }
+  .preview-body.empty { color: var(--muted-2); font-style: italic; }
+  .preview-body.has-text::after {
+    content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 60px;
+    background: linear-gradient(transparent, #06091F 90%);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="aurora-bg"><div class="aurora"></div></div>
+
+  <!-- NAV -->
+  <nav class="top">
+    <div class="container">
+      <a class="brand" href="/home.html">
+        <div class="brand-mark">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2" />
+            <circle cx="12" cy="12" r="3" fill="#04102E" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">독서 아이트래킹</div>
+          <div class="brand-mono">EYE-TRACKING · READING</div>
+        </div>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="/reading-list-admin.html">독서 목록</a>
+        <a class="nav-link" href="/book-write-admin.html" style="color: #fff;">도서 등록</a>
+        <a class="nav-link">리포트</a>
+        <a class="btn-logout" href="/login.html">로그아웃</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="write-wrap">
+
+      <div class="write-head">
+        <div>
+          <span class="eyebrow" style="margin-bottom: 14px;">REGISTER · NEW READING</span>
+          <h1 style="margin-top: 14px;">직접 등록한 글로 <span class="grad-text">시선 추적을 시작해요.</span></h1>
+          <p>독서 화면에 표시할 글을 작성하면 즉시 라이브러리에 추가됩니다.</p>
+        </div>
+        <div style="text-align: right;">
+          <span class="pill">DRAFT · AUTO-SAVED</span>
+          <div style="margin-top: 8px; font-size: 12px; color: var(--muted-2); font-family: var(--mono); letter-spacing: 0.1em;">LAST SAVED · 2 SEC AGO</div>
+        </div>
+      </div>
+
+      <form id="book-form" class="write-grid">
+
+        <!-- LEFT: form -->
+        <div class="write-card">
+          <h2>도서 정보</h2>
+          <p class="desc">제목과 난이도는 라이브러리에 표시되며 검색에도 사용됩니다.</p>
+
+          <div class="form-group">
+            <label class="field-label" for="title">
+              <span>제목<span class="required">*</span></span>
+              <span class="field-hint" id="title-count">0 / 60</span>
+            </label>
+            <div class="field-input">
+              <input type="text" id="title" placeholder="예) 방망이 깎던 노인" maxlength="60" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="form-group">
+              <label class="field-label" for="difficulty">
+                <span>난이도<span class="required">*</span></span>
+              </label>
+              <div class="field-select">
+                <select id="difficulty" required>
+                  <option value="" disabled selected>선택</option>
+                  <option value="초등">초등</option>
+                  <option value="중등">중등</option>
+                  <option value="고등">고등</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="field-label" for="genre"><span>장르</span></label>
+              <div class="field-select">
+                <select id="genre">
+                  <option value="">없음</option>
+                  <option value="소설">소설</option>
+                  <option value="에세이">에세이</option>
+                  <option value="비문학">비문학</option>
+                  <option value="시">시</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 22px;">
+            <label class="field-label" for="content">
+              <span>본문<span class="required">*</span></span>
+              <span class="field-hint" id="word-count">0자 · 0줄 · 예상 0분</span>
+            </label>
+            <div class="field-textarea">
+              <textarea id="content" class="body-input" placeholder="독서 화면에 표시될 본문을 입력하세요.
+
+좋은 본문은 한 문단이 너무 길지 않고, 호흡이 일정합니다.
+시선 추적이 자연스럽게 작동하도록 가능하면 한 줄에 40자 내외로 작성해 주세요." required></textarea>
+            </div>
+          </div>
+
+          <div id="msg" class="msg"></div>
+
+          <div class="actions">
+            <span class="help">⌘ + Enter 로 빠른 등록</span>
+            <div class="buttons">
+              <button type="button" class="btn btn-line btn-lg" onclick="history.back()">취소</button>
+              <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+                등록하기
+                <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: live preview -->
+        <div class="preview-card" style="position: sticky; top: 92px;">
+          <h2>라이브러리 미리보기</h2>
+          <p class="desc">등록 후 라이브러리에서 이렇게 보입니다.</p>
+
+          <div class="preview-cover"></div>
+          <div class="preview-title" id="p-title">제목을 입력하세요</div>
+          <div class="preview-meta" id="p-meta">저자 · 장르</div>
+
+          <div class="preview-stats">
+            <div class="s">
+              <div class="v" id="p-words">0<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">자</span></div>
+              <div class="k">분량</div>
+            </div>
+            <div class="s">
+              <div class="v" id="p-time">0<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">분</span></div>
+              <div class="k">예상</div>
+            </div>
+          </div>
+
+          <div class="preview-body empty" id="p-body">
+            본문을 입력하면 여기에 미리보기가 표시됩니다.
+          </div>
+        </div>
+
+      </form>
+
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="container">
+      <span>© 2026 GONGSO</span>
+      <span>SESSION · DRAFT_2c6a</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  const title      = document.getElementById('title');
+  const difficulty = document.getElementById('difficulty');
+  const genre      = document.getElementById('genre');
+  const content    = document.getElementById('content');
+
+  const pTitle = document.getElementById('p-title');
+  const pMeta = document.getElementById('p-meta');
+  const pWords = document.getElementById('p-words');
+  const pTime = document.getElementById('p-time');
+  const pBody = document.getElementById('p-body');
+
+  const tCount = document.getElementById('title-count');
+  const wCount = document.getElementById('word-count');
+
+  function update() {
+    const t = title.value.trim();
+    const c = content.value;
+    const wlen = c.replace(/\s/g, '').length;
+    const lines = c.split('\n').length;
+    const mins = Math.max(0, Math.round(wlen / 320));
+
+    pTitle.textContent = t || '제목을 입력하세요';
+    const metaBits = [genre.value || '장르 미지정'].join(' · ');
+    pMeta.textContent = metaBits;
+    pWords.innerHTML = `${wlen}<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">자</span>`;
+    pTime.innerHTML = `${mins}<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">분</span>`;
+
+    if (c.trim().length) {
+      pBody.classList.remove('empty');
+      pBody.classList.add('has-text');
+      pBody.textContent = c.slice(0, 280);
+    } else {
+      pBody.classList.add('empty');
+      pBody.classList.remove('has-text');
+      pBody.textContent = '본문을 입력하면 여기에 미리보기가 표시됩니다.';
+    }
+
+    tCount.textContent = `${t.length} / 60`;
+    wCount.textContent = `${wlen}자 · ${lines}줄 · 예상 ${mins}분`;
+  }
+  [title, content].forEach((el) => el.addEventListener('input', update));
+  [genre, difficulty].forEach((el) => el.addEventListener('change', update));
+
+  // submit
+  document.getElementById('book-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('msg');
+    const submitBtn = document.getElementById('submit-btn');
+    if (!title.value.trim() || !difficulty.value || !content.value.trim()) {
+      msg.className = 'msg bad show';
+      msg.textContent = '필수 항목(제목, 난이도, 본문)을 모두 채워주세요.';
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = '등록 중...';
+    try {
+      const res = await fetch('/api/db/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title:      title.value.trim(),
+          content:    content.value.trim(),
+          difficulty: difficulty.value,
+          genre:      genre.value || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `오류 ${res.status}`);
+      }
+      msg.className = 'msg ok show';
+      msg.innerHTML = `✓ 등록 완료. 잠시 후 <a href="/reading-list-admin.html" style="color: var(--accent); font-weight: 600;">라이브러리</a>로 이동합니다.`;
+      setTimeout(() => { location.href = '/reading-list-admin.html'; }, 1500);
+    } catch (err) {
+      msg.className = 'msg bad show';
+      msg.textContent = err.message || '서버 연결 오류가 발생했습니다.';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '등록하기';
+    }
+  });
+
+  // ⌘ + Enter
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      document.getElementById('submit-btn').click();
+    }
+  });
+
+  update();
+</script>
+
+</body>
+</html>
