@@ -192,8 +192,8 @@
         </div>
       </a>
       <div class="nav-links">
-        <span class="navbar-user"><span class="avatar">신</span>신민호님</span>
-        <a class="btn btn-line" href="/reading-list.html">건너뛰기</a>
+        <span class="navbar-user" id="nav-user"></span>
+        <a class="btn btn-line" id="skip-link" href="/reading-list-user.html">건너뛰기</a>
       </div>
     </div>
   </nav>
@@ -230,57 +230,16 @@
         <div class="panel">
           <div class="panel-head">
             <h3>사용 가능한 카메라</h3>
-            <span class="pill">3 FOUND</span>
+            <span class="pill" id="cam-count-pill">스캔 중...</span>
           </div>
 
-          <div class="cam-list">
-            <div class="cam-item selected" data-cam="0">
-              <div class="cam-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
-                  <path d="M17 10l4-2v8l-4-2z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round" />
-                  <circle cx="10" cy="12" r="2.5" stroke="currentColor" stroke-width="1.6" />
-                </svg>
-              </div>
-              <div class="cam-info">
-                <div class="name">FaceTime HD Camera</div>
-                <div class="meta">1080P · 30FPS · BUILT-IN</div>
-              </div>
-              <div class="radio"></div>
-            </div>
-
-            <div class="cam-item" data-cam="1">
-              <div class="cam-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
-                  <path d="M17 10l4-2v8l-4-2z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round" />
-                  <circle cx="10" cy="12" r="2.5" stroke="currentColor" stroke-width="1.6" />
-                </svg>
-              </div>
-              <div class="cam-info">
-                <div class="name">Logitech BRIO 4K</div>
-                <div class="meta">4K · 60FPS · USB</div>
-              </div>
-              <div class="radio"></div>
-            </div>
-
-            <div class="cam-item" data-cam="2">
-              <div class="cam-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
-                  <path d="M17 10l4-2v8l-4-2z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round" />
-                  <circle cx="10" cy="12" r="2.5" stroke="currentColor" stroke-width="1.6" />
-                </svg>
-              </div>
-              <div class="cam-info">
-                <div class="name">iPhone 15 (Continuity)</div>
-                <div class="meta">1080P · 30FPS · WIRELESS</div>
-              </div>
-              <div class="radio"></div>
+          <div class="cam-list" id="cam-list">
+            <div style="padding:32px;text-align:center;color:var(--muted);font-size:14px;">
+              카메라를 스캔하는 중입니다...
             </div>
           </div>
 
-          <button class="refresh-btn">↻ 목록 새로고침</button>
+          <button class="refresh-btn" id="refresh-btn">↻ 목록 새로고침</button>
         </div>
 
         <!-- Preview -->
@@ -341,15 +300,19 @@
       </div>
 
       <div class="next-row">
-        <div class="meta">
+        <div class="meta" id="selected-meta" style="display:none;">
           <span class="dot"></span>
-          현재 선택 · <span style="color: #fff; margin-left: 4px;">FaceTime HD Camera</span>
+          현재 선택 · <span id="selected-name" style="color: #fff; margin-left: 4px;"></span>
         </div>
-        <button class="btn btn-primary btn-lg" onclick="location.href='Calibration.html'">
+        <div class="meta" id="no-select-meta">
+          카메라를 선택해주세요
+        </div>
+        <button class="btn btn-primary btn-lg" id="next-btn" disabled>
           다음 · 시선 보정
           <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
         </button>
       </div>
+      <div id="error-msg" style="margin-top:14px;color:#ff6b6b;font-size:13.5px;text-align:right;display:none;"></div>
     </div>
   </main>
 
@@ -362,11 +325,126 @@
 </div>
 
 <script>
-  document.querySelectorAll('.cam-item').forEach((it) => {
-    it.addEventListener('click', () => {
-      document.querySelectorAll('.cam-item').forEach((x) => x.classList.toggle('selected', x === it));
+  // 인증 확인
+  const userId = localStorage.getItem('user_id');
+  const userNick = localStorage.getItem('user_nick') || '';
+  if (!userId) { location.href = '/login.html'; }
+
+  // 사용자 정보 표시
+  const navUser = document.getElementById('nav-user');
+  if (navUser && userNick) {
+    navUser.innerHTML = `<span class="avatar">${userNick[0]}</span>${userNick}님`;
+  }
+
+  // 건너뛰기 링크: 관리자는 reading-list-admin
+  const skipLink = document.getElementById('skip-link');
+  if (userId === '100') skipLink.href = '/reading-list-admin.html';
+
+  // 카메라 SVG 아이콘
+  const CAM_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/>
+    <path d="M17 10l4-2v8l-4-2z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
+    <circle cx="10" cy="12" r="2.5" stroke="currentColor" stroke-width="1.6"/>
+  </svg>`;
+
+  let selectedIndex = null;
+
+  function renderCameras(cameras) {
+    const list = document.getElementById('cam-list');
+    const pill = document.getElementById('cam-count-pill');
+
+    if (!cameras || cameras.length === 0) {
+      list.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:14px;">
+        감지된 카메라가 없습니다.<br>카메라를 연결한 후 새로고침해주세요.
+      </div>`;
+      pill.textContent = '0 FOUND';
+      return;
+    }
+
+    pill.textContent = `${cameras.length} FOUND`;
+    list.innerHTML = cameras.map((cam, i) => `
+      <div class="cam-item${i === 0 ? ' selected' : ''}" data-index="${cam.index}">
+        <div class="cam-icon">${CAM_SVG}</div>
+        <div class="cam-info">
+          <div class="name">${cam.name || `카메라 ${cam.index}`}</div>
+          <div class="meta">INDEX ${cam.index}${cam.is_default ? ' · DEFAULT' : ''}</div>
+        </div>
+        <div class="radio"></div>
+      </div>
+    `).join('');
+
+    // 첫 번째 카메라 자동 선택
+    if (cameras.length > 0) selectCamera(cameras[0].index, cameras[0].name || `카메라 ${cameras[0].index}`);
+
+    list.querySelectorAll('.cam-item').forEach(item => {
+      item.addEventListener('click', () => {
+        list.querySelectorAll('.cam-item').forEach(x => x.classList.remove('selected'));
+        item.classList.add('selected');
+        const idx  = +item.dataset.index;
+        const name = item.querySelector('.name').textContent;
+        selectCamera(idx, name);
+      });
     });
+  }
+
+  function selectCamera(index, name) {
+    selectedIndex = index;
+    document.getElementById('selected-name').textContent = name;
+    document.getElementById('selected-meta').style.display = 'flex';
+    document.getElementById('no-select-meta').style.display = 'none';
+    document.getElementById('next-btn').disabled = false;
+  }
+
+  async function scanCameras() {
+    document.getElementById('cam-list').innerHTML = `
+      <div style="padding:32px;text-align:center;color:var(--muted);font-size:14px;">
+        카메라를 스캔하는 중입니다...
+      </div>`;
+    document.getElementById('cam-count-pill').textContent = '스캔 중...';
+    document.getElementById('next-btn').disabled = true;
+    selectedIndex = null;
+    document.getElementById('selected-meta').style.display = 'none';
+    document.getElementById('no-select-meta').style.display = '';
+    try {
+      const data = await fetch('/api/webcam/scan').then(r => r.json());
+      renderCameras(data.cameras ?? data ?? []);
+    } catch {
+      document.getElementById('cam-list').innerHTML = `
+        <div style="padding:32px;text-align:center;color:#ff6b6b;font-size:14px;">
+          카메라 스캔 중 오류가 발생했습니다.
+        </div>`;
+      document.getElementById('cam-count-pill').textContent = 'ERROR';
+    }
+  }
+
+  document.getElementById('refresh-btn').addEventListener('click', scanCameras);
+
+  document.getElementById('next-btn').addEventListener('click', async () => {
+    if (selectedIndex === null) return;
+    const btn = document.getElementById('next-btn');
+    const errEl = document.getElementById('error-msg');
+    btn.disabled = true;
+    btn.textContent = '연결 중...';
+    errEl.style.display = 'none';
+    try {
+      const res = await fetch('/api/webcam/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ camera_index: selectedIndex }),
+      });
+      if (!res.ok) throw new Error('카메라 시작 실패');
+      location.href = '/calibration.html';
+    } catch (e) {
+      errEl.textContent = e.message || '카메라를 시작하지 못했습니다. 다시 시도해주세요.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = `다음 · 시선 보정
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    }
   });
+
+  // 페이지 로드 시 자동 스캔
+  scanCameras();
 </script>
 
 </body>

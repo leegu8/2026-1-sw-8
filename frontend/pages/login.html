@@ -187,7 +187,7 @@ function LoginAurora() {
       localStorage.setItem('user_id', user.id);
       localStorage.setItem('user_email', user.email);
       localStorage.setItem('user_nick', user.nickname);
-      location.href = '/reading-list-admin.html';
+      location.href = '/camera.html';
     } catch {
       setError('서버 연결 오류가 발생했습니다.');
     } finally { setLoading(false); }
@@ -214,7 +214,7 @@ function LoginAurora() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.id }),
       }).catch(() => {});
-      location.href = '/reading-list.html';
+      location.href = '/camera.html';
     } catch {
       setError('서버 연결 오류가 발생했습니다.');
     } finally { setLoading(false); }

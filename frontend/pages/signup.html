@@ -280,7 +280,7 @@ function Signup() {
       localStorage.setItem('user_id', data.id);
       localStorage.setItem('user_email', data.email);
       localStorage.setItem('user_nick', data.nickname);
-      location.href = '/reading-list.html';
+      location.href = '/camera.html';
     } catch {
       setError('서버 연결 오류가 발생했습니다.');
     } finally { setLoading(false); }
