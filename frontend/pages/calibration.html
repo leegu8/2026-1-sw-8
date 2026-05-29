@@ -167,12 +167,26 @@
 
   /* webcam mini-widget */
   .cal-cam {
-    position: absolute; bottom: 24px; right: 24px;
-    width: 220px; height: 132px; border-radius: 12px;
+    position: fixed;
+    width: 220px; border-radius: 12px;
     overflow: hidden;
     background: #06091F;
     border: 1px solid var(--line);
     box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+    z-index: 110;
+    user-select: none;
+  }
+  .cal-cam-handle {
+    height: 22px;
+    background: rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    cursor: grab; gap: 3px;
+  }
+  .cal-cam-handle:active { cursor: grabbing; }
+  .cal-cam-handle span {
+    width: 20px; height: 2px; border-radius: 2px;
+    background: rgba(255,255,255,0.25);
   }
   .cal-cam-frame {
     position: relative; width: 100%; height: 100%;
@@ -275,7 +289,7 @@
       </a>
       <div class="nav-links">
         <span class="navbar-user" id="nav-user"></span>
-        <a class="btn btn-line" id="skip-link" href="/reading-list-user.html">건너뛰기</a>
+        <a class="btn btn-line" id="skip-link" href="/reading-list.html">건너뛰기</a>
       </div>
     </div>
   </nav>
@@ -289,14 +303,16 @@
       <span>카메라 선택</span>
     </div>
     <div class="step-line"></div>
-    <div class="step-item active">
-      <div class="step-circle">2</div>
-      <span>시선 보정</span>
+    <div class="step-item done">
+      <div class="step-circle">
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" /></svg>
+      </div>
+      <span>사용 안내</span>
     </div>
     <div class="step-line"></div>
-    <div class="step-item">
+    <div class="step-item active">
       <div class="step-circle">3</div>
-      <span>독서 시작</span>
+      <span>시선 보정</span>
     </div>
   </div></div>
 
@@ -377,18 +393,22 @@
   </button>
 
   <!-- 9 dots (positioned at 10/50/90%) -->
-  <div class="cal-dot" data-i="0" style="left:10%; top:18%;"></div>
-  <div class="cal-dot" data-i="1" style="left:50%; top:18%;"></div>
-  <div class="cal-dot" data-i="2" style="left:90%; top:18%;"></div>
+  <!-- 아래 행부터 시작 -->
+  <div class="cal-dot" data-i="0" style="left:10%; top:82%;"></div>
+  <div class="cal-dot" data-i="1" style="left:50%; top:82%;"></div>
+  <div class="cal-dot" data-i="2" style="left:90%; top:82%;"></div>
   <div class="cal-dot" data-i="3" style="left:10%; top:50%;"></div>
   <div class="cal-dot" data-i="4" style="left:50%; top:50%;"></div>
   <div class="cal-dot" data-i="5" style="left:90%; top:50%;"></div>
-  <div class="cal-dot" data-i="6" style="left:10%; top:82%;"></div>
-  <div class="cal-dot" data-i="7" style="left:50%; top:82%;"></div>
-  <div class="cal-dot" data-i="8" style="left:90%; top:82%;"></div>
+  <div class="cal-dot" data-i="6" style="left:10%; top:18%;"></div>
+  <div class="cal-dot" data-i="7" style="left:50%; top:18%;"></div>
+  <div class="cal-dot" data-i="8" style="left:90%; top:18%;"></div>
 
   <!-- webcam mini-widget -->
-  <div class="cal-cam">
+  <div class="cal-cam" id="cal-cam">
+    <div class="cal-cam-handle" id="cal-cam-handle">
+      <span style="width:40px;"></span>
+    </div>
     <div class="cal-cam-frame" style="background:#000;">
       <img id="cal-preview-img" src="/api/webcam/preview" alt="카메라"
         style="width:100%;height:100%;object-fit:cover;display:block;" />
@@ -414,7 +434,7 @@
     </div>
     <h2>보정이 완성되었어요</h2>
     <p>이제 독서 화면에서 시선이 함께 움직입니다.</p>
-    <button class="btn btn-primary btn-lg" id="go-reading-btn" onclick="location.href='/reading-list-user.html'">
+    <button class="btn btn-primary btn-lg" id="go-reading-btn" onclick="location.href='/reading-list.html'">
       독서 시작하기
       <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
     </button>
@@ -431,7 +451,11 @@
   if (navUser && userNick) navUser.innerHTML = `<span class="avatar">${userNick[0]}</span>${userNick}님`;
 
   const skipLink = document.getElementById('skip-link');
-  if (userId === '100') { skipLink.href = '/reading-list-admin.html'; document.getElementById('go-reading-btn').onclick = () => location.href = '/reading-list-admin.html'; }
+  const goReadingBtn = document.getElementById('go-reading-btn');
+  if (userId === '100') {
+    skipLink.href = '/reading-list-admin.html';
+    goReadingBtn.onclick = () => location.href = '/reading-list-admin.html';
+  }
 
   // 인트로 미리보기 상태
   const introPrev = document.getElementById('intro-preview-img');
@@ -447,15 +471,15 @@
   const complete = document.getElementById('cal-complete');
 
   const labels = [
-    '왼쪽 위 점을 응시하고 클릭하세요',
-    '가운데 위 점을 응시하고 클릭하세요',
-    '오른쪽 위 점을 응시하고 클릭하세요',
-    '왼쪽 중앙 점을 응시하고 클릭하세요',
-    '가운데 점을 응시하고 클릭하세요',
-    '오른쪽 중앙 점을 응시하고 클릭하세요',
     '왼쪽 아래 점을 응시하고 클릭하세요',
     '가운데 아래 점을 응시하고 클릭하세요',
     '오른쪽 아래 점을 응시하고 클릭하세요',
+    '왼쪽 중앙 점을 응시하고 클릭하세요',
+    '가운데 점을 응시하고 클릭하세요',
+    '오른쪽 중앙 점을 응시하고 클릭하세요',
+    '왼쪽 위 점을 응시하고 클릭하세요',
+    '가운데 위 점을 응시하고 클릭하세요',
+    '오른쪽 위 점을 응시하고 클릭하세요',
   ];
 
   let current = 0;
@@ -497,6 +521,37 @@
     if (!overlay.classList.contains('active')) return;
     if (e.key === 'Escape') overlay.classList.remove('active');
     if (e.key === ' ' && current < 9) { e.preventDefault(); advance(); }
+  });
+
+  // 드래그 이동
+  const cam = document.getElementById('cal-cam');
+  const handle = document.getElementById('cal-cam-handle');
+  cam.style.top   = '24px';
+  cam.style.right = '24px';
+
+  let dragging = false, ox = 0, oy = 0;
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    const r = cam.getBoundingClientRect();
+    ox = e.clientX - r.left;
+    oy = e.clientY - r.top;
+    cam.style.right  = '';
+    cam.style.bottom = '';
+    cam.style.left = r.left + 'px';
+    cam.style.top  = r.top  + 'px';
+    handle.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const x = Math.min(Math.max(e.clientX - ox, 0), window.innerWidth  - cam.offsetWidth);
+    const y = Math.min(Math.max(e.clientY - oy, 0), window.innerHeight - cam.offsetHeight);
+    cam.style.left = x + 'px';
+    cam.style.top  = y + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    dragging = false;
+    handle.style.cursor = 'grab';
   });
 </script>
 

@@ -12,7 +12,19 @@
 <body>
 <div class="aurora-bg"><div class="aurora-layer"></div></div>
     <header class="page-header">
-        <a href="/home.html" class="logo" style="text-decoration:none;color:inherit;">👁 독서 아이트래킹</a>
+        <a class="brand" href="/home.html">
+          <div class="brand-mark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2" />
+              <circle cx="12" cy="12" r="3" fill="#04102E" />
+            </svg>
+          </div>
+          <div>
+            <div class="brand-name">독서 아이트래킹</div>
+            <div class="brand-mono">EYE-TRACKING · READING</div>
+          </div>
+        </a>
+        <span class="navbar-user" id="nav-user"></span>
     </header>
 
     <div class="page-content">
@@ -29,7 +41,7 @@
         <script>
         function goToBookList() {
             const isDev = localStorage.getItem('user_id') === '100';
-            location.href = isDev ? '/reading-list-admin.html' : '/reading-list-user.html';
+            location.href = isDev ? '/reading-list-admin.html' : '/reading-list.html';
         }
         function goToGrowth() {
             location.href = '/growth.html';
@@ -261,7 +273,7 @@
                     ${metricBar('✅', '완독률',
                         '줄 단위 방문 판정',
                         depthScore, `${linesdone}/${totallines}줄`)}
-                    ${metricBar('👁', '집중도',
+                    ${metricBar('', '집중도',
                         '≥80%→우수',
                         focusScore, `${focusRate}%`)}
                     ${metricBar('↩', '역행비율',
@@ -342,5 +354,12 @@
     }
     })();
     </script>
+<script>
+(function() {
+    const nick = localStorage.getItem('user_nick') || sessionStorage.getItem('user_nick') || '';
+    const el = document.getElementById('nav-user');
+    if (el && nick) el.innerHTML = '<span class="avatar">' + nick[0] + '</span>' + nick + '님';
+})();
+</script>
 </body>
 </html>

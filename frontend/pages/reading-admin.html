@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="/static/aurora-theme.css">
     <script src="/static/js/auth-guard.js"></script>
     <style>
-        .reading-area   { position: relative; }
+        .reading-area   { position: relative; overflow: hidden; }
+        .page-content   { padding-top: 1rem !important; padding-bottom: 0.5rem !important; }
         #line-highlight-bar {
             position: absolute; left: 0; right: 0;
             background: rgba(52, 152, 219, 0.13);
@@ -49,9 +50,9 @@
         /* 오른쪽 콜아웃 (skim) — 화살표가 왼쪽(← 텍스트 방향) */
         #callout-skim  .callout-arrow { border-right: 8px solid rgba(250,160,50,0.95); }
         #callout-skim  .callout-box   { background: rgba(250,160,50,0.95); color: #fff; }
-        #book-title     { font-size: 1.9rem; }
-        .reading-text   { position: relative; z-index: 1; font-size: 1.12rem; line-height: 2; }
-        .reading-text p { margin: 0 0 1.2em; }
+        #book-title     { display: none; }
+        .reading-text   { position: relative; z-index: 1; font-size: 1.45rem; line-height: 2.5; }
+        .reading-text p { margin: 0 0 1.8em; }
         .word           { display: inline; transition: filter 0.25s; }
         .word-blur      { filter: blur(2px); opacity: 0.55; user-select: none; }
 
@@ -166,7 +167,19 @@
     <div id="gaze-dot"></div>
 
     <header class="page-header">
-        <a href="/home.html" class="logo" style="text-decoration:none;color:inherit;">👁 독서 아이트래킹</a>
+        <a class="brand" href="/home.html">
+          <div class="brand-mark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2" />
+              <circle cx="12" cy="12" r="3" fill="#04102E" />
+            </svg>
+          </div>
+          <div>
+            <div class="brand-name">독서 아이트래킹</div>
+            <div class="brand-mono">EYE-TRACKING · READING</div>
+          </div>
+        </a>
+        <span class="navbar-user" id="nav-user"></span>
         <div class="progress-bar">
             <div class="progress-step done">
                 <div class="circle">✓</div> 시선 보정
@@ -192,9 +205,12 @@
         </div>
 
         <div class="reading-controls">
-            <button id="done-btn"  class="btn btn-success">다 읽었어요 →</button>
-            <button id="recal-btn" class="btn btn-warning">재보정</button>
+            <button id="prev-page-btn" class="btn btn-line"    style="display:none;">← 이전 페이지</button>
+            <button id="next-page-btn" class="btn btn-primary" style="display:none;">다음 페이지 →</button>
+            <button id="done-btn"      class="btn btn-success" style="display:none;">다 읽었어요 →</button>
+            <button id="recal-btn"     class="btn btn-warning">재보정</button>
             <div id="reading-status" style="color:#666; font-size:0.95rem;"></div>
+            <div id="page-indicator" style="font-size:0.85rem;color:rgba(28,28,46,0.5);font-variant-numeric:tabular-nums;"></div>
         </div>
     </div>
 
@@ -288,5 +304,12 @@
     </script>
 
     <script src="/static/js/reading-admin.js" defer></script>
+<script>
+(function() {
+    const nick = localStorage.getItem('user_nick') || sessionStorage.getItem('user_nick') || '';
+    const el = document.getElementById('nav-user');
+    if (el && nick) el.innerHTML = '<span class="avatar">' + nick[0] + '</span>' + nick + '님';
+})();
+</script>
 </body>
 </html>

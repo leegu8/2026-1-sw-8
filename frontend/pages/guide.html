@@ -14,7 +14,19 @@
     <div id="gaze-dot"></div>
 
     <header class="page-header">
-        <a href="/home.html" class="logo" style="text-decoration:none;color:inherit;">👁 독서 아이트래킹</a>
+        <a class="brand" href="/home.html">
+          <div class="brand-mark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2" />
+              <circle cx="12" cy="12" r="3" fill="#04102E" />
+            </svg>
+          </div>
+          <div>
+            <div class="brand-name">독서 아이트래킹</div>
+            <div class="brand-mono">EYE-TRACKING · READING</div>
+          </div>
+        </a>
+        <span class="navbar-user" id="nav-user"></span>
         <div class="progress-bar">
             <div class="progress-step done">
                 <div class="circle">✓</div> 웹캠 연결
@@ -100,6 +112,7 @@
 
         <!-- 사용 안내 -->
         <div class="guide-list">
+            <h3 style="margin: 0 0 1rem; font-size: 1.05rem; font-weight: 700; color: #E8EEFF; letter-spacing: -0.01em;">주의사항</h3>
             <div class="guide-item">
                 <div class="num">1</div>
                 <div>
@@ -139,15 +152,14 @@
 
         <div style="text-align:center; display:flex; justify-content:center; align-items:center; gap:12px;">
             <button class="btn btn-success" onclick="goToBookList()">
-                도서 선택하기 →
+                시선 보정 시작하기 →
             </button>
             <button class="btn" id="reset-cal-btn" style="background:linear-gradient(135deg,#a81b1b,#e74c3c); border:none; color:white;">
                 🔄 보정 초기화
             </button>
             <script>
             function goToBookList() {
-                const isDev = localStorage.getItem('user_id') === '100';
-                location.href = isDev ? '/reading-list-admin.html' : '/reading-list.html';
+                location.href = '/calibration.html';
             }
             </script>
         </div>
@@ -218,5 +230,12 @@
         }
     });
     </script>
+<script>
+(function() {
+    const nick = localStorage.getItem('user_nick') || sessionStorage.getItem('user_nick') || '';
+    const el = document.getElementById('nav-user');
+    if (el && nick) el.innerHTML = '<span class="avatar">' + nick[0] + '</span>' + nick + '님';
+})();
+</script>
 </body>
 </html>

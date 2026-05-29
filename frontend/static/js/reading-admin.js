@@ -1,6 +1,82 @@
-// ── 책 로드 ──────────────────────────────────────────────
-let lineList    = []; // [{top, bottom, xMin, xMax}] — document y, viewport x
-let readingAreaRect = null; // reading-area 경계 캐시 (좌우 이탈 판정용)
+// ── 책 로드 & 페이지네이션 ────────────────────────────────
+let lineList        = [];
+let readingAreaRect = null;
+
+let pages       = [];
+let currentPage = 0;
+
+function paraToHtml(para) {
+    return `<p>${para.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`;
+}
+function calcAvailableHeight() {
+    const header   = document.querySelector('.page-header');
+    const controls = document.querySelector('.reading-controls');
+    return window.innerHeight
+        - (header   ? header.offsetHeight   : 0)
+        - (controls ? controls.offsetHeight : 0)
+        - 32;
+}
+function buildPages(paraHtmlList) {
+    const area      = document.querySelector('.reading-text');
+    const available = calcAvailableHeight();
+    const result    = [];
+    let   bucket    = [];
+    for (const html of paraHtmlList) {
+        bucket.push(html);
+        area.innerHTML = bucket.join('');
+        if (area.scrollHeight > available && bucket.length > 1) {
+            result.push(bucket.slice(0, -1).join(''));
+            bucket = [html];
+        }
+    }
+    if (bucket.length) result.push(bucket.join(''));
+    return result;
+}
+function showPage(n) {
+    currentPage = n;
+    document.querySelector('.reading-text').innerHTML = pages[n];
+    document.getElementById('page-indicator').textContent = `${n + 1} / ${pages.length}`;
+    const isFirst = n === 0;
+    const isLast  = n === pages.length - 1;
+    document.getElementById('prev-page-btn').style.display = isFirst ? 'none' : '';
+    document.getElementById('next-page-btn').style.display = isLast  ? 'none' : '';
+    document.getElementById('done-btn').style.display      = isLast  ? ''     : 'none';
+
+    // 시선 추적 상태 초기화
+    lineList = [];
+    startTime              = null;
+    gazeData.length        = 0;
+    patternData.length     = 0;
+    rereadingEvents.length = 0;
+    lineSegmentsVisited.clear();
+    currentReadingLine      = -1;
+    maxReadingLine          = -1;
+    lineDwellLine           = -1;
+    lineDwellCount          = 0;
+    lineDwellMinX           = 0;
+    lineDwellHasRight       = false;
+    baselineLastChangedTime = Date.now();
+    skimAlertActive         = false;
+    lastValidLine           = -1;
+    lastValidLineTime       = 0;
+    blurActive              = false;
+    blurLine                = -1;
+    blurEventSent           = false;
+    highlightEventSent      = false;
+    boxEventSent            = false;
+    oobSince                = null;
+    // 오버레이 초기화
+    ['line-highlight-bar', 'line-box'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.style.opacity = '0'; el.style.display = 'none'; }
+    });
+    ['callout-focus', 'callout-skim'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('show');
+    });
+
+    buildLineList();
+}
 
 (async () => {
     const bookId = +new URLSearchParams(location.search).get('book_id')
@@ -8,14 +84,10 @@ let readingAreaRect = null; // reading-area 경계 캐시 (좌우 이탈 판정�
     if (!bookId) return;
     const book = await fetch(`/api/db/books/${bookId}`).then(r => r.ok ? r.json() : null);
     if (!book) return;
-    document.getElementById('book-title').textContent = `📖 ${book.title}`;
+    document.getElementById('book-title').textContent = book.title;
     document.title = `${book.title} - 독서 아이트래킹`;
-    const paras = book.content.split(/\n+/).map(s => s.trim()).filter(Boolean);
-    document.querySelector('.reading-text').innerHTML = paras.map(para =>
-        `<p>${para.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`
-    ).join('');
-    bookWordCount = document.querySelector('.reading-text').innerText
-        .trim().split(/\s+/).filter(w => w.length > 0).length;
+    const paraHtmlList = book.content.split(/\n+/).map(s => s.trim()).filter(Boolean).map(paraToHtml);
+    bookWordCount = paraHtmlList.join('').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(w => w.length > 0).length;
 
     const timeIssue = localStorage.getItem('last_time_issue');
     if (timeIssue && bookWordCount > 0) {
@@ -25,15 +97,23 @@ let readingAreaRect = null; // reading-area 경계 캐시 (좌우 이탈 판정�
             const optRange = `${fmt(bookWordCount / 400 * 60)} ~ ${fmt(bookWordCount / 270 * 60)}`;
             const note = document.createElement('p');
             note.style.cssText = 'font-size:0.85rem;color:#2980b9;font-weight:600;margin:10px 0 0;padding:10px 0 0;border-top:1px solid #dce8f5;line-height:1.6;';
-            note.textContent = `📖 이 글의 적정 독서 시간: ${optRange}`;
+            note.textContent = `이 글의 적정 독서 시간: ${optRange}`;
             document.getElementById('popup-improvement-list').appendChild(note);
         }
         localStorage.removeItem('last_time_issue');
     }
 
-    buildLineList();
+    pages = buildPages(paraHtmlList);
+    showPage(0);
     await createSession(bookId);
 })();
+
+document.getElementById('prev-page-btn').addEventListener('click', () => {
+    if (currentPage > 0) showPage(currentPage - 1);
+});
+document.getElementById('next-page-btn').addEventListener('click', () => {
+    if (currentPage < pages.length - 1) showPage(currentPage + 1);
+});
 
 // 줄별 메타 구축 — document 기준 y, viewport 기준 x (수평 스크롤 없음)
 function buildLineList() {
@@ -196,7 +276,7 @@ if (DEV_MODE) {
     }, 33);
 
 } else {
-    document.getElementById('reading-status').textContent = '👁 시선 추적 중';
+    document.getElementById('reading-status').textContent = '시선 추적 중';
 }
 
 // ── 분석 항목 모니터 패널 (항상 표시) ────────────────────
@@ -738,7 +818,7 @@ function _positionCallout(el, lineIdx, side) {
 
 function showFocusCallout(lineIdx) {
     if (lineIdx < 0 || lineIdx >= lineList.length) { hideFocusCallout(); return; }
-    _calloutFocus.querySelector('.callout-box').textContent = '👁 집중하세요';
+    _calloutFocus.querySelector('.callout-box').textContent = '집중하세요';
     _calloutFocus.classList.add('show');
     _positionCallout(_calloutFocus, lineIdx, 'left');
 }

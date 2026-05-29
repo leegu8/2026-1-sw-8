@@ -1,4 +1,24 @@
 /* ── aurora-theme.css — 오로라 다크 테마 오버라이드 ── */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── 브랜드 로고 ── */
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.brand-mark {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #1E5BE0, #3FB6FF);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(30,91,224,0.40);
+    flex-shrink: 0;
+}
+.brand-name {
+    font-family: "Space Grotesk", "Pretendard", sans-serif;
+    font-weight: 700; font-size: 15px; letter-spacing: -0.02em; color: #E8EEFF;
+}
+.brand-mono {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9.5px; letter-spacing: 0.22em;
+    color: rgba(232,238,255,0.4); margin-top: 2px;
+}
 
 /* ── 기본 ── */
 html, body {
@@ -32,6 +52,33 @@ html, body {
 @keyframes aurora-drift {
     0%, 100% { transform: translate(0,0) scale(1); }
     50% { transform: translate(20px,-30px) scale(1.05); }
+}
+
+/* ── guide 주의사항 숫자 동그라미 ── */
+.guide-item .num {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 0.75rem !important;
+    background: linear-gradient(135deg, #1E5BE0, #3FB6FF) !important;
+}
+
+/* ── 프로그레스 바 그라데이션 ── */
+.progress-step.done .circle {
+    background: linear-gradient(135deg, #27ae60, #2ecc71) !important;
+    box-shadow: 0 0 10px rgba(46,204,113,0.4);
+}
+.progress-step.done {
+    color: #2ecc71 !important;
+}
+.progress-step.active .circle {
+    background: linear-gradient(135deg, #1E5BE0, #3FB6FF) !important;
+    box-shadow: 0 0 12px rgba(63,182,255,0.45);
+}
+.progress-step.active {
+    color: #3FB6FF !important;
+}
+.progress-line {
+    background: linear-gradient(90deg, rgba(63,182,255,0.25), rgba(255,255,255,0.1)) !important;
 }
 
 /* ── 헤더/내비 ── */
@@ -95,7 +142,7 @@ html, body {
 }
 
 /* ── 카드 공통 (글래스모피즘) ── */
-.reading-area, .guide-list,
+.guide-list,
 .result-card, .result-feedback,
 .session-card, .chart-card,
 .attendance-card, .user-banner {
@@ -105,6 +152,16 @@ html, body {
     -webkit-backdrop-filter: blur(16px) !important;
     color: #E8EEFF !important;
     box-shadow: 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+
+/* ── 독서 글 박스 — 종이 느낌 밝은 배경 ── */
+.reading-area {
+    background: #F8F7F4 !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    color: #1C1C2E !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.30) !important;
 }
 
 /* 출석 카드 — 블루 틴트 */
@@ -137,12 +194,12 @@ html, body {
 }
 
 .reading-area h2 {
-    color: #E8EEFF !important;
-    border-bottom-color: rgba(255,255,255,0.10) !important;
+    color: #1C1C2E !important;
+    border-bottom-color: rgba(0,0,0,0.10) !important;
 }
 
 /* ── 독서 텍스트 ── */
-.reading-text { color: rgba(232,238,255,0.92) !important; }
+.reading-text { color: #2A2A3E !important; }
 
 /* ── 결과 ── */
 .result-label { color: rgba(232,238,255,0.55) !important; }

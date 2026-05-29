@@ -120,7 +120,7 @@ let   baselineLastChangedTime = 0;
 let   skimAlertActive        = false;
 const lineSegmentsVisited    = new Map();
 
-document.getElementById('reading-status').textContent = '👁 시선 추적 중';
+document.getElementById('reading-status').textContent = '시선 추적 중';
 
 // ── 시선 이벤트 수집 ──────────────────────────────────────
 window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {

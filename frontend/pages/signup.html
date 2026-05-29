@@ -255,10 +255,13 @@ function Steps({ accent, primary, active = 0 }) {
 
 function Signup() {
   const [t, setTweak] = useTweaks(TWEAKS);
+  const LEVELS = ['초등', '중등', '고등'];
+
   const [email, setEmail] = React.useState('');
   const [nick, setNick] = React.useState('');
   const [pw, setPw] = React.useState('');
   const [pw2, setPw2] = React.useState('');
+  const [level, setLevel] = React.useState('');
   const [showPw, setShowPw] = React.useState(false);
   const [agree, setAgree] = React.useState(false);
   const [agreeMkt, setAgreeMkt] = React.useState(false);
@@ -272,7 +275,7 @@ function Signup() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: pw, nickname: nick }),
+        body: JSON.stringify({ email, password: pw, nickname: nick, level }),
       });
       if (res.status === 409) { setError('이미 사용 중인 이메일입니다.'); return; }
       if (!res.ok) { setError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'); return; }
@@ -280,6 +283,7 @@ function Signup() {
       localStorage.setItem('user_id', data.id);
       localStorage.setItem('user_email', data.email);
       localStorage.setItem('user_nick', data.nickname);
+      if (data.level) localStorage.setItem('user_level', data.level);
       location.href = '/camera.html';
     } catch {
       setError('서버 연결 오류가 발생했습니다.');
@@ -290,7 +294,7 @@ function Signup() {
   const { accent, primary } = t;
   const strength = pwStrength(pw);
   const pw2Error = pw2 && pw2 !== pw ? '비밀번호가 일치하지 않아요' : null;
-  const canSubmit = email && nick && pw && pw2 === pw && agree;
+  const canSubmit = email && nick && pw && pw2 === pw && level && agree;
 
   return (
     <React.Fragment>
@@ -435,6 +439,33 @@ function Signup() {
               accent={accent}
               error={pw2Error}
             />
+
+            {/* level selector */}
+            <div>
+              <div style={{
+                fontFamily: T.body, fontSize: 12, fontWeight: 500,
+                color: 'rgba(232,238,255,0.55)',
+                letterSpacing: '0.04em', marginBottom: 8, textTransform: 'uppercase',
+              }}>독서 수준</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {LEVELS.map((lv) => {
+                  const active = level === lv;
+                  return (
+                    <button key={lv} type="button" onClick={() => setLevel(lv)} style={{
+                      flex: 1, height: 48, borderRadius: 12, border: 'none', cursor: 'pointer',
+                      fontFamily: T.body, fontSize: 14, fontWeight: 600,
+                      background: active
+                        ? `linear-gradient(135deg, ${accent}, ${primary})`
+                        : 'rgba(255,255,255,0.04)',
+                      color: active ? '#04102E' : 'rgba(232,238,255,0.7)',
+                      outline: active ? 'none' : '1px solid rgba(255,255,255,0.10)',
+                      boxShadow: active ? `0 6px 18px ${primary}66` : 'none',
+                      transition: 'all 160ms ease',
+                    }}>{lv}</button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* agreements */}

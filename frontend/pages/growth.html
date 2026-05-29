@@ -16,10 +16,21 @@
 <div class="aurora-bg"><div class="aurora-layer"></div></div>
 
     <nav class="navbar">
-        <a href="/home.html" class="navbar-logo">👁 독서 아이트래킹</a>
+        <a class="brand" href="/home.html">
+          <div class="brand-mark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2" />
+              <circle cx="12" cy="12" r="3" fill="#04102E" />
+            </svg>
+          </div>
+          <div>
+            <div class="brand-name">독서 아이트래킹</div>
+            <div class="brand-mono">EYE-TRACKING · READING</div>
+          </div>
+        </a>
         <div class="navbar-right">
             <span class="navbar-user" id="navbar-user"></span>
-            <a id="back-to-list" href="/reading-list-user.html" class="btn btn-outline">← 도서 목록</a>
+            <a id="back-to-list" href="/reading-list.html" class="btn btn-outline">← 도서 목록</a>
             <a href="#" class="btn-logout" onclick="localStorage.clear();sessionStorage.clear();location.href='/home.html'">로그아웃</a>
         </div>
     </nav>
