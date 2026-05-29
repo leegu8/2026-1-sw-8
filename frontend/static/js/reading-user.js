@@ -463,11 +463,8 @@ function calcRegressionRate() {
         p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down'
     );
     const regCount = saccades.filter((p, i) => {
-        if (p.type === 'up') {
-            return !(saccades[i - 1]?.type === 'down' && saccades[i + 1]?.type === 'down');
-        }
+        if (p.type === 'up') return true;
         if (p.type !== 'left') return false;
-        if (saccades[i - 1]?.type === 'right' && saccades[i + 1]?.type === 'right') return false;
         if (saccades[i + 1]?.type === 'down') return false;
         return true;
     }).length;
