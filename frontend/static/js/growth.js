@@ -1,9 +1,9 @@
 const userId = localStorage.getItem('user_id');
 const nick   = localStorage.getItem('user_nick') || '';
 
-document.getElementById('navbar-user').innerHTML = nick ? `<span class="avatar">${nick[0]}</span>${nick}님` : '';
+document.getElementById('navbar-user').textContent = nick;
 if (nick) document.getElementById('growth-title').textContent = `${nick}의 성장일지`;
-if (userId === '100') document.getElementById('back-to-list').href = '/reading-list-admin.html';
+if (userId === '100') document.getElementById('back-to-list').href = '/reading-list.html';
 
 async function loadAttendance() {
     let data = { streak: 0, total_days: 0, recent_dates: [] };
@@ -83,7 +83,7 @@ function renderGrowthSummary(sessions) {
 
     const focusDiff = (last.summary.concentration_score ?? 0) - (first.summary.concentration_score ?? 0);
     if (focusDiff >= 5)       insights.push({ type: 'good', icon: '🧠', text: `집중도가 ${Math.round(focusDiff)}% 향상됐어요!` });
-    else if (focusDiff <= -5) insights.push({ type: 'bad',  icon: '●', text: `집중도가 떨어졌어요. 독서 환경을 점검해보세요.` });
+    else if (focusDiff <= -5) insights.push({ type: 'bad',  icon: '👁', text: `집중도가 떨어졌어요. 독서 환경을 점검해보세요.` });
 
     const regDiff = (first.summary.regression_ratio ?? 0) - (last.summary.regression_ratio ?? 0);
     if (regDiff >= 3)       insights.push({ type: 'good', icon: '↩', text: `역행 비율이 ${Math.round(regDiff)}% 줄었어요. 읽기 흐름이 좋아지고 있어요!` });

@@ -130,19 +130,26 @@
             <div class="guide-item">
                 <div class="num">3</div>
                 <div>
-                    <h3>현재 읽는 줄 하이라이트</h3>
-                    <p>시선이 향하는 줄이 파란색으로 강조됩니다. 한 줄씩 집중해서 읽어보세요.</p>
+                    <h3>집중 이탈 감지 시 줄 하이라이트</h3>
+                    <p>시선이 텍스트 밖을 벗어나거나 2초 이상 멈추는 집중 이탈 신호가 감지되면 읽던 줄이 파란색으로 강조됩니다. 시선을 화면으로 되돌려 집중해서 읽어보세요.</p>
                 </div>
             </div>
             <div class="guide-item">
                 <div class="num">4</div>
+                <div>
+                    <h3>줄 건너뜀 감지 시 줄 박스</h3>
+                    <p>현재 읽어야 할 줄을 충분히 읽지 않고 앞으로 넘어간 것이 감지되면 해당 줄에 주황색 박스가 표시됩니다. 박스가 표시된 줄부터 다시 읽어보세요.</p>
+                </div>
+            </div>
+            <div class="guide-item">
+                <div class="num">5</div>
                 <div>
                     <h3>역행 시 블러 처리</h3>
                     <p>이미 읽은 부분으로 시선이 역행하면 해당 줄이 흐려집니다. 앞으로 읽는 습관을 길러보세요.</p>
                 </div>
             </div>
             <div class="guide-item">
-                <div class="num">5</div>
+                <div class="num">6</div>
                 <div>
                     <h3>독서 분석 결과 제공</h3>
                     <p>독서가 끝나면 집중도, 역행 비율, WPM(분당 읽은 단어 수) 등 상세한 분석 결과를 확인할 수 있습니다.</p>
@@ -185,7 +192,7 @@
     ">🎯 마우스 보정 모드 &nbsp;|&nbsp; Q 로 해제</div>
 
     <script type="module">
-    import { addCalibrationPoint, clearCalibration } from '/static/js/api/gazeApi.js';
+    import { addCalibrationPoint, clearCalibration, setYCorrection } from '/static/js/api/gazeApi.js';
 
     document.getElementById('reset-cal-btn').addEventListener('click', async () => {
         const btn = document.getElementById('reset-cal-btn');
@@ -218,6 +225,7 @@
         calMode = !calMode;
         badge.style.display        = calMode ? 'block' : 'none';
         document.body.style.cursor = calMode ? 'crosshair' : '';
+        setYCorrection(!calMode); // Q모드 ON → Y보정 OFF, Q모드 OFF → Y보정 ON
     });
 
     document.addEventListener('click', async (e) => {

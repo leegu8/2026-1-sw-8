@@ -7,6 +7,10 @@ export async function addCalibrationPoint(x, y, count = 3) {
     return res.json();
 }
 
+export async function setYCorrection(active) {
+    return (await fetch(`/api/calibrate/y-correction?active=${active}`, { method: 'POST' })).json();
+}
+
 export async function clearCalibration() {
     return (await fetch('/api/calibrate', { method: 'DELETE' })).json();
 }
