@@ -72,7 +72,7 @@ index → login/signup → reading-list → reading → result → growth
 - **signup**: 회원가입. 이메일·비밀번호·닉네임·레벨 입력
 - **calibration**: 화면 14개 지점을 응시하며 Ridge Regression 모델 학습
 - **guide**: 사용 안내. Q키 — 마우스 보정 모드(클릭·정지로 추가 보정)
-- **reading** (개발자): 실시간 하이라이트·역행 블러·줄박스 개입. 분석 지표 프론트에서 계산 후 DB 저장. BLUR/HIGHLIGHT/BOX 교정 이벤트는 종료 버튼 클릭 시 한 번에 DB 저장
+- **reading** (개발자): 실시간 하이라이트·역행 블러 개입. 분석 지표 프론트에서 계산 후 DB 저장. BLUR/HIGHLIGHT 교정 이벤트는 종료 버튼 클릭 시 한 번에 DB 저장. 긴 글은 자동 페이지 분할
 - **reading-user** (사용자): 역행 블러만 적용. 동일한 분석·저장 구조
 - **result**: DB에서 세션 결과 조회. 집중도·역행비율·WPM·완독률·독서시간 기반 종합 점수 계산 후 DB 저장
 - **growth**: 최근 5세션 지표·점수 차트, 출석 달력
@@ -109,7 +109,7 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 | `attendance` | 출석체크 (user별, attended_at: date) |
 | `books` | 도서 (title, content, difficulty, genre) |
 | `reading_sessions` | 독서 세션 (wpm, concentration_score, regression_ratio, visited_lines, total_lines, word_count, score) |
-| `correction_events` | 교정 이벤트 (BLUR/HIGHLIGHT/BOX, line_index, triggered_at) |
+| `correction_events` | 교정 이벤트 (BLUR/HIGHLIGHT, line_index, triggered_at) |
 
 ## API 엔드포인트
 
@@ -126,6 +126,7 @@ Python(웹캠 → MediaPipe → Ridge Regression)
 |--------|------|------|
 | `GET` | `/api/status` | 시스템 상태 |
 | `POST/DELETE` | `/api/calibrate` | 보정 포인트 추가 `{x, y, count}` / 초기화 |
+| `POST` | `/api/calibrate/y-correction?active=true\|false` | Y좌표 보정 활성화 토글 (Q모드 ON → false, OFF → true) |
 | `GET` | `/api/calibrate/status` | 보정 상태 |
 | `POST` | `/api/webcam/start` | 웹캠 시작 `{camera_index}` |
 | `POST` | `/api/webcam/stop` | 웹캠 중지 |

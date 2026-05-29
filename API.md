@@ -270,8 +270,7 @@
     "concentration_score": 72.3,
     "regression_ratio": 18.5,
     "blur_event_count": 3,
-    "highlight_event_count": 5,
-    "box_event_count": 1
+    "highlight_event_count": 5
   }
 }
 ```
@@ -304,7 +303,6 @@
 >
 > BLUR: 재독 3/30초 조건 달성 시 재독 발생 줄
 > HIGHLIGHT: 집중 이탈 감지 시 이탈된 줄
-> BOX: 줄 건너뜀(스킴) 감지 시 해당 줄
 
 ---
 
@@ -352,9 +350,10 @@
 ---
 
 | 메서드 | 경로 | 설명 |
-|--------|------|------|
+| --- | --- | --- |
 | `POST` | `/api/calibrate` | 보정 포인트 추가 `{x, y, count}` |
 | `DELETE` | `/api/calibrate` | 보정 초기화 |
+| `POST` | `/api/calibrate/y-correction?active=true\|false` | Y좌표 보정 활성화 토글 (Q모드 ON → false, OFF → true) |
 | `GET` | `/api/calibrate/status` | 보정 상태 조회 |
 | `POST` | `/api/webcam/start` | 웹캠 시작 `{camera_index}` |
 | `POST` | `/api/webcam/stop` | 웹캠 중지 |

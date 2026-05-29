@@ -21,7 +21,6 @@ async def get_session_result(session_id: int, db: AsyncSession = Depends(get_db)
 
     blur_count      = sum(1 for e in events if e.event_type == "BLUR")
     highlight_count = sum(1 for e in events if e.event_type == "HIGHLIGHT")
-    box_count       = sum(1 for e in events if e.event_type == "BOX")
 
     total_lines = session.total_lines or 1
     visited_lines = session.visited_lines or 0
@@ -49,6 +48,5 @@ async def get_session_result(session_id: int, db: AsyncSession = Depends(get_db)
             "regression_ratio": session.regression_ratio,
             "blur_event_count": blur_count,
             "highlight_event_count": highlight_count,
-            "box_event_count": box_count,
         },
     }
