@@ -541,6 +541,7 @@ document.getElementById('done-btn').addEventListener('click', async () => {
             }
         } catch {}
     }
+    localStorage.setItem('max_rereadings_30s', calcMaxRereadingsIn30s());
     window.location.href = `/result.html?session_id=${sessionId ?? ''}`;
 });
 
@@ -756,6 +757,18 @@ function updateLineTracking(x, line, type = 'still') {
 function rereadingsInWindow(windowMs = REREAD_WINDOW_MS) {
     const cutoff = Date.now() - windowMs;
     return rereadingEvents.filter(t => t >= cutoff).length;
+}
+
+function calcMaxRereadingsIn30s() {
+    if (!rereadingEvents.length) return 0;
+    const W = 30000;
+    let max = 0;
+    for (let i = 0; i < rereadingEvents.length; i++) {
+        let count = 0;
+        for (let j = i; j < rereadingEvents.length && rereadingEvents[j] - rereadingEvents[i] <= W; j++) count++;
+        max = Math.max(max, count);
+    }
+    return max;
 }
 
 // ── 집중 이탈 판정 (실시간) ──────────────────────────────

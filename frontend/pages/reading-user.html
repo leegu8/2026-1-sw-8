@@ -28,6 +28,21 @@
         .word           { display: inline; transition: filter 0.25s; }
         .word-blur      { filter: blur(2px); opacity: 0.55; user-select: none; }
         #gaze-dot       { display: none !important; }
+        #intervention-panel {
+            position: fixed; top: 68px; left: 20px;
+            background: rgba(15,15,25,0.90);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px; padding: 10px 14px;
+            z-index: 9997; min-width: 130px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            font-size: 0.82rem;
+        }
+        .iv-title  { color:#a78bfa; font-weight:700; font-size:0.80rem; margin-bottom:8px;
+                     padding-bottom:5px; border-bottom:1px solid rgba(139,92,246,0.25); }
+        .iv-row    { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+        .iv-row:last-child { margin-bottom:0; }
+        .iv-check  { accent-color:#a78bfa; width:14px; height:14px; cursor:pointer; }
+        .iv-label  { color:#d1d5db; cursor:pointer; font-size:0.80rem; flex:1; }
         #line-highlight-bar {
             position: absolute; left: 0; right: 0;
             background: rgba(52, 152, 219, 0.13);
@@ -82,6 +97,19 @@
             <button id="done-btn"  class="btn btn-success">다 읽었어요 →</button>
             <button id="recal-btn" class="btn btn-warning">재보정</button>
             <div id="reading-status" style="color:#666; font-size:0.95rem;"></div>
+        </div>
+    </div>
+
+    <!-- 독서 보조 개입 패널 -->
+    <div id="intervention-panel">
+        <div class="iv-title">🛡 독서 보조</div>
+        <div class="iv-row">
+            <input type="checkbox" id="iv-blur-check" class="iv-check" checked>
+            <label class="iv-label" for="iv-blur-check">역행 블러</label>
+        </div>
+        <div class="iv-row">
+            <input type="checkbox" id="iv-highlight-check" class="iv-check" checked>
+            <label class="iv-label" for="iv-highlight-check">하이라이트</label>
         </div>
     </div>
 

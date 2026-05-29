@@ -339,6 +339,7 @@ document.getElementById('done-btn').addEventListener('click', async () => {
             }
         } catch {}
     }
+    localStorage.setItem('max_rereadings_30s', calcMaxRereadingsIn30s());
     window.location.href = `/result.html?session_id=${sessionId ?? ''}`;
 });
 
@@ -362,8 +363,14 @@ function clearRegressionBlur() {
     document.querySelectorAll('.word-blur').forEach(w => w.classList.remove('word-blur'));
 }
 
+const ivBlurCheck      = document.getElementById('iv-blur-check');
+const ivHighlightCheck = document.getElementById('iv-highlight-check');
+
 setInterval(() => {
-    if (!startTime) return;
+    if (!startTime || !ivBlurCheck.checked) {
+        if (blurActive) { blurActive = false; blurLine = -1; clearRegressionBlur(); blurEventSent = false; }
+        return;
+    }
     const rereadCount = rereadingsInWindow();
     if (!blurActive && rereadCount >= REREAD_BLUR_ON) {
         blurActive = true;
@@ -524,6 +531,18 @@ function rereadingsInWindow(windowMs = REREAD_WINDOW_MS) {
     return rereadingEvents.filter(t => t >= cutoff).length;
 }
 
+function calcMaxRereadingsIn30s() {
+    if (!rereadingEvents.length) return 0;
+    const W = 30000;
+    let max = 0;
+    for (let i = 0; i < rereadingEvents.length; i++) {
+        let count = 0;
+        for (let j = i; j < rereadingEvents.length && rereadingEvents[j] - rereadingEvents[i] <= W; j++) count++;
+        max = Math.max(max, count);
+    }
+    return max;
+}
+
 // ── 집중 이탈 판정 ────────────────────────────────────────
 function isLostFocus() {
     if (!startTime || patternData.length < 3) return false;
@@ -555,7 +574,7 @@ function updateHighlightBar(lineIdx) {
 
 setInterval(() => {
     const bar = document.getElementById('line-highlight-bar');
-    if (!startTime) { hideOverlay(bar); return; }
+    if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); highlightEventSent = false; return; }
     if (isLostFocus()) {
         updateHighlightBar(currentReadingLine);
         if (!highlightEventSent) {

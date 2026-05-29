@@ -350,6 +350,13 @@
         else if (wpm > 0 && wpm <= 250 && wpmScore < 40)
             improvements.push('독서 속도가 느린 편이에요. 어절 단위로 묶어 읽는 연습을 해보세요.');
 
+        // 30초 최대 재독 횟수
+        const maxRe = localStorage.getItem('max_rereadings_30s');
+        if (maxRe !== null) {
+            goods.push(`30초 동안 재독 최대 횟수는 ${parseInt(maxRe)}번입니다.`);
+            localStorage.removeItem('max_rereadings_30s');
+        }
+
         // 다음 독서 시 팝업 표시용으로 개선 포인트 저장
         if (improvements.length > 0)
             localStorage.setItem('last_improvements', JSON.stringify(improvements));
