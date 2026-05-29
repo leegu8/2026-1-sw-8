@@ -72,8 +72,8 @@ index → login/signup → reading-list → reading → result → growth
 - **signup**: 회원가입. 이메일·비밀번호·닉네임·레벨 입력
 - **calibration**: 화면 14개 지점을 응시하며 Ridge Regression 모델 학습
 - **guide**: 사용 안내. Q키 — 마우스 보정 모드(클릭·정지로 추가 보정)
-- **reading** (개발자): 실시간 하이라이트·역행 블러 개입. 분석 지표 프론트에서 계산 후 DB 저장. BLUR/HIGHLIGHT 교정 이벤트는 종료 버튼 클릭 시 한 번에 DB 저장. 긴 글은 자동 페이지 분할
-- **reading-user** (사용자): 역행 블러만 적용. 동일한 분석·저장 구조
+- **reading** (개발자): 실시간 하이라이트·역행 블러 개입. 분석 지표 프론트에서 계산 후 DB 저장. BLUR/HIGHLIGHT 교정 이벤트는 종료 버튼 클릭 시 한 번에 DB 저장. 긴 글은 자동 페이지 분할(pageBoundaries 동적 계산). 완독률: 방문 세그먼트 Set 합산 / 전체(줄×5). 역행비율: right-left-right·down-up-down 떨림 노이즈 제거
+- **reading-user** (사용자): 역행 블러만 적용. 페이지네이션·완독률 계산·역행비율 노이즈 필터는 reading.js와 동일
 - **result**: DB에서 세션 결과 조회. 집중도·역행비율·WPM·완독률·독서시간 기반 종합 점수 계산 후 DB 저장
 - **growth**: 최근 5세션 지표·점수 차트, 출석 달력
 - **reading-list** (개발자): 도서 목록. 읽은 도서는 커리큘럼/전체 목록에서 제외되고 읽은 도서 탭으로 이동

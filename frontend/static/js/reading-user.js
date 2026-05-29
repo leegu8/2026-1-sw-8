@@ -1,6 +1,12 @@
 // ── 책 로드 ──────────────────────────────────────────────
 let lineList        = [];
+let allLineList     = [];
 let readingAreaRect = null;
+let currentPage       = 0;
+let totalPages        = 1;
+let pageBoundaries    = [];
+let _paginationTopPad = 0;
+let _paginationMaxH   = 0;
 
 (async () => {
     const bookId = +new URLSearchParams(location.search).get('book_id');
@@ -15,7 +21,23 @@ let readingAreaRect = null;
     ).join('');
     bookWordCount = document.querySelector('.reading-text').innerText
         .trim().split(/\s+/).filter(w => w.length > 0).length;
+    const timeIssue = localStorage.getItem('last_time_issue');
+    if (timeIssue && bookWordCount > 0) {
+        const popup = document.getElementById('improvement-popup');
+        if (popup && popup.style.display === 'flex') {
+            const fmt = s => { s = Math.round(s); return s >= 60 ? `${Math.floor(s/60)}분 ${s%60}초` : `${s}초`; };
+            const optRange = `${fmt(bookWordCount / 400 * 60)} ~ ${fmt(bookWordCount / 270 * 60)}`;
+            const note = document.createElement('p');
+            note.style.cssText = 'font-size:0.85rem;color:#2980b9;font-weight:600;margin:10px 0 0;padding:10px 0 0;border-top:1px solid #dce8f5;line-height:1.6;';
+            note.textContent = `📖 이 글의 적정 독서 시간: ${optRange}`;
+            document.getElementById('popup-improvement-list').appendChild(note);
+        }
+        localStorage.removeItem('last_time_issue');
+    }
+
     buildLineList();
+    allLineList = lineList.map(l => ({ ...l }));
+    initPagination();
     await createSession(bookId);
 })();
 
@@ -49,6 +71,85 @@ function buildLineList() {
         const top = Math.round(w.getBoundingClientRect().top + window.scrollY);
         w.dataset.line = topToIdx.get(top) ?? -1;
     });
+}
+
+// ── 페이지네이션 ──────────────────────────────────────────
+function initPagination() {
+    if (!allLineList.length) return;
+
+    const area     = document.querySelector('.reading-area');
+    const controls = document.querySelector('.reading-controls');
+    const nav      = document.getElementById('page-nav');
+    const areaRect = area.getBoundingClientRect();
+
+    _paginationTopPad = allLineList[0].top - areaRect.top;
+    _paginationMaxH   = window.innerHeight
+        - areaRect.top
+        - 50
+        - controls.offsetHeight
+        - 36;
+
+    const bottomPad   = parseFloat(getComputedStyle(area).paddingBottom) || _paginationTopPad;
+    const maxContentH = _paginationMaxH - _paginationTopPad - bottomPad;
+
+    pageBoundaries = [];
+    let s = 0;
+    while (s < allLineList.length) {
+        let e = s, h = 0;
+        while (e < allLineList.length) {
+            const lh = allLineList[e].bottom - allLineList[e].top;
+            if (h + lh > maxContentH && e > s) break;
+            h += lh;
+            e++;
+        }
+        pageBoundaries.push({ start: s, end: e - 1 });
+        s = e;
+    }
+    totalPages = pageBoundaries.length;
+
+    const clip = document.getElementById('reading-clip');
+    if (clip) {
+        clip.style.overflow = 'hidden';
+        clip.style.height   = maxContentH + 'px';
+    }
+
+    area.style.overflow        = 'hidden';
+    area.style.height          = _paginationMaxH + 'px';
+    document.body.style.overflowY = 'hidden';
+    if (nav) nav.style.display = totalPages > 1 ? 'flex' : 'none';
+
+    goToPage(0);
+}
+
+function goToPage(page) {
+    if (page < 0 || page >= totalPages) return;
+    currentPage = page;
+
+    const { start: startIdx } = pageBoundaries[page];
+    const translateY = allLineList[0].top - allLineList[startIdx].top;
+
+    document.querySelector('.reading-text').style.transform = `translateY(${translateY}px)`;
+
+    const area = document.querySelector('.reading-area');
+    area.style.height = _paginationMaxH + 'px';
+
+    lineList = allLineList.map(l => ({
+        ...l,
+        top:    l.top    + translateY,
+        bottom: l.bottom + translateY,
+    }));
+
+    readingAreaRect = area.getBoundingClientRect();
+    updatePageNav();
+}
+
+function updatePageNav() {
+    const prevBtn   = document.getElementById('prev-page-btn');
+    const nextBtn   = document.getElementById('next-page-btn');
+    const indicator = document.getElementById('page-indicator');
+    if (prevBtn)   prevBtn.disabled   = currentPage <= 0;
+    if (nextBtn)   nextBtn.disabled   = currentPage >= totalPages - 1;
+    if (indicator) indicator.textContent = `${currentPage + 1} / ${totalPages}`;
 }
 
 function getLineIndex(y) {
@@ -92,7 +193,8 @@ const gazeData        = [];
 const patternData     = [];
 const rereadingEvents = [];
 
-let blurEventSent = false;
+let blurEventSent      = false;
+let highlightEventSent = false;
 const pendingCorrectionEvents = [];
 
 function sendCorrectionEvent(type, lineIndex) {
@@ -118,12 +220,13 @@ let   lineDwellMinX          = 0;
 let   lineDwellHasRight      = false;
 let   baselineLastChangedTime = 0;
 let   skimAlertActive        = false;
-const lineSegmentsVisited    = new Map();
+const lineSegmentsVisited    = new Map(); // lineIndex → Set<segIndex>
 
 document.getElementById('reading-status').textContent = '👁 시선 추적 중';
 
 // ── 시선 이벤트 수집 ──────────────────────────────────────
 window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
+    if (document.getElementById('improvement-popup')?.style.display === 'flex') return;
     if (!startTime && isReadingStart(x, y)) {
         startTime = Date.now();
         gazeData.length        = 0;
@@ -243,6 +346,9 @@ document.getElementById('recal-btn').addEventListener('click', () => {
     window.location.href = '/guide.html';
 });
 
+document.getElementById('prev-page-btn')?.addEventListener('click', () => goToPage(currentPage - 1));
+document.getElementById('next-page-btn')?.addEventListener('click', () => goToPage(currentPage + 1));
+
 // ── 역행 블러 (항상 활성) ─────────────────────────────────
 function applyRegressionBlur() {
     document.querySelectorAll('.word[data-line]').forEach(w => {
@@ -288,14 +394,17 @@ function analyzeReading() {
     return { totalSec, completionRate, focusRate, regressionCount, regRate, regressionRate, wpm, visitedLines, totalLines, error: false };
 }
 
+// ── 완독률 — 방문한 세그먼트 합 / 전체 세그먼트(줄 수 × 5) ──
 function calcCompletion() {
     const totalLines = lineList.length;
     if (!totalLines) return { visitedLines: 0, totalLines: 0, completionRate: 0 };
-    let visited = 0;
+
+    let visitedSegs = 0;
     for (let i = 0; i < totalLines; i++) {
-        if ((lineSegmentsVisited.get(i) ?? -1) >= 3) visited++;
+        visitedSegs += lineSegmentsVisited.get(i)?.size ?? 0;
     }
-    return { visitedLines: visited, totalLines, completionRate: Math.round(visited / totalLines * 100) };
+    const totalSegs = totalLines * 5;
+    return { visitedLines: visitedSegs, totalLines: totalSegs, completionRate: Math.round(visitedSegs / totalSegs * 100) };
 }
 
 function calcFocusRate(totalSec) {
@@ -333,10 +442,19 @@ function calcFocusRate(totalSec) {
     return Math.round(Math.max(0, (gazeSpanMs - unfocusedMs) / gazeSpanMs * 100));
 }
 
+// ── 역행비율 — 노이즈 필터 적용 (right-left-right, down-up-down 제외) ──
 function calcRegressionRate() {
-    const saccades = patternData.filter(p => ['right','left','up','down'].includes(p.type));
+    const saccades = patternData.filter(p =>
+        p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down'
+    );
     if (!saccades.length) return 0;
-    const regCount = saccades.filter(p => p.type === 'up' || p.type === 'left').length;
+    const regCount = saccades.filter((p, i) => {
+        if (p.type === 'up') {
+            return !(saccades[i - 1]?.type === 'down' && saccades[i + 1]?.type === 'down');
+        }
+        if (p.type !== 'left') return false;
+        return !(saccades[i - 1]?.type === 'right' && saccades[i + 1]?.type === 'right');
+    }).length;
     return Math.round(regCount / saccades.length * 100);
 }
 
@@ -357,15 +475,14 @@ function updateLineTracking(x, line, type = 'still') {
         if (line > maxReadingLine) maxReadingLine = line;
     }
 
-    if (line === currentReadingLine) {
-        const l = lineList[line];
-        if (l) {
-            const sw = (l.xMax - l.xMin) / 5;
-            if (sw > 0) {
-                const seg  = Math.max(0, Math.min(4, Math.floor((x - l.xMin) / sw)));
-                const prev = lineSegmentsVisited.get(line) ?? -1;
-                if (seg > prev) lineSegmentsVisited.set(line, seg);
-            }
+    // 세그먼트 방문 기록 — 시선이 닿는 모든 줄, Set으로 개별 추적
+    const l = lineList[line];
+    if (l) {
+        const sw = (l.xMax - l.xMin) / 5;
+        if (sw > 0) {
+            const seg = Math.max(0, Math.min(4, Math.floor((x - l.xMin) / sw)));
+            if (!lineSegmentsVisited.has(line)) lineSegmentsVisited.set(line, new Set());
+            lineSegmentsVisited.get(line).add(seg);
         }
     }
 
@@ -386,7 +503,7 @@ function updateLineTracking(x, line, type = 'still') {
             if (line !== currentReadingLine) baselineLastChangedTime = Date.now();
             currentReadingLine = line;
         } else if (line === currentReadingLine + 1) {
-            const maxSeg = lineSegmentsVisited.get(currentReadingLine) ?? -1;
+            const maxSeg = lineSegmentsVisited.get(currentReadingLine)?.size ?? 0;
             if (maxSeg >= 3) {
                 const nextL     = lineList[line];
                 const lineWidth = nextL ? nextL.xMax - nextL.xMin : 0;
@@ -406,3 +523,47 @@ function rereadingsInWindow(windowMs = REREAD_WINDOW_MS) {
     const cutoff = Date.now() - windowMs;
     return rereadingEvents.filter(t => t >= cutoff).length;
 }
+
+// ── 집중 이탈 판정 ────────────────────────────────────────
+function isLostFocus() {
+    if (!startTime || patternData.length < 3) return false;
+    const cutoff = Date.now() - 2000;
+    const recent = patternData.filter(p => p.t >= cutoff);
+    if (recent.length < 3) return false;
+    return recent.every(p => p.type === 'oob' || p.type === 'still');
+}
+
+// ── 하이라이트 바 ─────────────────────────────────────────
+function showOverlay(el) {
+    el.style.display = 'block';
+    requestAnimationFrame(() => { el.style.opacity = '1'; });
+}
+function hideOverlay(el) {
+    el.style.opacity = '0';
+    setTimeout(() => { if (el.style.opacity === '0') el.style.display = 'none'; }, 450);
+}
+
+function updateHighlightBar(lineIdx) {
+    const bar = document.getElementById('line-highlight-bar');
+    if (lineIdx < 0 || lineIdx >= lineList.length) { hideOverlay(bar); return; }
+    const areaTop = document.querySelector('.reading-area').getBoundingClientRect().top + window.scrollY;
+    const ln = lineList[lineIdx];
+    bar.style.top    = (ln.top - areaTop) + 'px';
+    bar.style.height = (ln.bottom - ln.top + 4) + 'px';
+    showOverlay(bar);
+}
+
+setInterval(() => {
+    const bar = document.getElementById('line-highlight-bar');
+    if (!startTime) { hideOverlay(bar); return; }
+    if (isLostFocus()) {
+        updateHighlightBar(currentReadingLine);
+        if (!highlightEventSent) {
+            highlightEventSent = true;
+            sendCorrectionEvent('HIGHLIGHT', currentReadingLine);
+        }
+    } else {
+        hideOverlay(bar);
+        highlightEventSent = false;
+    }
+}, 500);

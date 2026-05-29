@@ -97,8 +97,10 @@ function initPagination() {
         - controls.offsetHeight
         - 36;
 
+    // box-sizing:border-box — padding-bottom도 제외
+    const bottomPad   = parseFloat(getComputedStyle(area).paddingBottom) || _paginationTopPad;
     // 실제 줄 높이를 합산해 페이지 경계 동적 계산 (단락 여백 포함)
-    const maxContentH = _paginationMaxH - _paginationTopPad;
+    const maxContentH = _paginationMaxH - _paginationTopPad - bottomPad;
     pageBoundaries = [];
     let s = 0;
     while (s < allLineList.length) {
@@ -113,6 +115,13 @@ function initPagination() {
         s = e;
     }
     totalPages = pageBoundaries.length;
+
+    // reading-clip: padding 위쪽 이전 페이지 내용 차단
+    const clip = document.getElementById('reading-clip');
+    if (clip) {
+        clip.style.overflow = 'hidden';
+        clip.style.height   = maxContentH + 'px';
+    }
 
     area.style.overflow        = 'hidden';
     area.style.height          = _paginationMaxH + 'px';
