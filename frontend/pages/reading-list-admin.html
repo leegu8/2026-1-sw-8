@@ -118,9 +118,9 @@
     font-size: 11.5px; font-weight: 600; font-family: inherit; transition: opacity 0.15s;
   }
   .book-actions button:hover { opacity: 0.82; }
-  .btn-read-gaze { background: var(--accent); color: #04102E; }
-  .btn-read-dev  { background: var(--surface); color: var(--ink); border: 1px solid var(--line) !important; }
-  .btn-delete    { background: rgba(231,76,60,0.12); color: #e74c3c; border: 1px solid rgba(231,76,60,0.3) !important; }
+  .btn-read-gaze { background: linear-gradient(135deg, rgba(63,182,255,0.25), rgba(30,91,224,0.35)); color: var(--ink); border: 1px solid rgba(63,182,255,0.25) !important; }
+  .btn-read-dev  { background: linear-gradient(135deg, rgba(167,139,250,0.2), rgba(109,40,217,0.28)); color: rgba(232,238,255,0.85); border: 1px solid rgba(167,139,250,0.2) !important; }
+  .btn-delete    { background: linear-gradient(135deg, rgba(248,113,113,0.15), rgba(220,38,38,0.22)); color: rgba(248,113,113,0.9); border: 1px solid rgba(248,113,113,0.2) !important; }
 
   /* ── Empty state ── */
   .empty-state {
@@ -253,9 +253,9 @@
       <div class="author">${book.genre || '산문'}</div>
       <div class="book-meta">${statusHtml}</div>
       <div class="book-actions">
-        <button class="btn-read-gaze"  data-id="${book.id}">👁 시선 추적</button>
-        <button class="btn-read-dev"   data-id="${book.id}">🛠 개발자 모드</button>
-        <button class="btn-delete"     data-id="${book.id}">🗑 삭제</button>
+        <button class="btn-read-gaze"  data-id="${book.id}">시선 추적</button>
+        <button class="btn-read-dev"   data-id="${book.id}">개발자 모드</button>
+        <button class="btn-delete"     data-id="${book.id}">삭제</button>
       </div>`;
     card.querySelector('.btn-read-gaze').addEventListener('click', e => {
       e.stopPropagation();
