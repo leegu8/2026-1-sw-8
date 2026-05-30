@@ -2,115 +2,104 @@
 let lineList        = [];
 let readingAreaRect = null;
 
-let pages       = [];   // 페이지별 단락 HTML 배열
-let currentPage = 0;
+let allLineList       = [];
+let currentPage       = 0;
+let totalPages        = 1;
+let pageBoundaries    = [];
+let _paginationTopPad = 0;
+let _paginationMaxH   = 0;
 
-function paraToHtml(text, isParaStart = false) {
-    const cls = isParaStart ? ' class="para-start"' : '';
-    return `<p${cls}>${text.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`;
-}
+function initPagination() {
+    if (!allLineList.length) return;
+    const area     = document.querySelector('.reading-area');
+    const areaRect = area.getBoundingClientRect();
 
-function contentToParas(content) {
-    return content.split(/\n+/).map(s => s.trim()).filter(Boolean)
-        .flatMap((para, paraIdx) => {
-            const sents = para.split(/(?<=[.!?。！？])\s+/).filter(Boolean);
-            const items = sents.length > 1 ? sents : [para];
-            return items.map((s, i) => ({ text: s, paraStart: i === 0 && paraIdx > 0 }));
-        });
-}
+    _paginationTopPad = allLineList[0].top - areaRect.top;
+    _paginationMaxH   = area.clientHeight;
+    const bottomPad   = parseFloat(getComputedStyle(area).paddingBottom) || _paginationTopPad;
+    const maxContentH = _paginationMaxH - _paginationTopPad - bottomPad;
 
-function calcAvailableHeight() {
-    const area = document.querySelector('.reading-area');
-    if (area) {
-        const s = getComputedStyle(area);
-        return area.clientHeight
-            - (parseFloat(s.paddingTop)    || 0)
-            - (parseFloat(s.paddingBottom) || 0);
-    }
-    return 500;
-}
-
-function buildPages(paraHtmlList) {
-    const area      = document.querySelector('.reading-text');
-    const available = calcAvailableHeight();
-    const result    = [];
-    let   bucket    = [];
-
-    for (const html of paraHtmlList) {
-        bucket.push(html);
-        area.innerHTML = bucket.join('');
-        if (area.scrollHeight > available && bucket.length > 1) {
-            result.push(bucket.slice(0, -1).join(''));
-            bucket = [html];
+    pageBoundaries = [];
+    let s = 0;
+    while (s < allLineList.length) {
+        let e = s, h = 0;
+        while (e < allLineList.length) {
+            const lh = allLineList[e].bottom - allLineList[e].top;
+            if (h + lh > maxContentH && e > s) break;
+            h += lh;
+            e++;
         }
+        pageBoundaries.push({ start: s, end: e - 1 });
+        s = e;
     }
-    if (bucket.length) result.push(bucket.join(''));
-    return result;
+    totalPages = pageBoundaries.length;
+
+    const clip = document.getElementById('reading-clip');
+    if (clip) {
+        clip.style.overflow = 'hidden';
+        clip.style.height   = maxContentH + 'px';
+    }
+
+    goToPage(0);
 }
 
-function showPage(n) {
-    currentPage = n;
-    const area = document.querySelector('.reading-text');
-    area.innerHTML = pages[n];
+function goToPage(page) {
+    if (page < 0 || page >= totalPages) return;
+    currentPage = page;
 
+    const { start: startIdx } = pageBoundaries[page];
+    const translateY = allLineList[0].top - allLineList[startIdx].top;
+
+    document.querySelector('.reading-text').style.transform = `translateY(${translateY}px)`;
+
+    readingAreaRect = document.querySelector('.reading-area').getBoundingClientRect();
+
+    lineList = allLineList.map(l => ({
+        ...l,
+        top:    l.top    + translateY,
+        bottom: l.bottom + translateY,
+    }));
+
+    updatePageNav();
+}
+
+function updatePageNav() {
+    const isFirst = currentPage <= 0;
+    const isLast  = currentPage >= totalPages - 1;
+    const prevBtn   = document.getElementById('prev-page-btn');
+    const nextBtn   = document.getElementById('next-page-btn');
+    const doneBtn   = document.getElementById('done-btn');
     const indicator = document.getElementById('page-indicator');
-    indicator.textContent = `${n + 1} / ${pages.length}`;
-
-    const isFirst = n === 0;
-    const isLast  = n === pages.length - 1;
-    document.getElementById('prev-page-btn').style.display = isFirst ? 'none' : '';
-    document.getElementById('next-page-btn').style.display = isLast  ? 'none' : '';
-    document.getElementById('done-btn').style.display      = isLast  ? ''     : 'none';
-
-    // 시선 추적 상태 초기화
-    lineList = [];
-    startTime              = null;
-    gazeData.length        = 0;
-    patternData.length     = 0;
-    rereadingEvents.length = 0;
-    lineSegmentsVisited.clear();
-    currentReadingLine       = -1;
-    maxReadingLine           = -1;
-    lineDwellLine            = -1;
-    lineDwellCount           = 0;
-    lineDwellMinX            = 0;
-    lineDwellHasRight        = false;
-    baselineLastChangedTime  = Date.now();
-    skimAlertActive          = false;
-    lastValidLine            = -1;
-    lastValidLineTime        = 0;
-    blurActive               = false;
-    blurLine                 = -1;
-    blurEventSent            = false;
-    highlightEventSent       = false;
-    oobSince                 = null;
-    hideFocusCallout();
-    const bar = document.getElementById('line-highlight-bar');
-    if (bar) { bar.style.opacity = '0'; bar.style.display = 'none'; }
-
-    buildLineList();
+    if (prevBtn)   prevBtn.style.display = isFirst ? 'none' : '';
+    if (nextBtn)   nextBtn.style.display = isLast  ? 'none' : '';
+    if (doneBtn)   doneBtn.style.display = isLast  ? ''     : 'none';
+    if (indicator) indicator.textContent = `${currentPage + 1} / ${totalPages}`;
 }
 
 (async () => {
-    const bookId = +new URLSearchParams(location.search).get('book_id');
+    const bookId = +new URLSearchParams(location.search).get('book_id')
+                || +localStorage.getItem('current_book_id');
     if (!bookId) return;
     const book = await fetch(`/api/db/books/${bookId}`).then(r => r.ok ? r.json() : null);
     if (!book) return;
     document.getElementById('book-title').textContent = book.title;
     document.title = `${book.title} - 독서 아이트래킹`;
-    const paraHtmlList = contentToParas(book.content).map(p => paraToHtml(p.text, p.paraStart));
-    bookWordCount = paraHtmlList.join('').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(w => w.length > 0).length;
-    pages = buildPages(paraHtmlList);
-    showPage(0);
+    bookWordCount = book.content.trim().split(/\s+/).filter(w => w.length > 0).length;
+
+    const paras = book.content.split(/\n+/).map(s => s.trim()).filter(Boolean);
+    document.querySelector('.reading-text').innerHTML = paras.map((para, i) =>
+        `<p${i > 0 ? ' class="para-start"' : ''}>${para.split(/\s+/).map(w =>
+            `<span class="word">${w}</span>`).join(' ')}</p>`
+    ).join('');
+
+    buildLineList();
+    allLineList = lineList.map(l => ({ ...l }));
+    initPagination();
     await createSession(bookId);
 })();
 
-document.getElementById('prev-page-btn').addEventListener('click', () => {
-    if (currentPage > 0) showPage(currentPage - 1);
-});
-document.getElementById('next-page-btn').addEventListener('click', () => {
-    if (currentPage < pages.length - 1) showPage(currentPage + 1);
-});
+document.getElementById('prev-page-btn')?.addEventListener('click', () => goToPage(currentPage - 1));
+document.getElementById('next-page-btn')?.addEventListener('click', () => goToPage(currentPage + 1));
 
 function buildLineList() {
     const map = new Map();
@@ -187,6 +176,7 @@ const rereadingEvents = [];
 
 let blurEventSent      = false;
 let highlightEventSent = false;
+let boxEventSent       = false;
 const pendingCorrectionEvents = [];
 
 function sendCorrectionEvent(type, lineIndex) {
@@ -513,6 +503,18 @@ function rereadingsInWindow(windowMs = REREAD_WINDOW_MS) {
     return rereadingEvents.filter(t => t >= cutoff).length;
 }
 
+// ── 현재 독서 행동 판단 ──────────────────────────────────
+function getReadingBehavior() {
+    if (!startTime || patternData.length === 0) return 'idle';
+    const types = patternData.slice(-10).map(p => p.type);
+    if (types.slice(-3).every(t => t === 'oob'))                  return 'oob';
+    if (types.slice(-5).every(t => t === 'still' || t === 'oob')) return 'distracted';
+    if (rereadingEvents.some(t => t >= Date.now() - 2000))        return 'rereading';
+    if (types.slice(-3).includes('down')) return 'wrap';
+    if (types.includes('right'))          return 'reading';
+    return 'idle';
+}
+
 // ── 집중 이탈 판정 ────────────────────────────────────────
 function isLostFocus() {
     if (!startTime || patternData.length < 3) return false;
@@ -522,39 +524,71 @@ function isLostFocus() {
     return recent.every(p => p.type === 'oob' || p.type === 'still');
 }
 
+// 오버레이 페이드 인/아웃 헬퍼
+function showOverlay(el) {
+    el.style.display = 'block';
+    requestAnimationFrame(() => { el.style.opacity = '1'; });
+}
+function hideOverlay(el) {
+    el.style.opacity = '0';
+    setTimeout(() => { if (el.style.opacity === '0') el.style.display = 'none'; }, 450);
+}
+
 // ── 하이라이트 바 & 콜아웃 ───────────────────────────────
 function updateHighlightBar(lineIdx) {
     const bar = document.getElementById('line-highlight-bar');
     if (!bar) return;
-    if (lineIdx < 0 || lineIdx >= lineList.length) {
-        bar.style.opacity = '0';
-        setTimeout(() => { if (bar.style.opacity === '0') bar.style.display = 'none'; }, 450);
-        return;
-    }
+    if (lineIdx < 0 || lineIdx >= lineList.length) { hideOverlay(bar); return; }
     const areaTop = document.querySelector('.reading-area').getBoundingClientRect().top + window.scrollY;
     const ln = lineList[lineIdx];
     bar.style.top    = (ln.top - areaTop) + 'px';
     bar.style.height = (ln.bottom - ln.top + 4) + 'px';
-    bar.style.display = 'block';
-    requestAnimationFrame(() => { bar.style.opacity = '1'; });
+    showOverlay(bar);
+}
+
+function updateLineBox(lineIdx) {
+    const box = document.getElementById('line-box');
+    if (!box) return;
+    if (lineIdx < 0 || lineIdx >= lineList.length) { hideOverlay(box); return; }
+    const areaTop = document.querySelector('.reading-area').getBoundingClientRect().top + window.scrollY;
+    const ln = lineList[lineIdx];
+    box.style.top    = (ln.top - areaTop - 2) + 'px';
+    box.style.height = (ln.bottom - ln.top + 4) + 'px';
+    showOverlay(box);
+}
+
+const _calloutFocus = document.getElementById('callout-focus');
+const _calloutSkim  = document.getElementById('callout-skim');
+
+function _positionCallout(el, lineIdx, side) {
+    if (lineIdx < 0 || lineIdx >= lineList.length) return;
+    const ln      = lineList[lineIdx];
+    const centerY = (ln.top + ln.bottom) / 2 - window.scrollY;
+    if (side === 'left') {
+        el.style.left  = '';
+        el.style.right = (window.innerWidth - (readingAreaRect?.left ?? 0) + 6) + 'px';
+    } else {
+        el.style.right = '';
+        el.style.left  = ((readingAreaRect?.right ?? window.innerWidth * 0.75) + 6) + 'px';
+    }
+    el.style.top = (centerY - el.offsetHeight / 2) + 'px';
 }
 
 function showFocusCallout(lineIdx) {
-    const el = document.getElementById('callout-focus');
-    if (!el || lineIdx < 0 || lineIdx >= lineList.length) { hideFocusCallout(); return; }
-    el.querySelector('.callout-box').textContent = '집중하세요';
-    const ln = lineList[lineIdx];
-    const centerY = (ln.top + ln.bottom) / 2 - window.scrollY;
-    const areaLeft = readingAreaRect ? readingAreaRect.left : 0;
-    el.style.right = (window.innerWidth - areaLeft + 6) + 'px';
-    el.style.left  = '';
-    el.style.top   = (centerY - 14) + 'px';
-    el.classList.add('show');
+    if (lineIdx < 0 || lineIdx >= lineList.length) { hideFocusCallout(); return; }
+    _calloutFocus.querySelector('.callout-box').textContent = '집중하세요';
+    _calloutFocus.classList.add('show');
+    _positionCallout(_calloutFocus, lineIdx, 'left');
 }
-function hideFocusCallout() {
-    const el = document.getElementById('callout-focus');
-    if (el) el.classList.remove('show');
+function hideFocusCallout() { _calloutFocus.classList.remove('show'); }
+
+function showSkimCallout(lineIdx) {
+    if (lineIdx < 0 || lineIdx >= lineList.length) { hideSkimCallout(); return; }
+    _calloutSkim.querySelector('.callout-box').textContent = '꼼꼼히 읽으세요';
+    _calloutSkim.classList.add('show');
+    _positionCallout(_calloutSkim, lineIdx, 'right');
 }
+function hideSkimCallout() { _calloutSkim.classList.remove('show'); }
 
 // ── 하이라이트 개입 (집중 이탈 2초+ 시 발동) ─────────────
 setInterval(() => {
@@ -570,5 +604,30 @@ setInterval(() => {
         updateHighlightBar(-1);
         hideFocusCallout();
         highlightEventSent = false;
+    }
+}, 500);
+
+// ── 줄 박스 개입 (스킵 감지 5초+ 시 발동) ────────────────
+const SKIM_ALERT_MS = 5000;
+setInterval(() => {
+    const box = document.getElementById('line-box');
+    if (!startTime) { if (box) hideOverlay(box); skimAlertActive = false; hideSkimCallout(); return; }
+    const skimDetected =
+        currentReadingLine >= 0 &&
+        lastValidLine > currentReadingLine &&
+        getReadingBehavior() === 'reading' &&
+        Date.now() - baselineLastChangedTime > SKIM_ALERT_MS;
+    if (skimDetected) skimAlertActive = true;
+    if (skimAlertActive) {
+        updateLineBox(currentReadingLine);
+        showSkimCallout(currentReadingLine);
+        if (!boxEventSent) {
+            boxEventSent = true;
+            sendCorrectionEvent('BOX', currentReadingLine);
+        }
+    } else {
+        if (box) hideOverlay(box);
+        hideSkimCallout();
+        boxEventSent = false;
     }
 }, 500);

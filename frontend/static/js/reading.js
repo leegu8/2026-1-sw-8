@@ -837,15 +837,6 @@ function updateGazeLineHighlight(lineIdx) {
     _gazeLineHighlight.style.display = 'block';
 }
 
-// Y가 줄 top~bottom 안에 정확히 있을 때만 인덱스 반환 (하이라이트 전용)
-function getLineIndexStrict(y) {
-    if (!lineList.length) return -1;
-    const docY = y + window.scrollY;
-    for (let i = 0; i < lineList.length; i++) {
-        if (docY >= lineList[i].top && docY <= lineList[i].bottom) return i;
-    }
-    return -1;
-}
 
 // ── 라인 콜아웃 말풍선 ───────────────────────────────────
 const _calloutFocus = document.getElementById('callout-focus');

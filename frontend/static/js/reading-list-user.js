@@ -41,7 +41,8 @@ async function loadBooks() {
 
 function setupBanner() {
     document.getElementById('navbar-user').innerHTML = `<span class="avatar">${USER_NICK[0]}</span>${USER_NICK}님`;
-    document.getElementById('banner-greeting').textContent = `안녕하세요, ${USER_NICK}님!`;
+    document.getElementById('banner-greeting').innerHTML =
+        `안녕하세요, <span class="name-highlight">${USER_NICK}</span>님!`;
     document.getElementById('banner-level-desc').textContent =
         `현재 레벨: ${USER_LEVEL} | 레벨에 맞는 커리큘럼을 확인하세요`;
     const badge = document.getElementById('level-badge');
@@ -103,11 +104,8 @@ function bookCardHTML(book, num, isCurriculum, isRead = false) {
         ? `<span class="book-read-badge"><svg width="11" height="11" viewBox="0 0 11 11"><path d="M2 6L4.5 8.5L9 3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>완독</span>`
         : `<span class="book-level lv-${book.difficulty}">${book.difficulty}</span>`;
     return `
-        <div class="book-card ${isCurriculum ? 'curriculum' : ''} ${isRead ? 'read' : ''}">
-            <div class="book-head">
-                <div class="book-cover"></div>
-                ${num ? `<span class="order-num">0${num}</span>` : ''}
-            </div>
+        <div class="book-card ${isCurriculum ? 'curriculum' : ''} ${isRead ? 'read' : ''}" data-id="${book.id}" style="cursor:pointer;">
+            ${num ? `<span class="order-num">0${num}</span>` : ''}
             <div class="book-title">${book.title}</div>
             <div class="book-genre">${book.genre || ''}</div>
             <div class="book-meta">
@@ -121,9 +119,9 @@ function bookCardHTML(book, num, isCurriculum, isRead = false) {
 }
 
 function bindStartButtons(container) {
-    container.querySelectorAll('.book-card-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            location.href = `/reading.html?book_id=${btn.dataset.id}`;
+    container.querySelectorAll('.book-card').forEach(card => {
+        card.addEventListener('click', () => {
+            location.href = `/reading.html?book_id=${card.dataset.id}`;
         });
     });
 }

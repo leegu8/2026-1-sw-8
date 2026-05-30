@@ -2,93 +2,78 @@
 let lineList        = [];
 let readingAreaRect = null;
 
-let pages       = [];
-let currentPage = 0;
+let allLineList       = [];
+let currentPage       = 0;
+let totalPages        = 1;
+let pageBoundaries    = [];
+let _paginationTopPad = 0;
+let _paginationMaxH   = 0;
 
-function paraToHtml(text, isParaStart = false) {
-    const cls = isParaStart ? ' class="para-start"' : '';
-    return `<p${cls}>${text.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`;
-}
+function initPagination() {
+    if (!allLineList.length) return;
+    const area     = document.querySelector('.reading-area');
+    const areaRect = area.getBoundingClientRect();
 
-function contentToParas(content) {
-    return content.split(/\n+/).map(s => s.trim()).filter(Boolean)
-        .flatMap((para, paraIdx) => {
-            const sents = para.split(/(?<=[.!?。！？])\s+/).filter(Boolean);
-            const items = sents.length > 1 ? sents : [para];
-            return items.map((s, i) => ({ text: s, paraStart: i === 0 && paraIdx > 0 }));
-        });
-}
+    _paginationTopPad = allLineList[0].top - areaRect.top;
+    _paginationMaxH   = area.clientHeight;
+    const bottomPad   = parseFloat(getComputedStyle(area).paddingBottom) || _paginationTopPad;
+    const maxContentH = _paginationMaxH - _paginationTopPad - bottomPad;
 
-function calcAvailableHeight() {
-    const area = document.querySelector('.reading-area');
-    if (area) {
-        const s = getComputedStyle(area);
-        return area.clientHeight
-            - (parseFloat(s.paddingTop)    || 0)
-            - (parseFloat(s.paddingBottom) || 0);
-    }
-    return 500;
-}
-function buildPages(paraHtmlList) {
-    const area      = document.querySelector('.reading-text');
-    const available = calcAvailableHeight();
-    const result    = [];
-    let   bucket    = [];
-    for (const html of paraHtmlList) {
-        bucket.push(html);
-        area.innerHTML = bucket.join('');
-        if (area.scrollHeight > available && bucket.length > 1) {
-            result.push(bucket.slice(0, -1).join(''));
-            bucket = [html];
+    pageBoundaries = [];
+    let s = 0;
+    while (s < allLineList.length) {
+        let e = s, h = 0;
+        while (e < allLineList.length) {
+            const lh = allLineList[e].bottom - allLineList[e].top;
+            if (h + lh > maxContentH && e > s) break;
+            h += lh;
+            e++;
         }
+        pageBoundaries.push({ start: s, end: e - 1 });
+        s = e;
     }
-    if (bucket.length) result.push(bucket.join(''));
-    return result;
+    totalPages = pageBoundaries.length;
+
+    const clip = document.getElementById('reading-clip');
+    if (clip) {
+        clip.style.overflow = 'hidden';
+        clip.style.height   = maxContentH + 'px';
+    }
+
+    goToPage(0);
 }
-function showPage(n) {
-    currentPage = n;
-    document.querySelector('.reading-text').innerHTML = pages[n];
-    document.getElementById('page-indicator').textContent = `${n + 1} / ${pages.length}`;
-    const isFirst = n === 0;
-    const isLast  = n === pages.length - 1;
-    document.getElementById('prev-page-btn').style.display = isFirst ? 'none' : '';
-    document.getElementById('next-page-btn').style.display = isLast  ? 'none' : '';
-    document.getElementById('done-btn').style.display      = isLast  ? ''     : 'none';
 
-    // 시선 추적 상태 초기화
-    lineList = [];
-    startTime              = null;
-    gazeData.length        = 0;
-    patternData.length     = 0;
-    rereadingEvents.length = 0;
-    lineSegmentsVisited.clear();
-    currentReadingLine      = -1;
-    maxReadingLine          = -1;
-    lineDwellLine           = -1;
-    lineDwellCount          = 0;
-    lineDwellMinX           = 0;
-    lineDwellHasRight       = false;
-    baselineLastChangedTime = Date.now();
-    skimAlertActive         = false;
-    lastValidLine           = -1;
-    lastValidLineTime       = 0;
-    blurActive              = false;
-    blurLine                = -1;
-    blurEventSent           = false;
-    highlightEventSent      = false;
-    boxEventSent            = false;
-    oobSince                = null;
-    // 오버레이 초기화
-    ['line-highlight-bar', 'line-box'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) { el.style.opacity = '0'; el.style.display = 'none'; }
-    });
-    ['callout-focus', 'callout-skim'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.remove('show');
-    });
+function goToPage(page) {
+    if (page < 0 || page >= totalPages) return;
+    currentPage = page;
 
-    buildLineList();
+    const { start: startIdx } = pageBoundaries[page];
+    const translateY = allLineList[0].top - allLineList[startIdx].top;
+
+    document.querySelector('.reading-text').style.transform = `translateY(${translateY}px)`;
+
+    readingAreaRect = document.querySelector('.reading-area').getBoundingClientRect();
+
+    lineList = allLineList.map(l => ({
+        ...l,
+        top:    l.top    + translateY,
+        bottom: l.bottom + translateY,
+    }));
+
+    updatePageNav();
+}
+
+function updatePageNav() {
+    const isFirst = currentPage <= 0;
+    const isLast  = currentPage >= totalPages - 1;
+    const prevBtn   = document.getElementById('prev-page-btn');
+    const nextBtn   = document.getElementById('next-page-btn');
+    const doneBtn   = document.getElementById('done-btn');
+    const indicator = document.getElementById('page-indicator');
+    if (prevBtn)   prevBtn.style.display = isFirst ? 'none' : '';
+    if (nextBtn)   nextBtn.style.display = isLast  ? 'none' : '';
+    if (doneBtn)   doneBtn.style.display = isLast  ? ''     : 'none';
+    if (indicator) indicator.textContent = `${currentPage + 1} / ${totalPages}`;
 }
 
 (async () => {
@@ -99,8 +84,13 @@ function showPage(n) {
     if (!book) return;
     document.getElementById('book-title').textContent = book.title;
     document.title = `${book.title} - 독서 아이트래킹`;
-    const paraHtmlList = contentToParas(book.content).map(p => paraToHtml(p.text, p.paraStart));
-    bookWordCount = paraHtmlList.join('').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(w => w.length > 0).length;
+    bookWordCount = book.content.trim().split(/\s+/).filter(w => w.length > 0).length;
+
+    const paras = book.content.split(/\n+/).map(s => s.trim()).filter(Boolean);
+    document.querySelector('.reading-text').innerHTML = paras.map((para, i) =>
+        `<p${i > 0 ? ' class="para-start"' : ''}>${para.split(/\s+/).map(w =>
+            `<span class="word">${w}</span>`).join(' ')}</p>`
+    ).join('');
 
     const timeIssue = localStorage.getItem('last_time_issue');
     if (timeIssue && bookWordCount > 0) {
@@ -116,17 +106,14 @@ function showPage(n) {
         localStorage.removeItem('last_time_issue');
     }
 
-    pages = buildPages(paraHtmlList);
-    showPage(0);
+    buildLineList();
+    allLineList = lineList.map(l => ({ ...l }));
+    initPagination();
     await createSession(bookId);
 })();
 
-document.getElementById('prev-page-btn').addEventListener('click', () => {
-    if (currentPage > 0) showPage(currentPage - 1);
-});
-document.getElementById('next-page-btn').addEventListener('click', () => {
-    if (currentPage < pages.length - 1) showPage(currentPage + 1);
-});
+document.getElementById('prev-page-btn')?.addEventListener('click', () => goToPage(currentPage - 1));
+document.getElementById('next-page-btn')?.addEventListener('click', () => goToPage(currentPage + 1));
 
 // 줄별 메타 구축 — document 기준 y, viewport 기준 x (수평 스크롤 없음)
 function buildLineList() {
@@ -471,6 +458,8 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
                       : (lastValidLine >= 0 && now - lastValidLineTime < 300) ? lastValidLine
                       : -1;
 
+    updateGazeLineHighlight(currentReadingLine);
+
     // 블러 활성 상태에서 블러 구간(기준 줄 위)으로 시선 → 이탈로 간주
     // 실제로 블러된 줄(blurLine 위)만 이탈로 처리 — blurLine과 OOB 범위 일치
     const blurOob = blurActive && rawFiltered >= 0 && blurLine >= 0 && rawFiltered < blurLine;
@@ -813,15 +802,21 @@ function hideOverlay(el) {
     setTimeout(() => { if (el.style.opacity === '0') el.style.display = 'none'; }, 450);
 }
 
-// Y가 줄 top~bottom 안에 정확히 있을 때만 인덱스 반환 (하이라이트 전용)
-function getLineIndexStrict(y) {
-    if (!lineList.length) return -1;
-    const docY = y + window.scrollY;
-    for (let i = 0; i < lineList.length; i++) {
-        if (docY >= lineList[i].top && docY <= lineList[i].bottom) return i;
+// ── 현재 응시 줄 주황색 하이라이트 ──────────────────────────
+const _gazeLineHighlight = document.getElementById('current-line-highlight');
+function updateGazeLineHighlight(lineIdx) {
+    if (!_gazeLineHighlight) return;
+    if (!lineList.length || lineIdx < 0 || lineIdx >= lineList.length) {
+        _gazeLineHighlight.style.display = 'none';
+        return;
     }
-    return -1;
+    const areaTop = document.querySelector('.reading-area').getBoundingClientRect().top + window.scrollY;
+    const ln = lineList[lineIdx];
+    _gazeLineHighlight.style.top    = (ln.top - areaTop) + 'px';
+    _gazeLineHighlight.style.height = (ln.bottom - ln.top + 4) + 'px';
+    _gazeLineHighlight.style.display = 'block';
 }
+
 
 // ── 라인 콜아웃 말풍선 ───────────────────────────────────
 const _calloutFocus = document.getElementById('callout-focus');
@@ -851,7 +846,7 @@ function hideFocusCallout() { _calloutFocus.classList.remove('show'); }
 
 function showSkimCallout(lineIdx) {
     if (lineIdx < 0 || lineIdx >= lineList.length) { hideSkimCallout(); return; }
-    _calloutSkim.querySelector('.callout-box').textContent = '↩ 이곳부터 다시 읽으세요';
+    _calloutSkim.querySelector('.callout-box').textContent = '꼼꼼히 읽으세요';
     _calloutSkim.classList.add('show');
     _positionCallout(_calloutSkim, lineIdx, 'right');
 }

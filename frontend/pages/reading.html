@@ -18,10 +18,9 @@
             position: relative; overflow: hidden; flex-shrink: 0;
             width: min(780px, calc(100vw - 3rem));
             height: min(560px, calc(100vh - 210px));
-            background: #F9F7F2;
-            border: 18px solid #6B2E18;
-            border-radius: 4px;
-            padding: 2rem 2.6rem !important;
+            background: white;
+            border-radius: 12px;
+            padding: 2.5rem 3rem !important;
             box-shadow:
                 inset 0 0 24px rgba(0,0,0,0.07),
                 0 6px 32px rgba(0,0,0,0.40),
@@ -45,15 +44,24 @@
             pointer-events: none; display: none; opacity: 0;
             transition: top 0.08s ease, opacity 0.4s ease; z-index: 0;
         }
-        #callout-focus {
+        #callout-focus, #callout-skim {
             position: fixed; display: none; align-items: center;
             z-index: 9990; pointer-events: none;
         }
-        #callout-focus.show { display: flex; }
+        #callout-focus.show, #callout-skim.show { display: flex; }
         .callout-arrow { width:0; height:0; border-top:7px solid transparent; border-bottom:7px solid transparent; flex-shrink:0; }
         .callout-box   { padding:5px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; white-space:nowrap; }
-        #callout-focus .callout-arrow { border-left: 8px solid rgba(52,152,219,0.9); }
+        #callout-focus .callout-arrow { border-left:  8px solid rgba(52,152,219,0.9); }
         #callout-focus .callout-box   { background: rgba(52,152,219,0.9); color:#fff; }
+        #callout-skim  .callout-arrow { border-right: 8px solid rgba(250,160,50,0.95); }
+        #callout-skim  .callout-box   { background: rgba(250,160,50,0.95); color:#fff; }
+        #line-box {
+            position: absolute; left: -4px; right: -4px;
+            border: 2px solid rgba(250,160,50,0.85);
+            border-radius: 4px; pointer-events: none;
+            display: none; opacity: 0;
+            transition: opacity 0.4s ease; z-index: 2;
+        }
         #page-indicator {
             font-size: 0.85rem; color: rgba(28,28,46,0.5);
             font-variant-numeric: tabular-nums;
@@ -94,8 +102,11 @@
     <div class="page-content">
         <div class="reading-area">
             <div id="line-highlight-bar"></div>
+            <div id="line-box"></div>
             <h2 id="book-title">📖 불러오는 중...</h2>
-            <div class="reading-text"></div>
+            <div id="reading-clip">
+                <div class="reading-text"></div>
+            </div>
         </div>
 
         <div class="reading-controls">
@@ -112,6 +123,10 @@
     <div id="callout-focus">
         <div class="callout-box"></div>
         <div class="callout-arrow"></div>
+    </div>
+    <div id="callout-skim">
+        <div class="callout-arrow"></div>
+        <div class="callout-box"></div>
     </div>
 <script>
 (function() {

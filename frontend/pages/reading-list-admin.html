@@ -8,232 +8,125 @@
 <style>
   .page { position: relative; min-height: 100vh; }
   .aurora-bg { position: fixed; inset: 0; pointer-events: none; }
+  main { position: relative; z-index: 1; }
 
-  main { position: relative; z-index: 1; padding: 32px 0 80px; }
+  /* ── Wrap ── */
+  .library-wrap {
+    max-width: 1080px; margin: 0 auto;
+    padding: 2.25rem 1.5rem 3.75rem;
+  }
 
   /* ── User banner ── */
   .user-banner {
-    display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: stretch;
-    margin-bottom: 40px;
-  }
-  .banner-info {
-    padding: 36px 40px; border-radius: var(--r-xl);
-    background: linear-gradient(135deg,
-      color-mix(in oklab, var(--primary), transparent 80%) 0%,
-      color-mix(in oklab, var(--accent), transparent 90%) 100%);
-    border: 1px solid var(--line);
     position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.75rem 2.25rem; margin-bottom: 1.75rem;
+    border-radius: 20px;
+    background: linear-gradient(140deg, #0c1230 0%, #060d1f 50%, #120a2e 100%);
+    border: 1px solid rgba(167,139,250,0.18);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
   }
-  .banner-info::after {
-    content: ""; position: absolute; right: -40px; top: -40px;
+  .user-banner::before {
+    content: ""; position: absolute; top: -60px; left: -40px;
+    width: 260px; height: 260px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(63,182,255,0.16) 0%, transparent 65%);
+    filter: blur(18px); pointer-events: none;
+  }
+  .user-banner::after {
+    content: ""; position: absolute; bottom: -50px; right: 26%;
     width: 220px; height: 220px; border-radius: 50%;
-    background: radial-gradient(circle, color-mix(in oklab, var(--accent), transparent 70%) 0%, transparent 70%);
-    filter: blur(20px);
+    background: radial-gradient(circle, rgba(167,139,250,0.18) 0%, transparent 65%);
+    filter: blur(20px); pointer-events: none;
   }
-  .banner-info > * { position: relative; z-index: 1; }
+  .user-banner > * { position: relative; z-index: 1; }
   .banner-info .hello {
-    font-family: var(--serif); font-weight: 700; font-size: 36px;
-    letter-spacing: -0.025em; line-height: 1.1;
+    font-family: var(--serif); font-weight: 700; font-size: 1.55rem;
+    letter-spacing: -0.025em; line-height: 1.2; margin-bottom: 8px; color: var(--ink);
   }
-  .banner-info .hello .nick { background-image: linear-gradient(120deg, var(--accent), #fff); }
-  .banner-info .desc { color: var(--muted); margin-top: 14px; font-size: 14.5px; line-height: 1.6; max-width: 460px; }
-  .banner-info .meta {
-    display: flex; gap: 28px; margin-top: 28px;
-    padding-top: 22px; border-top: 1px solid var(--line);
-  }
-  .banner-info .meta .m .v {
-    font-family: var(--serif); font-weight: 600; font-size: 24px; letter-spacing: -0.02em; line-height: 1;
-  }
-  .banner-info .meta .m .v span { font-size: 12px; color: var(--muted); margin-left: 3px; }
-  .banner-info .meta .m .k { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 0.04em; }
-
-  .level-card {
-    padding: 36px 40px; border-radius: var(--r-xl);
-    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-    border: 1px solid var(--line);
-    display: flex; flex-direction: column; justify-content: space-between;
-  }
-  .level-card .label {
-    font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; color: var(--accent);
-  }
-  .level-badge {
-    margin-top: 14px;
-    display: inline-flex; align-items: center; gap: 12px;
-  }
-  .level-badge .ring {
-    width: 64px; height: 64px; border-radius: 50%;
-    background:
-      radial-gradient(circle at 30% 30%, color-mix(in oklab, var(--accent), transparent 70%), transparent 60%),
-      conic-gradient(from 0deg, var(--accent) 0%, var(--primary) 60%, color-mix(in oklab, var(--primary), transparent 80%) 100%);
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 12px 30px color-mix(in oklab, var(--primary), transparent 60%);
-  }
-  .level-badge .ring-inner {
-    width: 50px; height: 50px; border-radius: 50%; background: #06091F;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--serif); font-weight: 700; font-size: 17px;
-    color: var(--accent); letter-spacing: -0.02em;
-  }
-  .level-badge .info .name {
-    font-family: var(--serif); font-weight: 700; font-size: 28px; letter-spacing: -0.025em;
-  }
-  .level-badge .info .sub { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
-
-  .level-card .prog {
-    margin-top: 20px;
-  }
-  .prog-bar {
-    height: 6px; border-radius: 999px; background: var(--surface);
-    overflow: hidden;
-  }
-  .prog-fill {
-    height: 100%; border-radius: 999px;
-    background: linear-gradient(90deg, var(--accent), var(--primary));
-    width: 62%;
-  }
-  .prog-meta {
-    display: flex; justify-content: space-between; margin-top: 10px;
-    font-size: 12.5px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.08em;
+  .banner-info .desc { color: var(--muted-2); font-size: 13.5px; line-height: 1.5; }
+  .dev-badge {
+    padding: 10px 20px; border-radius: 24px; font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.15em; font-weight: 600;
+    background: rgba(167,139,250,0.14); color: #a78bfa;
+    border: 1px solid rgba(167,139,250,0.30); white-space: nowrap; flex-shrink: 0;
   }
 
-  /* ── Tabs ── */
-  .tabs {
-    display: flex; gap: 4px; padding: 4px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    width: max-content;
-    margin-bottom: 36px;
+  /* ── Tab bar ── */
+  .tab-bar {
+    display: flex; gap: 4px;
+    border-bottom: 2px solid var(--line); margin-bottom: 28px;
   }
   .tab-btn {
-    background: transparent; border: none; color: var(--muted);
-    padding: 10px 18px; border-radius: 8px;
-    font-size: 13.5px; font-weight: 600; cursor: pointer;
-    transition: background 160ms, color 160ms;
+    padding: 12px 24px; background: none; border: none;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+    font-size: 0.95rem; font-weight: 600; color: var(--muted);
+    cursor: pointer; font-family: inherit;
+    transition: color 0.2s, border-color 0.2s;
   }
-  .tab-btn:hover { color: #fff; }
-  .tab-btn.active {
-    background: var(--surface);
-    color: #fff;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
-  }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
   /* ── Section header ── */
-  .ph { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
-  .ph h3 { font-size: 22px; font-weight: 600; letter-spacing: -0.022em; }
-  .ph p { font-size: 13.5px; color: var(--muted); margin: 4px 0 0; }
-
-  .filter-group { display: flex; gap: 6px; }
-  .filter-btn {
-    padding: 8px 14px; border-radius: 8px;
-    background: var(--surface); color: var(--muted);
-    border: 1px solid var(--line);
-    font-size: 12.5px; font-weight: 500; cursor: pointer;
-    transition: all 160ms;
-  }
-  .filter-btn:hover { color: #fff; }
-  .filter-btn.active {
-    background: color-mix(in oklab, var(--accent), transparent 85%);
-    border-color: color-mix(in oklab, var(--accent), transparent 60%);
-    color: var(--accent);
-  }
+  .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .ph h3 { font-size: 1.1rem; color: var(--ink); margin-bottom: 5px; }
+  .ph p  { font-size: 0.88rem; color: var(--muted); margin: 0; }
 
   /* ── Book grid ── */
   .book-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
   }
+
+  /* ── Book card ── */
   .book-card {
-    padding: 24px; border-radius: var(--r-lg);
-    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    padding: 22px; border-radius: var(--r-lg);
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
     border: 1px solid var(--line);
-    position: relative; overflow: hidden;
-    cursor: pointer;
+    display: flex; flex-direction: column;
     transition: border-color 200ms, transform 200ms;
   }
   .book-card:hover {
-    border-color: color-mix(in oklab, var(--accent), transparent 55%);
-    transform: translateY(-2px);
+    border-color: rgba(63,182,255,0.45); transform: translateY(-2px);
   }
-  .book-card .book-head {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    margin-bottom: 18px;
-  }
-  .book-card .cover {
-    width: 64px; height: 84px; border-radius: 8px;
-    background: linear-gradient(135deg, var(--bg-2), #0E1B45);
-    border: 1px solid var(--line);
-    position: relative; overflow: hidden;
-    flex: none;
-  }
-  .book-card .cover::before {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(135deg,
-      color-mix(in oklab, var(--accent), transparent 80%) 0%,
-      transparent 50%);
-  }
-  .book-card .cover::after {
-    content: ""; position: absolute; left: 4px; top: 6px; right: 4px;
-    height: 1px; background: rgba(255,255,255,0.08);
-    box-shadow:
-      0 8px 0 rgba(255,255,255,0.06),
-      0 16px 0 rgba(255,255,255,0.04),
-      0 24px 0 rgba(255,255,255,0.04);
+  .book-card.completed { opacity: 0.82; }
+
+  .order-num {
+    font-size: 10px; letter-spacing: 0.18em;
+    color: var(--muted-2); font-family: var(--mono);
+    margin-bottom: 10px; display: block;
   }
   .book-card h4 {
-    font-family: var(--serif); font-weight: 700; font-size: 17px;
-    line-height: 1.3; letter-spacing: -0.02em;
-    margin-top: 4px; min-height: 44px;
+    font-size: 1rem; font-weight: 700; color: var(--ink);
+    line-height: 1.35; letter-spacing: -0.02em; margin-bottom: 5px;
   }
-  .book-card .author { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
-  .book-card .desc {
-    font-size: 13px; color: var(--muted); line-height: 1.55;
-    margin: 14px 0 0;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden;
+  .author { font-size: 12px; color: var(--muted); }
+  .book-meta {
+    margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line);
+    margin-top: 12px;
+    font-size: 11.5px; color: var(--muted);
   }
-  .book-card .book-meta {
-    margin-top: 14px;
-    font-size: 11.5px; font-family: var(--mono); letter-spacing: 0.1em; color: var(--muted);
-  }
-  .book-card .book-actions {
-    display: flex; gap: 8px; margin-top: 12px; padding-top: 12px;
+  .status-done { color: var(--good); display: inline-flex; align-items: center; gap: 4px; }
+
+  /* ── Action buttons ── */
+  .book-actions {
+    display: flex; gap: 6px; margin-top: 10px; padding-top: 10px;
     border-top: 1px solid var(--line);
   }
-  .book-card .book-actions button {
-    flex: 1; padding: 7px 4px; border-radius: 8px; border: none; cursor: pointer;
+  .book-actions button {
+    flex: 1; padding: 8px 4px; border-radius: var(--r-sm); border: none; cursor: pointer;
     font-size: 11.5px; font-weight: 600; font-family: inherit; transition: opacity 0.15s;
   }
-  .book-card .book-actions button:hover { opacity: 0.85; }
-  .book-card .btn-read-gaze { background: var(--accent); color: #04102E; }
-  .book-card .btn-read-dev  { background: rgba(255,255,255,0.1); color: var(--ink);
-                               border: 1px solid var(--line) !important; }
-  .book-card .status-done {
-    color: var(--good);
-    display: inline-flex; align-items: center; gap: 4px;
-  }
-  .book-card .play {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: color-mix(in oklab, var(--accent), transparent 80%);
-    border: 1px solid color-mix(in oklab, var(--accent), transparent 50%);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--accent);
-    transition: all 200ms;
-  }
-  .book-card:hover .play {
-    background: var(--accent); color: #04102E;
-  }
-  .book-card.completed { opacity: 0.85; }
+  .book-actions button:hover { opacity: 0.82; }
+  .btn-read-gaze { background: var(--accent); color: #04102E; }
+  .btn-read-dev  { background: var(--surface); color: var(--ink); border: 1px solid var(--line) !important; }
+  .btn-delete    { background: rgba(231,76,60,0.12); color: #e74c3c; border: 1px solid rgba(231,76,60,0.3) !important; }
 
-  .book-card .order-num {
-    position: absolute; top: 18px; right: 22px;
-    font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
-    color: var(--muted-2);
+  /* ── Empty state ── */
+  .empty-state {
+    grid-column: 1 / -1; text-align: center;
+    padding: 60px 20px; color: var(--muted); font-size: 0.95rem; line-height: 1.8;
   }
-  .book-card.current {
-    border-color: color-mix(in oklab, var(--accent), transparent 50%);
-    background: linear-gradient(180deg, color-mix(in oklab, var(--accent), transparent 92%), rgba(255,255,255,0.01));
-  }
-  .book-card.current .order-num { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -259,7 +152,7 @@
       <div class="nav-links">
         <a class="nav-link" href="/reading-list-admin.html">독서 목록</a>
         <a class="nav-link" href="/book-write-admin.html">도서 등록</a>
-        <a class="nav-link" href="#">리포트</a>
+        <a class="nav-link" href="/growth.html">성장 일지</a>
         <span class="navbar-user">
           <span class="avatar">독</span>
           <span class="nick">독자</span>
@@ -270,28 +163,19 @@
   </nav>
 
   <main>
-    <div class="container">
+    <div class="library-wrap">
 
       <!-- User banner -->
       <div class="user-banner">
         <div class="banner-info">
           <div class="hello">안녕하세요, <span class="grad-text">독자</span>님.</div>
-          <p class="desc">
-            지난 주 평균 집중도는 87%, 이번 주는 더 깊게 읽어볼까요?<br/>
-            지금 이어 읽기를 선택하면 마지막 페이지부터 시작합니다.
-          </p>
-          <div class="meta">
-            <div class="m"><div class="v">14<span>편</span></div><div class="k">완독</div></div>
-            <div class="m"><div class="v">320<span>자/분</span></div><div class="k">평균 속도</div></div>
-            <div class="m"><div class="v">87<span>%</span></div><div class="k">평균 집중도</div></div>
-            <div class="m"><div class="v">23<span>일</span></div><div class="k">연속 독서</div></div>
-          </div>
+          <p class="desc">도서를 등록하고 시선 추적으로 독서 분석을 시작하세요.</p>
         </div>
-
+        <div class="dev-badge">🛠 개발자 모드</div>
       </div>
 
-      <!-- Tabs -->
-      <div class="tabs">
+      <!-- Tab bar -->
+      <div class="tab-bar">
         <button class="tab-btn active" data-tab="all">전체 도서</button>
         <button class="tab-btn" data-tab="my">내가 등록한 글</button>
       </div>
@@ -301,109 +185,23 @@
         <div class="ph">
           <div>
             <h3>전체 도서</h3>
-            <p>모든 도서 목록입니다</p>
+            <p>등록된 모든 도서 목록입니다.</p>
           </div>
-          <span class="pill">5 OF 5</span>
         </div>
-        <div class="book-grid">
-
-          <div class="book-card completed">
-            <div class="order-num">01</div>
-            <div class="book-head">
-              <div class="cover"></div>
-            </div>
-            <h4>방망이 깎던 노인</h4>
-            <div class="author">윤오영 · 수필</div>
-            <p class="desc">오래된 장인의 손길에서 시간과 정성을, 그리고 우리가 잃어가는 결을 들여다보는 짧은 수필.</p>
-            <div class="book-meta">
-              <span class="status-done">
-                <svg width="11" height="11" viewBox="0 0 11 11"><path d="M2 6L4.5 8.5L9 3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" /></svg>
-                완독 · 91%
-              </span>
-              <div class="play"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M4 3l5 3-5 3z" fill="currentColor" /></svg></div>
-            </div>
-          </div>
-
-          <div class="book-card completed">
-            <div class="order-num">02</div>
-            <div class="book-head">
-              <div class="cover" style="background: linear-gradient(135deg, #0F1F4A, #1B3A8B);"></div>
-            </div>
-            <h4>나의 라임 오렌지나무</h4>
-            <div class="author">J. M. 바스콘셀로스</div>
-            <p class="desc">한 소년이 친구로 삼은 작은 라임 나무를 통해 세상에서 사랑이 어떻게 자라는지 배우는 이야기.</p>
-            <div class="book-meta">
-              <span class="status-done">
-                <svg width="11" height="11" viewBox="0 0 11 11"><path d="M2 6L4.5 8.5L9 3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" /></svg>
-                완독 · 84%
-              </span>
-              <div class="play"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M4 3l5 3-5 3z" fill="currentColor" /></svg></div>
-            </div>
-          </div>
-
-          <div class="book-card current">
-            <div class="order-num">03 · NOW</div>
-            <div class="book-head">
-              <div class="cover" style="background: linear-gradient(135deg, #1B3A8B, #3D7BFF);"></div>
-            </div>
-            <h4>완득이</h4>
-            <div class="author">김려령 · 소설</div>
-            <p class="desc">교복도 낡았고, 권투 글러브도 빌린 것이지만 — 완득이는 자기 삶을 처음으로 자기 손에 쥐어본다.</p>
-            <div class="book-meta">
-              <span style="color: var(--accent);">읽는 중 · 42%</span>
-              <div class="play"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M4 3l5 3-5 3z" fill="currentColor" /></svg></div>
-            </div>
-          </div>
-
-          <div class="book-card">
-            <div class="order-num">04</div>
-            <div class="book-head">
-              <div class="cover" style="background: linear-gradient(135deg, #2D1A4B, #5B3A8A);"></div>
-            </div>
-            <h4>동백꽃</h4>
-            <div class="author">김유정 · 단편</div>
-            <p class="desc">시골 마을, 닭싸움과 풋사랑이 뒤엉킨 어느 봄날. 어린 두 사람의 마음이 자라는 짧은 순간을 그린다.</p>
-            <div class="book-meta">
-              <span>예정 · 약 18분</span>
-              <div class="play"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M4 3l5 3-5 3z" fill="currentColor" /></svg></div>
-            </div>
-          </div>
-
-          <div class="book-card">
-            <div class="order-num">05</div>
-            <div class="book-head">
-              <div class="cover" style="background: linear-gradient(135deg, #0E2A2A, #1B6B6B);"></div>
-            </div>
-            <h4>사랑손님과 어머니</h4>
-            <div class="author">주요섭 · 단편</div>
-            <p class="desc">여섯 살 아이의 시선으로 본 어른들의 마음. 직접 말하지 않아도 닿는, 가장 정직한 형태의 마음.</p>
-            <div class="book-meta">
-              <span>예정 · 약 22분</span>
-              <div class="play"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M4 3l5 3-5 3z" fill="currentColor" /></svg></div>
-            </div>
-          </div>
-
-        </div>
+        <div class="book-grid"></div>
       </section>
 
-
-      <!-- My uploaded texts (hidden by default) -->
+      <!-- My uploaded texts -->
       <section id="tab-my" style="display: none;">
         <div class="ph">
           <div>
             <h3>내가 등록한 글</h3>
-            <p>직접 등록한 텍스트로 시선 추적을 시작할 수 있어요</p>
+            <p>직접 등록한 텍스트로 시선 추적을 시작할 수 있어요.</p>
           </div>
           <a class="btn btn-primary" href="/book-write-admin.html">+ 새로 등록</a>
         </div>
-        <div class="book-grid">
-          <div class="book-card">
-            <div class="book-head"><div class="cover" style="background: linear-gradient(135deg,#4B3A1B,#A0763A);"></div></div>
-            <h4>발표용 자료 · 3장</h4>
-            <div class="author">2026 · 05 · 17 등록</div>
-            <p class="desc">기말 발표 슬라이드 노트. 시선 데이터로 발표 흐름을 점검합니다.</p>
-            <div class="book-meta"><span>중등 · 약 12분</span><div class="play"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M4 3l5 3-5 3z" fill="currentColor" /></svg></div></div>
-          </div>
+        <div class="book-grid" id="my-grid">
+          <div class="empty-state">등록한 도서가 없습니다.</div>
         </div>
       </section>
 
@@ -438,41 +236,26 @@
   });
 
   // 도서 카드 생성
-  const COVER_COLORS = [
-    'linear-gradient(135deg, #0F1F4A, #1E5BE0)',
-    'linear-gradient(135deg, #0F1F4A, #1B3A8B)',
-    'linear-gradient(135deg, #1B3A8B, #3D7BFF)',
-    'linear-gradient(135deg, #2D1A4B, #5B3A8A)',
-    'linear-gradient(135deg, #0E2A2A, #1B6B6B)',
-    'linear-gradient(135deg, #4B1B1B, #A03A3A)',
-    'linear-gradient(135deg, #1B4B2A, #3AA06B)',
-  ];
-
-  function makeCard(book, idx, isCompleted, isCurrent) {
-    const cover = COVER_COLORS[idx % COVER_COLORS.length];
+  function makeCard(book, idx, isCompleted) {
     const wpm = 320;
     const charCount = (book.content || '').replace(/\s/g, '').length;
     const mins = Math.max(1, Math.round(charCount / wpm));
     const statusHtml = isCompleted
       ? `<span class="status-done"><svg width="11" height="11" viewBox="0 0 11 11"><path d="M2 6L4.5 8.5L9 3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" /></svg>완독</span>`
-      : isCurrent
-        ? `<span style="color: var(--accent);">읽는 중</span>`
-        : `<span>예정 · 약 ${mins}분</span>`;
+      : `<span>예정 · 약 ${mins}분</span>`;
 
     const card = document.createElement('div');
-    card.className = 'book-card' + (isCompleted ? ' completed' : '') + (isCurrent ? ' current' : '');
+    card.className = 'book-card' + (isCompleted ? ' completed' : '');
     card.dataset.bookId = book.id;
     card.dataset.difficulty = book.difficulty || '';
     card.innerHTML = `
-      <div class="book-head">
-        <div class="cover" style="background: ${cover};"></div>
-      </div>
       <h4>${book.title}</h4>
       <div class="author">${book.genre || '산문'}</div>
       <div class="book-meta">${statusHtml}</div>
       <div class="book-actions">
         <button class="btn-read-gaze"  data-id="${book.id}">👁 시선 추적</button>
         <button class="btn-read-dev"   data-id="${book.id}">🛠 개발자 모드</button>
+        <button class="btn-delete"     data-id="${book.id}">🗑 삭제</button>
       </div>`;
     card.querySelector('.btn-read-gaze').addEventListener('click', e => {
       e.stopPropagation();
@@ -481,6 +264,17 @@
     card.querySelector('.btn-read-dev').addEventListener('click', e => {
       e.stopPropagation();
       location.href = `/reading-admin.html?book_id=${book.id}&dev=true`;
+    });
+    card.querySelector('.btn-delete').addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!confirm(`"${book.title}"을(를) 삭제하시겠습니까?`)) return;
+      try {
+        const res = await fetch(`/api/db/books/${book.id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error();
+        await loadData();
+      } catch {
+        alert('삭제 중 오류가 발생했습니다.');
+      }
     });
     return card;
   }
@@ -493,10 +287,10 @@
     if (!grid) return;
     grid.innerHTML = '';
     allBooks.forEach((b, i) => {
-      grid.appendChild(makeCard(b, i, completedIds.has(b.id), false));
+      grid.appendChild(makeCard(b, i, completedIds.has(b.id)));
     });
     if (allBooks.length === 0) {
-      grid.innerHTML = '<p style="color: var(--muted); grid-column: 1/-1; padding: 32px 0;">등록된 도서가 없습니다.</p>';
+      grid.innerHTML = '<div class="empty-state">등록된 도서가 없습니다.</div>';
     }
   }
 

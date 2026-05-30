@@ -12,12 +12,6 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-.navbar-logo {
-    font-size: 1.15rem;
-    font-weight: bold;
-    color: white;
-    text-decoration: none;
-}
 
 .navbar-right {
     display: flex;
@@ -54,31 +48,49 @@
 
 /* ── 유저 배너 ── */
 .user-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: white;
-    border-radius: 14px;
-    padding: 1.5rem 2rem;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-    margin-bottom: 1.75rem;
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.75rem 2.25rem; margin-bottom: 1.75rem;
+    border-radius: 20px;
+    background: linear-gradient(140deg, #0a1628 0%, #060d1f 55%, #0c1430 100%);
+    border: 1px solid rgba(63,182,255,0.16);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
 }
+.user-banner::before {
+    content: ""; position: absolute; top: -60px; left: -40px;
+    width: 280px; height: 280px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(63,182,255,0.18) 0%, transparent 65%);
+    filter: blur(18px); pointer-events: none;
+}
+.user-banner::after {
+    content: ""; position: absolute; bottom: -50px; right: 28%;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(30,91,224,0.16) 0%, transparent 65%);
+    filter: blur(20px); pointer-events: none;
+}
+.user-banner > * { position: relative; z-index: 1; }
 
-.user-banner-info h2 { font-size: 1.3rem; margin-bottom: 6px; color: #1a1a2e; }
-.user-banner-info p  { font-size: 0.88rem; color: #888; }
+
+.user-banner-info h2 {
+    font-size: 1.55rem; font-weight: 700;
+    letter-spacing: -0.025em; line-height: 1.2;
+    color: #E8EEFF; margin-bottom: 6px;
+}
+.user-banner-info h2 .name-highlight {
+    background: linear-gradient(120deg, #3FB6FF, #B8DCFF 55%, #fff);
+    background-clip: text; -webkit-background-clip: text;
+    color: transparent; -webkit-text-fill-color: transparent;
+}
+.user-banner-info p { font-size: 13.5px; color: rgba(232,238,255,0.48); line-height: 1.5; }
 
 .level-badge {
-    padding: 10px 22px;
-    border-radius: 24px;
-    background: #3498db;
-    color: white;
-    font-size: 0.95rem;
-    font-weight: bold;
+    padding: 10px 22px; border-radius: 24px;
+    font-size: 0.9rem; font-weight: 700;
+    white-space: nowrap; flex-shrink: 0;
 }
-
-.level-badge.lv-초등 { background: #2ecc71; }
-.level-badge.lv-중등 { background: #3498db; }
-.level-badge.lv-고등 { background: #9b59b6; }
+.level-badge.lv-초등 { background: rgba(110,231,166,0.12); color: #6EE7A6; border: 1px solid rgba(110,231,166,0.28); }
+.level-badge.lv-중등 { background: rgba(63,182,255,0.12);  color: #3FB6FF; border: 1px solid rgba(63,182,255,0.28); }
+.level-badge.lv-고등 { background: rgba(167,139,250,0.12); color: #a78bfa; border: 1px solid rgba(167,139,250,0.28); }
 
 /* ── 탭 ── */
 .tab-bar {
@@ -165,25 +177,6 @@
 }
 .book-card.read { opacity: 0.85; }
 
-.book-head {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    margin-bottom: 16px;
-}
-.book-cover {
-    width: 56px; height: 76px; border-radius: 8px;
-    background: linear-gradient(135deg, #0E1B45, #1E3A6E);
-    border: 1px solid rgba(255,255,255,0.10);
-    position: relative; overflow: hidden; flex: none;
-}
-.book-cover::before {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(63,182,255,0.25) 0%, transparent 55%);
-}
-.book-cover::after {
-    content: ""; position: absolute; left: 4px; top: 6px; right: 4px;
-    height: 1px; background: rgba(255,255,255,0.10);
-    box-shadow: 0 8px 0 rgba(255,255,255,0.07), 0 16px 0 rgba(255,255,255,0.05);
-}
 .order-num {
     font-size: 10px; letter-spacing: 0.18em;
     color: rgba(232,238,255,0.35);
