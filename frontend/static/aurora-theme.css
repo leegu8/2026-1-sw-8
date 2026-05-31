@@ -155,6 +155,13 @@ html, body {
     border-color: rgba(255,255,255,0.3) !important;
 }
 
+/* ── 본문 레이아웃 ── */
+.page-content {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+}
+
 /* ── 카드 공통 (글래스모피즘) ── */
 .guide-list,
 .result-card, .result-feedback,

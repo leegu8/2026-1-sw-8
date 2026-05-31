@@ -196,7 +196,7 @@
       </a>
       <div class="nav-links">
         <span class="navbar-user" id="nav-user"></span>
-        <a class="btn btn-line" id="skip-link" href="/reading-list.html">건너뛰기</a>
+        <a class="btn btn-line" id="skip-link" href="/guide.html">건너뛰기</a>
       </div>
     </div>
   </nav>
@@ -233,16 +233,16 @@
         <div class="panel">
           <div class="panel-head">
             <h3>사용 가능한 카메라</h3>
-            <span class="pill" id="cam-count-pill">스캔 중...</span>
+            <span class="pill" id="cam-count-pill">대기 중</span>
           </div>
 
           <div class="cam-list" id="cam-list">
             <div style="padding:32px;text-align:center;color:var(--muted);font-size:14px;">
-              카메라를 스캔하는 중입니다...
+              아래 버튼을 눌러 카메라를 검색해주세요.
             </div>
           </div>
 
-          <button class="refresh-btn" id="refresh-btn">↻ 목록 새로고침</button>
+          <button class="refresh-btn" id="refresh-btn">🔍 카메라 검색하기</button>
         </div>
 
         <!-- Preview -->
@@ -329,9 +329,6 @@
     navUser.innerHTML = `<span class="avatar">${userNick[0]}</span>${userNick}님`;
   }
 
-  // 건너뛰기 링크: 관리자는 reading-list-admin
-  const skipLink = document.getElementById('skip-link');
-  if (userId === '100') skipLink.href = '/reading-list-admin.html';
 
   // 카메라 SVG 아이콘
   const CAM_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -467,15 +464,15 @@
     }
   }
 
-  document.getElementById('refresh-btn').addEventListener('click', scanCameras);
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    document.getElementById('refresh-btn').textContent = '↻ 다시 검색';
+    scanCameras();
+  });
 
   document.getElementById('next-btn').addEventListener('click', () => {
     if (selectedIndex === null) return;
-    location.href = '/guide.html';
+    location.href = '/calibration.html';
   });
-
-  // 페이지 로드 시 자동 스캔
-  scanCameras();
 </script>
 
 </body>

@@ -289,7 +289,7 @@
       </a>
       <div class="nav-links">
         <span class="navbar-user" id="nav-user"></span>
-        <a class="btn btn-line" id="skip-link" href="/reading-list.html">건너뛰기</a>
+        <a class="btn btn-line" id="skip-link" href="/guide.html">건너뛰기</a>
       </div>
     </div>
   </nav>
@@ -303,16 +303,14 @@
       <span>카메라 선택</span>
     </div>
     <div class="step-line"></div>
-    <div class="step-item done">
-      <div class="step-circle">
-        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" /></svg>
-      </div>
-      <span>사용 안내</span>
+    <div class="step-item active">
+      <div class="step-circle">2</div>
+      <span>시선 보정</span>
     </div>
     <div class="step-line"></div>
-    <div class="step-item active">
+    <div class="step-item">
       <div class="step-circle">3</div>
-      <span>시선 보정</span>
+      <span>사용 안내</span>
     </div>
   </div></div>
 
@@ -394,15 +392,15 @@
 
   <!-- 9 dots (positioned at 10/50/90%) -->
   <!-- 아래 행부터 시작 -->
-  <div class="cal-dot" data-i="0" style="left:10%; top:82%;"></div>
+  <div class="cal-dot" data-i="0" style="left:25%; top:82%;"></div>
   <div class="cal-dot" data-i="1" style="left:50%; top:82%;"></div>
-  <div class="cal-dot" data-i="2" style="left:90%; top:82%;"></div>
-  <div class="cal-dot" data-i="3" style="left:10%; top:50%;"></div>
+  <div class="cal-dot" data-i="2" style="left:75%; top:82%;"></div>
+  <div class="cal-dot" data-i="3" style="left:25%; top:50%;"></div>
   <div class="cal-dot" data-i="4" style="left:50%; top:50%;"></div>
-  <div class="cal-dot" data-i="5" style="left:90%; top:50%;"></div>
-  <div class="cal-dot" data-i="6" style="left:10%; top:18%;"></div>
+  <div class="cal-dot" data-i="5" style="left:75%; top:50%;"></div>
+  <div class="cal-dot" data-i="6" style="left:25%; top:18%;"></div>
   <div class="cal-dot" data-i="7" style="left:50%; top:18%;"></div>
-  <div class="cal-dot" data-i="8" style="left:90%; top:18%;"></div>
+  <div class="cal-dot" data-i="8" style="left:75%; top:18%;"></div>
 
   <!-- webcam mini-widget -->
   <div class="cal-cam" id="cal-cam">
@@ -434,8 +432,8 @@
     </div>
     <h2>보정이 완성되었어요</h2>
     <p>이제 독서 화면에서 시선이 함께 움직입니다.</p>
-    <button class="btn btn-primary btn-lg" id="go-reading-btn" onclick="location.href='/reading-list.html'">
-      독서 시작하기
+    <button class="btn btn-primary btn-lg" id="go-reading-btn" onclick="location.href='/guide.html'">
+      다음 · 사용 안내
       <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
     </button>
   </div>
@@ -450,11 +448,9 @@
   const navUser = document.getElementById('nav-user');
   if (navUser && userNick) navUser.innerHTML = `<span class="avatar">${userNick[0]}</span>${userNick}님`;
 
-  const skipLink = document.getElementById('skip-link');
   const goReadingBtn = document.getElementById('go-reading-btn');
   if (userId === '100') {
-    skipLink.href = '/reading-list-admin.html';
-    goReadingBtn.onclick = () => location.href = '/reading-list-admin.html';
+    goReadingBtn.onclick = () => location.href = '/guide.html';
   }
 
   // 인트로 미리보기 상태

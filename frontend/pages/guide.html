@@ -4,21 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사용 안내 - 독서 아이트래킹</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+    <link rel="stylesheet" href="/static/base.css">
     <link rel="stylesheet" href="/static/aurora-theme.css">
     <script src="/static/js/auth-guard.js"></script>
+    <style>
+        body { min-width: 0; }
+        h2, h3 { margin: revert; }
+        #gaze-dot {
+            position: fixed;
+            width: 18px; height: 18px;
+            background: rgba(231,76,60,0.85);
+            border-radius: 50%;
+            border: 2px solid white;
+            pointer-events: none;
+            z-index: 99999;
+            box-shadow: 0 0 8px rgba(231,76,60,0.5);
+            display: none;
+            transform: translate(-50%, -50%);
+            transition: left 60ms linear, top 60ms linear;
+        }
+    </style>
 </head>
 <body>
-<div class="aurora-bg"><div class="aurora-layer"></div></div>
+<div class="aurora-bg"><div class="aurora"></div></div>
     <div id="gaze-dot"></div>
 
-    <header class="page-header">
+    <nav class="top">
+      <div class="container">
         <a class="brand" href="/home.html">
           <div class="brand-mark">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2" />
-              <circle cx="12" cy="12" r="3" fill="#04102E" />
+              <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2"/>
+              <circle cx="12" cy="12" r="3" fill="#04102E"/>
             </svg>
           </div>
           <div>
@@ -26,21 +43,32 @@
             <div class="brand-mono">EYE-TRACKING · READING</div>
           </div>
         </a>
-        <span class="navbar-user" id="nav-user"></span>
-        <div class="progress-bar">
-            <div class="progress-step done">
-                <div class="circle">✓</div> 웹캠 연결
-            </div>
-            <div class="progress-line"></div>
-            <div class="progress-step active">
-                <div class="circle">2</div> 사용 안내
-            </div>
-            <div class="progress-line"></div>
-            <div class="progress-step">
-                <div class="circle">3</div> 독서하기
-            </div>
+        <div class="nav-links">
+          <span class="navbar-user" id="nav-user"></span>
         </div>
-    </header>
+      </div>
+    </nav>
+
+    <div class="container"><div class="step-bar">
+      <div class="step-item done">
+        <div class="step-circle">
+          <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        </div>
+        <span>카메라 선택</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-item done">
+        <div class="step-circle">
+          <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        </div>
+        <span>시선 보정</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-item active">
+        <div class="step-circle">3</div>
+        <span>사용 안내</span>
+      </div>
+    </div></div>
 
     <div class="page-content">
         <h2 style="font-size:1.6rem; margin-bottom:8px;">사용 안내</h2>
@@ -48,7 +76,7 @@
 
         <div class="guide-notice">
             💡 시선 추적이 활성화되어 있습니다. 빨간 점이 시선을 따라다니는지 확인하세요.
-            정확도가 낮다면 <strong>Q 키</strong>를 눌러 보정하세요.
+            시선 점이 잘 따라오지 않는다면 <strong>Q 키</strong>로 추가 보정할 수 있습니다.
         </div>
 
         <!-- Q키 보정 방법 -->
@@ -60,7 +88,7 @@
             margin-bottom: 24px;
         ">
             <h3 style="margin:0 0 16px; font-size:1.1rem; color:#a78bfa;">
-                🎯 시선 보정 방법 (Q 키)
+                🎯 시선 점이 잘 안 따라올 때 — Q 키 추가 보정
             </h3>
             <div style="display:flex; flex-direction:column; gap:12px;">
                 <div style="display:flex; align-items:flex-start; gap:14px;">
@@ -71,9 +99,9 @@
                         font-weight:bold; font-size:0.85rem;
                     ">1</div>
                     <div>
-                        <strong style="color:#E8EEFF;">Q 키를 눌러 보정 모드 진입</strong>
+                        <strong style="color:#E8EEFF;">Q 키를 눌러 추가 보정 모드 진입</strong>
                         <p style="margin:4px 0 0; color:rgba(232,238,255,0.65); font-size:0.9rem;">
-                            커서가 십자(✛) 모양으로 바뀌고 상단에 빨간 배지가 표시됩니다.
+                            시선 점이 실제 시선과 다를 때 사용합니다. 커서가 십자(✛) 모양으로 바뀌고 상단에 빨간 배지가 표시됩니다.
                         </p>
                     </div>
                 </div>
@@ -137,19 +165,12 @@
             <div class="guide-item">
                 <div class="num">4</div>
                 <div>
-                    <h3>줄 건너뜀 감지 시 줄 박스</h3>
-                    <p>현재 읽어야 할 줄을 충분히 읽지 않고 앞으로 넘어간 것이 감지되면 해당 줄에 주황색 박스가 표시됩니다. 박스가 표시된 줄부터 다시 읽어보세요.</p>
-                </div>
-            </div>
-            <div class="guide-item">
-                <div class="num">5</div>
-                <div>
                     <h3>역행 시 블러 처리</h3>
                     <p>이미 읽은 부분으로 시선이 역행하면 해당 줄이 흐려집니다. 앞으로 읽는 습관을 길러보세요.</p>
                 </div>
             </div>
             <div class="guide-item">
-                <div class="num">6</div>
+                <div class="num">5</div>
                 <div>
                     <h3>독서 분석 결과 제공</h3>
                     <p>독서가 끝나면 집중도, 역행 비율, WPM(분당 읽은 단어 수) 등 상세한 분석 결과를 확인할 수 있습니다.</p>
@@ -159,14 +180,15 @@
 
         <div style="text-align:center; display:flex; justify-content:center; align-items:center; gap:12px;">
             <button class="btn btn-success" onclick="goToBookList()">
-                시선 보정 시작하기 →
+                독서 시작하기 →
             </button>
             <button class="btn" id="reset-cal-btn" style="background:linear-gradient(135deg,#a81b1b,#e74c3c); border:none; color:white;">
                 🔄 보정 초기화
             </button>
             <script>
             function goToBookList() {
-                location.href = '/calibration.html';
+                const uid = localStorage.getItem('user_id');
+                location.href = uid === '100' ? '/reading-list-admin.html' : '/reading-list.html';
             }
             </script>
         </div>

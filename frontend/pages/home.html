@@ -512,7 +512,7 @@
   signupBtn.onclick = function(e) {
     e.preventDefault();
     localStorage.clear(); sessionStorage.clear();
-    location.reload();
+    fetch('/api/webcam/stop', { method: 'POST' }).finally(() => location.reload());
   };
   document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('a[href="/signup.html"]').forEach(function(btn) {

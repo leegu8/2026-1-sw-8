@@ -8,16 +8,29 @@
     margin-bottom: 28px;
 }
 
+.growth-header h2 {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #E8EEFF;
+    margin: 0 0 6px;
+}
+
+.growth-header p {
+    color: rgba(232,238,255,0.55);
+    margin: 0;
+}
+
 /* ── 출석 카드 ── */
 .attendance-card {
-    background: white;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
     border-radius: 14px;
-    border: 1px solid #e8ecef;
+    border: 1px solid rgba(255,255,255,0.08);
     padding: 20px 28px;
     margin-bottom: 28px;
     display: flex;
     align-items: center;
     gap: 32px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
 .attendance-streak {
@@ -31,23 +44,23 @@
 .streak-num {
     font-size: 2.2rem;
     font-weight: 800;
-    color: #e67e22;
+    color: #FFC56B;
     line-height: 1;
 }
 
 .streak-label {
     font-size: 0.9rem;
-    color: #7f8c8d;
+    color: rgba(232,238,255,0.5);
     white-space: nowrap;
 }
 
 .attendance-total {
     font-size: 0.9rem;
-    color: #7f8c8d;
+    color: rgba(232,238,255,0.5);
     white-space: nowrap;
 }
 
-.attendance-total strong { color: #2c3e50; }
+.attendance-total strong { color: #E8EEFF; }
 
 .attendance-dots {
     display: flex;
@@ -66,30 +79,18 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: #ecf0f1;
-    border: 2px solid #dce1e7;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.12);
 }
 
 .attendance-dot.checked {
-    background: #f39c12;
-    border-color: #e67e22;
+    background: rgba(255,197,107,0.35);
+    border-color: #FFC56B;
 }
 
 .dot-label {
     font-size: 0.68rem;
-    color: #95a5a6;
-}
-
-.growth-header h2 {
-    font-size: 1.7rem;
-    font-weight: 700;
-    color: #2c3e50;
-    margin: 0 0 6px;
-}
-
-.growth-header p {
-    color: #7f8c8d;
-    margin: 0;
+    color: rgba(232,238,255,0.4);
 }
 
 /* 세션 요약 카드 리스트 */
@@ -101,9 +102,9 @@
 }
 
 .session-card {
-    background: white;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
     border-radius: 12px;
-    border: 1px solid #e8ecef;
+    border: 1px solid rgba(255,255,255,0.08);
     padding: 16px 20px;
     display: flex;
     align-items: center;
@@ -121,8 +122,8 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #3498db;
-    color: white;
+    background: linear-gradient(135deg, #1E5BE0, #3FB6FF);
+    color: #04102E;
     font-size: 0.85rem;
     font-weight: bold;
     display: flex;
@@ -134,13 +135,13 @@
 .session-info h5 {
     margin: 0 0 3px;
     font-size: 0.97rem;
-    color: #2c3e50;
+    color: #E8EEFF;
 }
 
 .session-info p {
     margin: 0;
     font-size: 0.82rem;
-    color: #95a5a6;
+    color: rgba(232,238,255,0.45);
 }
 
 .session-stats {
@@ -149,19 +150,17 @@
     flex-shrink: 0;
 }
 
-.stat-item {
-    text-align: center;
-}
+.stat-item { text-align: center; }
 
 .stat-item .val {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #2c3e50;
+    color: #E8EEFF;
 }
 
 .stat-item .lbl {
     font-size: 0.72rem;
-    color: #95a5a6;
+    color: rgba(232,238,255,0.4);
 }
 
 /* 차트 그리드 */
@@ -172,40 +171,42 @@
 }
 
 .chart-card {
-    background: white;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
     border-radius: 14px;
-    border: 1px solid #e8ecef;
+    border: 1px solid rgba(255,255,255,0.08);
     padding: 20px 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
 .chart-card h4 {
     margin: 0 0 16px;
     font-size: 0.95rem;
-    color: #2c3e50;
+    color: #E8EEFF;
     font-weight: 600;
 }
 
 .empty-state {
     text-align: center;
     padding: 80px 20px;
-    color: #95a5a6;
+    color: rgba(232,238,255,0.4);
     font-size: 1rem;
     line-height: 1.8;
 }
 
 /* ── 성장 요약 카드 ── */
 .growth-summary-card {
-    background: white;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
     border-radius: 14px;
-    border: 1px solid #e8ecef;
+    border: 1px solid rgba(255,255,255,0.08);
     padding: 20px 28px;
     margin-bottom: 28px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
 .summary-title {
     font-size: 0.88rem;
     font-weight: 700;
-    color: #7f8c8d;
+    color: rgba(232,238,255,0.5);
     letter-spacing: 0.04em;
     margin-bottom: 14px;
 }
@@ -225,15 +226,15 @@
     font-size: 0.9rem;
 }
 
-.summary-good    { background: #eafaf1; }
-.summary-bad     { background: #fef9e7; }
-.summary-neutral { background: #f4f6f7; }
+.summary-good    { background: rgba(110,231,166,0.1); border: 1px solid rgba(110,231,166,0.15); }
+.summary-bad     { background: rgba(255,197,107,0.1); border: 1px solid rgba(255,197,107,0.15); }
+.summary-neutral { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
 
 .summary-icon { font-size: 1.05rem; flex-shrink: 0; }
 
-.summary-good    .summary-text { color: #1e8449; }
-.summary-bad     .summary-text { color: #7d6608; }
-.summary-neutral .summary-text { color: #555; }
+.summary-good    .summary-text { color: #6EE7A6; }
+.summary-bad     .summary-text { color: #FFC56B; }
+.summary-neutral .summary-text { color: rgba(232,238,255,0.7); }
 
 /* ── 직전 대비 델타 ── */
 .stat-delta {
@@ -245,9 +246,7 @@
 }
 
 /* ── 종합점수 추세 차트 (전폭) ── */
-.score-chart-card {
-    margin-bottom: 20px;
-}
+.score-chart-card { margin-bottom: 20px; }
 
 /* ── 지표 선택 버튼 ── */
 .metric-selector {
@@ -260,9 +259,9 @@
 .metric-btn {
     padding: 5px 14px;
     border-radius: 20px;
-    border: 1.5px solid #dce1e7;
-    background: white;
-    color: #7f8c8d;
+    border: 1.5px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: rgba(232,238,255,0.55);
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
@@ -270,21 +269,21 @@
 }
 
 .metric-btn:hover {
-    border-color: #aab4be;
-    color: #2c3e50;
+    border-color: rgba(63,182,255,0.4);
+    color: #E8EEFF;
 }
 
 .metric-btn.active {
-    background: #2c3e50;
-    border-color: #2c3e50;
-    color: white;
+    background: linear-gradient(135deg, #1E5BE0, #3FB6FF);
+    border-color: transparent;
+    color: #04102E;
 }
 
 /* ── 지표 기준 설명 ── */
 .metric-desc {
     margin: -4px 0 12px;
     font-size: 0.78rem;
-    color: #95a5a6;
+    color: rgba(232,238,255,0.4);
 }
 
 @media (max-width: 640px) {

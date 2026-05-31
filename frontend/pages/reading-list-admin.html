@@ -1,331 +1,89 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>독서 아이트래킹 · 독서 목록</title>
-<link rel="stylesheet" href="/static/base.css" />
-<style>
-  .page { position: relative; min-height: 100vh; }
-  .aurora-bg { position: fixed; inset: 0; pointer-events: none; }
-  main { position: relative; z-index: 1; }
-
-  /* ── Wrap ── */
-  .library-wrap {
-    max-width: 1080px; margin: 0 auto;
-    padding: 2.25rem 1.5rem 3.75rem;
-  }
-
-  /* ── User banner ── */
-  .user-banner {
-    position: relative; overflow: hidden;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 1.75rem 2.25rem; margin-bottom: 1.75rem;
-    border-radius: 20px;
-    background: linear-gradient(140deg, #0c1230 0%, #060d1f 50%, #120a2e 100%);
-    border: 1px solid rgba(167,139,250,0.18);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
-  }
-  .user-banner::before {
-    content: ""; position: absolute; top: -60px; left: -40px;
-    width: 260px; height: 260px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(63,182,255,0.16) 0%, transparent 65%);
-    filter: blur(18px); pointer-events: none;
-  }
-  .user-banner::after {
-    content: ""; position: absolute; bottom: -50px; right: 26%;
-    width: 220px; height: 220px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(167,139,250,0.18) 0%, transparent 65%);
-    filter: blur(20px); pointer-events: none;
-  }
-  .user-banner > * { position: relative; z-index: 1; }
-  .banner-info .hello {
-    font-family: var(--serif); font-weight: 700; font-size: 1.55rem;
-    letter-spacing: -0.025em; line-height: 1.2; margin-bottom: 8px; color: var(--ink);
-  }
-  .banner-info .desc { color: var(--muted-2); font-size: 13.5px; line-height: 1.5; }
-  .dev-badge {
-    padding: 10px 20px; border-radius: 24px; font-family: var(--mono);
-    font-size: 11px; letter-spacing: 0.15em; font-weight: 600;
-    background: rgba(167,139,250,0.14); color: #a78bfa;
-    border: 1px solid rgba(167,139,250,0.30); white-space: nowrap; flex-shrink: 0;
-  }
-
-  /* ── Tab bar ── */
-  .tab-bar {
-    display: flex; gap: 4px;
-    border-bottom: 2px solid var(--line); margin-bottom: 28px;
-  }
-  .tab-btn {
-    padding: 12px 24px; background: none; border: none;
-    border-bottom: 3px solid transparent; margin-bottom: -2px;
-    font-size: 0.95rem; font-weight: 600; color: var(--muted);
-    cursor: pointer; font-family: inherit;
-    transition: color 0.2s, border-color 0.2s;
-  }
-  .tab-btn:hover { color: var(--ink); }
-  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-  /* ── Section header ── */
-  .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .ph h3 { font-size: 1.1rem; color: var(--ink); margin-bottom: 5px; }
-  .ph p  { font-size: 0.88rem; color: var(--muted); margin: 0; }
-
-  /* ── Book grid ── */
-  .book-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 18px;
-  }
-
-  /* ── Book card ── */
-  .book-card {
-    padding: 22px; border-radius: var(--r-lg);
-    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
-    border: 1px solid var(--line);
-    display: flex; flex-direction: column;
-    transition: border-color 200ms, transform 200ms;
-  }
-  .book-card:hover {
-    border-color: rgba(63,182,255,0.45); transform: translateY(-2px);
-  }
-  .book-card.completed { opacity: 0.82; }
-
-  .order-num {
-    font-size: 10px; letter-spacing: 0.18em;
-    color: var(--muted-2); font-family: var(--mono);
-    margin-bottom: 10px; display: block;
-  }
-  .book-card h4 {
-    font-size: 1rem; font-weight: 700; color: var(--ink);
-    line-height: 1.35; letter-spacing: -0.02em; margin-bottom: 5px;
-  }
-  .author { font-size: 12px; color: var(--muted); }
-  .book-meta {
-    margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line);
-    margin-top: 12px;
-    font-size: 11.5px; color: var(--muted);
-  }
-  .status-done { color: var(--good); display: inline-flex; align-items: center; gap: 4px; }
-
-  /* ── Action buttons ── */
-  .book-actions {
-    display: flex; gap: 6px; margin-top: 10px; padding-top: 10px;
-    border-top: 1px solid var(--line);
-  }
-  .book-actions button {
-    flex: 1; padding: 8px 4px; border-radius: var(--r-sm); border: none; cursor: pointer;
-    font-size: 11.5px; font-weight: 600; font-family: inherit; transition: opacity 0.15s;
-  }
-  .book-actions button:hover { opacity: 0.82; }
-  .btn-read-gaze { background: linear-gradient(135deg, rgba(63,182,255,0.25), rgba(30,91,224,0.35)); color: var(--ink); border: 1px solid rgba(63,182,255,0.25) !important; }
-  .btn-read-dev  { background: linear-gradient(135deg, rgba(167,139,250,0.2), rgba(109,40,217,0.28)); color: rgba(232,238,255,0.85); border: 1px solid rgba(167,139,250,0.2) !important; }
-  .btn-delete    { background: linear-gradient(135deg, rgba(248,113,113,0.15), rgba(220,38,38,0.22)); color: rgba(248,113,113,0.9); border: 1px solid rgba(248,113,113,0.2) !important; }
-
-  /* ── Empty state ── */
-  .empty-state {
-    grid-column: 1 / -1; text-align: center;
-    padding: 60px 20px; color: var(--muted); font-size: 0.95rem; line-height: 1.8;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서 아이트래킹 — 독서 목록 (관리자)</title>
+    <link rel="stylesheet" href="/static/base.css">
+    <link rel="stylesheet" href="/static/reading-list.css">
+    <script src="/static/js/auth-guard.js"></script>
 </head>
 <body>
 
-<div class="page">
-  <div class="aurora-bg"><div class="aurora" style="opacity: 0.55;"></div></div>
-
-  <!-- NAV -->
-  <nav class="top">
-    <div class="container">
-      <a class="brand" href="/home.html">
-        <div class="brand-mark">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2" />
-            <circle cx="12" cy="12" r="3" fill="#04102E" />
-          </svg>
+    <nav class="top">
+      <div class="container" style="display:flex;align-items:center;justify-content:space-between;height:72px;">
+        <a class="brand" href="/">
+          <div class="brand-mark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2"/>
+              <circle cx="12" cy="12" r="3" fill="#04102E"/>
+            </svg>
+          </div>
+          <div>
+            <div class="brand-name">독서 아이트래킹</div>
+            <div class="brand-mono">EYE-TRACKING · READING</div>
+          </div>
+        </a>
+        <div class="nav-links">
+          <span class="navbar-user" id="navbar-user"></span>
+          <a href="/growth.html" class="btn btn-line">성장일지</a>
+          <a href="/guide.html" class="btn btn-line">가이드</a>
+          <a href="/book-write-admin.html" class="btn btn-line">글 추가</a>
+          <a href="/" class="btn btn-line" onclick="localStorage.clear();fetch('/api/webcam/stop',{method:'POST'})">로그아웃</a>
         </div>
-        <div>
-          <div class="brand-name">독서 아이트래킹</div>
-          <div class="brand-mono">EYE-TRACKING · READING</div>
-        </div>
-      </a>
-      <div class="nav-links">
-        <a class="nav-link" href="/reading-list-admin.html">독서 목록</a>
-        <a class="nav-link" href="/book-write-admin.html">도서 등록</a>
-        <a class="nav-link" href="/growth.html">성장 일지</a>
-        <span class="navbar-user">
-          <span class="avatar">독</span>
-          <span class="nick">독자</span>
-        </span>
-        <a class="btn-logout" href="/login.html" data-logout>로그아웃</a>
       </div>
-    </div>
-  </nav>
+    </nav>
 
-  <main>
     <div class="library-wrap">
 
-      <!-- User banner -->
-      <div class="user-banner">
-        <div class="banner-info">
-          <div class="hello">안녕하세요, <span class="grad-text">독자</span>님.</div>
-          <p class="desc">도서를 등록하고 시선 추적으로 독서 분석을 시작하세요.</p>
+        <div class="user-banner">
+            <div class="user-banner-info">
+                <h2 id="banner-greeting">안녕하세요!</h2>
+                <p id="banner-level-desc"></p>
+            </div>
+            <div class="level-badge" id="level-badge">중등</div>
         </div>
-        <div class="dev-badge">🛠 개발자 모드</div>
-      </div>
 
-      <!-- Tab bar -->
-      <div class="tab-bar">
-        <button class="tab-btn active" data-tab="all">전체 도서</button>
-        <button class="tab-btn" data-tab="my">내가 등록한 글</button>
-      </div>
+        <div class="tab-bar">
+            <button class="tab-btn active" data-tab="curriculum">📚 나의 커리큘럼</button>
+            <button class="tab-btn"        data-tab="all">🔍 전체 도서 목록</button>
+            <button class="tab-btn"        data-tab="read">✅ 읽은 도서</button>
+        </div>
 
-      <!-- All books tab -->
-      <section id="tab-all">
-        <div class="ph">
-          <div>
-            <h3>전체 도서</h3>
-            <p>등록된 모든 도서 목록입니다.</p>
-          </div>
-        </div>
-        <div class="book-grid"></div>
-      </section>
+        <section id="tab-curriculum" class="tab-panel">
+            <div class="section-header">
+                <h3>레벨에 맞는 추천 도서</h3>
+                <p>현재 레벨에 최적화된 독서 자료입니다. 순서대로 읽으면 효과적입니다.</p>
+            </div>
+            <div class="book-grid" id="curriculum-grid"></div>
+        </section>
 
-      <!-- My uploaded texts -->
-      <section id="tab-my" style="display: none;">
-        <div class="ph">
-          <div>
-            <h3>내가 등록한 글</h3>
-            <p>직접 등록한 텍스트로 시선 추적을 시작할 수 있어요.</p>
-          </div>
-          <a class="btn btn-primary" href="/book-write-admin.html">+ 새로 등록</a>
-        </div>
-        <div class="book-grid" id="my-grid">
-          <div class="empty-state">등록한 도서가 없습니다.</div>
-        </div>
-      </section>
+        <section id="tab-all" class="tab-panel" style="display:none">
+            <div class="section-header">
+                <div class="filter-row">
+                    <h3>전체 도서 목록</h3>
+                    <div class="filter-group">
+                        <button class="filter-btn active" data-level="all">전체</button>
+                        <button class="filter-btn" data-level="초등">초등</button>
+                        <button class="filter-btn" data-level="중등">중등</button>
+                        <button class="filter-btn" data-level="고등">고등</button>
+                    </div>
+                </div>
+                <p>원하는 도서를 자유롭게 선택할 수 있습니다.</p>
+            </div>
+            <div class="book-grid" id="all-grid"></div>
+        </section>
+
+        <section id="tab-read" class="tab-panel" style="display:none">
+            <div class="section-header">
+                <h3>읽은 도서</h3>
+                <p>지금까지 완독한 도서 목록입니다.</p>
+            </div>
+            <div class="book-grid" id="read-grid"></div>
+        </section>
 
     </div>
-  </main>
 
-  <footer class="bottom">
-    <div class="container">
-      <span>© 2026 GONGSO · ALL RIGHTS RESERVED</span>
-      <span>MADE IN SEOUL · v 0.4.2</span>
-    </div>
-  </footer>
-</div>
-
-<script>
-  const BASE = '';
-  const userId   = localStorage.getItem('user_id');
-  const userNick = localStorage.getItem('user_nick') || '독자';
-
-  // 유저 정보 반영
-  document.querySelectorAll('.hello .grad-text').forEach(el => el.textContent = userNick);
-  document.querySelectorAll('.navbar-user .nick').forEach(el => el.textContent = userNick);
-  document.querySelectorAll('.avatar').forEach(el => el.textContent = userNick[0] || '독');
-
-  // 로그아웃
-  document.querySelectorAll('[data-logout]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.preventDefault();
-      localStorage.clear();
-      location.href = '/login.html';
-    });
-  });
-
-  // 도서 카드 생성
-  function makeCard(book, idx, isCompleted) {
-    const wpm = 320;
-    const charCount = (book.content || '').replace(/\s/g, '').length;
-    const mins = Math.max(1, Math.round(charCount / wpm));
-    const statusHtml = isCompleted
-      ? `<span class="status-done"><svg width="11" height="11" viewBox="0 0 11 11"><path d="M2 6L4.5 8.5L9 3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" /></svg>완독</span>`
-      : `<span>예정 · 약 ${mins}분</span>`;
-
-    const card = document.createElement('div');
-    card.className = 'book-card' + (isCompleted ? ' completed' : '');
-    card.dataset.bookId = book.id;
-    card.dataset.difficulty = book.difficulty || '';
-    card.innerHTML = `
-      <h4>${book.title}</h4>
-      <div class="author">${book.genre || '산문'}</div>
-      <div class="book-meta">${statusHtml}</div>
-      <div class="book-actions">
-        <button class="btn-read-gaze"  data-id="${book.id}">시선 추적</button>
-        <button class="btn-read-dev"   data-id="${book.id}">개발자 모드</button>
-        <button class="btn-delete"     data-id="${book.id}">삭제</button>
-      </div>`;
-    card.querySelector('.btn-read-gaze').addEventListener('click', e => {
-      e.stopPropagation();
-      location.href = `/reading-admin.html?book_id=${book.id}`;
-    });
-    card.querySelector('.btn-read-dev').addEventListener('click', e => {
-      e.stopPropagation();
-      location.href = `/reading-admin.html?book_id=${book.id}&dev=true`;
-    });
-    card.querySelector('.btn-delete').addEventListener('click', async e => {
-      e.stopPropagation();
-      if (!confirm(`"${book.title}"을(를) 삭제하시겠습니까?`)) return;
-      try {
-        const res = await fetch(`/api/db/books/${book.id}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error();
-        await loadData();
-      } catch {
-        alert('삭제 중 오류가 발생했습니다.');
-      }
-    });
-    return card;
-  }
-
-  let allBooks = [];
-  let completedIds = new Set();
-
-  function renderAllTab() {
-    const grid = document.querySelector('#tab-all .book-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    allBooks.forEach((b, i) => {
-      grid.appendChild(makeCard(b, i, completedIds.has(b.id)));
-    });
-    if (allBooks.length === 0) {
-      grid.innerHTML = '<div class="empty-state">등록된 도서가 없습니다.</div>';
-    }
-  }
-
-  async function loadData() {
-    try {
-      const [booksRes, completedRes] = await Promise.all([
-        fetch(`${BASE}/api/db/books`),
-        userId ? fetch(`${BASE}/api/db/users/${userId}/completed-books`) : Promise.resolve(null),
-      ]);
-      allBooks = await booksRes.json();
-      if (completedRes) {
-        const completedData = await completedRes.json();
-        completedIds = new Set(completedData.map(c => c.book_id));
-      }
-      renderAllTab();
-    } catch (err) {
-      console.error('도서 목록 로드 실패:', err);
-    }
-  }
-
-  // tabs
-  const tabs = document.querySelectorAll('.tab-btn');
-  const panels = { all: 'tab-all', my: 'tab-my' };
-  tabs.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      tabs.forEach((b) => b.classList.toggle('active', b === btn));
-      const which = btn.dataset.tab;
-      Object.entries(panels).forEach(([key, id]) => {
-        document.getElementById(id).style.display = key === which ? '' : 'none';
-      });
-    });
-  });
-
-  loadData();
-</script>
-
+    <script src="/static/js/reading-list-admin.js"></script>
 </body>
 </html>

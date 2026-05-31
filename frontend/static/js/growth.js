@@ -3,7 +3,7 @@ const nick   = localStorage.getItem('user_nick') || '';
 
 document.getElementById('navbar-user').textContent = nick;
 if (nick) document.getElementById('growth-title').textContent = `${nick}의 성장일지`;
-if (userId === '100') document.getElementById('back-to-list').href = '/reading-list.html';
+if (userId === '100') document.getElementById('back-to-list').href = '/reading-list-admin.html';
 
 async function loadAttendance() {
     let data = { streak: 0, total_days: 0, recent_dates: [] };
@@ -64,7 +64,6 @@ function deltaHtml(curr, prev, lowerIsBetter = false, unit = '') {
 }
 
 // ── 성장 요약 텍스트 카드 ─────────────────────────────────
-// 유효 세션(score > 0) 기준 첫 세션 vs 마지막 세션 비교
 function renderGrowthSummary(sessions) {
     const el = document.getElementById('growth-summary');
     if (!el || sessions.length < 2) return;
@@ -110,10 +109,10 @@ function renderGrowthSummary(sessions) {
 
 // ── 세션 카드 (직전 대비 델타 포함) ──────────────────────
 function renderSessionList(sessions) {
-    const list      = [...sessions].reverse(); // 최신순 표시, 차트는 원본 순서 유지
+    const list      = [...sessions].reverse();
     const container = document.getElementById('session-list');
     container.innerHTML = list.map((s, i) => {
-        const prev          = i < list.length - 1 ? list[i + 1] : null; // 시간상 직전 세션
+        const prev          = i < list.length - 1 ? list[i + 1] : null;
         const min           = Math.floor((s.total_duration_sec || 0) / 60);
         const sec           = (s.total_duration_sec || 0) % 60;
         const completionPct = Math.round((s.summary.completion_rate ?? 0) * 100);
@@ -231,7 +230,6 @@ function updateMetricChart(sessions, metric) {
     }
 }
 
-// 적정 구간 밴드 포함 차트 (지표 선택용)
 function makeMetricChart(canvasId, labels, data, bandLow, bandHigh, metric) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return null;
@@ -241,7 +239,6 @@ function makeMetricChart(canvasId, labels, data, bandLow, bandHigh, metric) {
             labels,
             datasets: [
                 {
-                    // 적정 구간 하한 — fill: '+1' 으로 상한까지 채움
                     data: bandLow,
                     borderColor: 'rgba(39,174,96,0.30)',
                     borderWidth: 1.5,
@@ -252,7 +249,6 @@ function makeMetricChart(canvasId, labels, data, bandLow, bandHigh, metric) {
                     tension: 0,
                 },
                 {
-                    // 적정 구간 상한
                     data: bandHigh,
                     borderColor: 'rgba(39,174,96,0.30)',
                     borderWidth: 1.5,
@@ -263,7 +259,6 @@ function makeMetricChart(canvasId, labels, data, bandLow, bandHigh, metric) {
                     tension: 0,
                 },
                 {
-                    // 실제 데이터
                     label: metric.label,
                     data,
                     borderColor:          metric.color,
@@ -281,14 +276,13 @@ function makeMetricChart(canvasId, labels, data, bandLow, bandHigh, metric) {
             responsive: true,
             plugins: { legend: { display: false } },
             scales: {
-                y: { min: 0, grid: { color: '#f0f0f0' } },
-                x: { grid: { display: false } }
+                y: { min: 0, grid: { color: 'rgba(255,255,255,0.07)' }, ticks: { color: 'rgba(232,238,255,0.5)' } },
+                x: { grid: { display: false }, ticks: { color: 'rgba(232,238,255,0.5)' } }
             }
         }
     });
 }
 
-// 종합점수 추세 차트 (밴드 없는 단순 라인)
 function makeChart(canvasId, labels, data, label, color) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return null;
@@ -313,8 +307,8 @@ function makeChart(canvasId, labels, data, label, color) {
             responsive: true,
             plugins: { legend: { display: false } },
             scales: {
-                y: { min: 0, grid: { color: '#f0f0f0' } },
-                x: { grid: { display: false } }
+                y: { min: 0, grid: { color: 'rgba(255,255,255,0.07)' }, ticks: { color: 'rgba(232,238,255,0.5)' } },
+                x: { grid: { display: false }, ticks: { color: 'rgba(232,238,255,0.5)' } }
             }
         }
     });
