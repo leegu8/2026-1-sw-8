@@ -8,19 +8,23 @@
 2026-1-sw-8/
 ├── requirements.txt
 ├── frontend/
-│   ├── pages/        # index, login, signup, calibration, guide, reading, reading-user, result, growth, reading-list, reading-list-user, book-write
+│   ├── pages/        # index, login, signup, camera, calibration, guide, reading, reading-admin, result, growth, reading-list, reading-list-admin, book-write-admin
 │   └── static/
 │       ├── style.css
+│       ├── base.css              # 홈·도서목록·보정·가이드 공통 다크 디자인 시스템
+│       ├── aurora-theme.css      # 가이드·독서 페이지 다크 오버라이드
+│       ├── reading-list.css      # 도서 목록 전용 스타일
+│       ├── growth.css            # 성장일지 전용 스타일
 │       └── js/
 │           ├── gaze.js               # 공통 진입점 — WS 연결 + 이벤트 분기
-│           ├── reading.js            # 독서 페이지 (개발자용) — 시선 분석·교정 이벤트
-│           ├── reading-user.js       # 독서 페이지 (사용자용) — 시선 분석
-│           ├── reading-list.js       # 도서 목록 (개발자용)
-│           ├── reading-list-user.js  # 도서 목록 (사용자용)
+│           ├── reading.js            # 독서 페이지 (사용자용) — 역행 블러
+│           ├── reading-admin.js      # 독서 페이지 (관리자용) — 시선 분석·교정·DEV_MODE
+│           ├── reading-list.js       # 도서 목록 (사용자용)
+│           ├── reading-list-admin.js # 도서 목록 (관리자용) — 삭제·개발자모드 버튼
 │           ├── growth.js             # 성장일지
 │           ├── login.js              # 로그인
 │           ├── signup.js             # 회원가입
-│           ├── book-write.js         # 도서 등록 (개발자용)
+│           ├── book-write.js         # 도서 등록 (관리자용)
 │           ├── auth-guard.js         # 로그인 여부 체크
 │           ├── ui/gazeDot.js         # 시선 점 렌더링
 │           ├── ui/widget.js          # 플로팅 웹캠 위젯
@@ -65,18 +69,22 @@ uvicorn backend.app.main:app --reload
 ## 페이지 흐름
 
 ```
-index → login/signup → reading-list → reading → result → growth
+login/signup → camera → calibration → guide → reading-list → reading → result → growth
 ```
+
+- 관리자(userId=100): reading-list-admin → reading-admin (개발자 모드: ?dev=true)
+- 일반 사용자: reading-list → reading
 
 - **login**: 이메일·비밀번호 로그인. 로그인 성공 시 출석체크 자동 호출
 - **signup**: 회원가입. 이메일·비밀번호·닉네임·레벨 입력
-- **calibration**: 화면 14개 지점을 응시하며 Ridge Regression 모델 학습
-- **guide**: 사용 안내. Q키 — 마우스 보정 모드(클릭·정지로 추가 보정)
-- **reading** (개발자): 실시간 하이라이트·역행 블러 개입. 분석 지표 프론트에서 계산 후 DB 저장. BLUR/HIGHLIGHT 교정 이벤트는 종료 버튼 클릭 시 한 번에 DB 저장. 긴 글은 자동 페이지 분할(pageBoundaries 동적 계산). 완독률: 방문 세그먼트 Set 합산 / 전체(줄×5). 역행비율: right-left-right·down-up-down 떨림 노이즈 제거
-- **reading-user** (사용자): 역행 블러만 적용. 페이지네이션·완독률 계산·역행비율 노이즈 필터는 reading.js와 동일
+- **camera**: 카메라 선택. 버튼 클릭 시 스캔, 미리보기 후 다음(보정)으로 이동
+- **calibration**: 화면 9개 지점(3×3 그리드, 좌우 25%~75%)을 응시·클릭하며 Ridge Regression 모델 학습. 점당 25샘플
+- **guide**: 사용 안내. Q키 — 시선이 잘 안 따라올 때 추가 보정 모드(클릭으로 보정 누적)
+- **reading** (사용자): 역행 블러만 적용. 페이지네이션·완독률 계산·역행비율 노이즈 필터. 마지막 페이지에서만 완료 버튼 활성
+- **reading-admin** (관리자): 실시간 하이라이트·역행 블러 개입. DEV_MODE(마우스=시선). 분석 지표 프론트에서 계산 후 DB 저장. BLUR/HIGHLIGHT 교정 이벤트는 종료 버튼 클릭 시 한 번에 DB 저장. 긴 글은 자동 페이지 분할(pageBoundaries 동적 계산). 완독률: 방문 세그먼트 Set 합산 / 전체(줄×5). 역행비율: right-left-right·down-up-down 떨림 노이즈 제거
 - **result**: DB에서 세션 결과 조회. 집중도·역행비율·WPM·완독률·독서시간 기반 종합 점수 계산 후 DB 저장
 - **growth**: 최근 5세션 지표·점수 차트, 출석 달력
-- **reading-list** (개발자): 도서 목록. 읽은 도서는 커리큘럼/전체 목록에서 제외되고 읽은 도서 탭으로 이동
+- **reading-list** (사용자) / **reading-list-admin** (관리자): 도서 목록. 읽은 도서는 커리큘럼/전체 목록에서 제외
 
 ## 시선 이벤트 흐름
 
