@@ -210,8 +210,6 @@ function sendCorrectionEvent(type, lineIndex) {
 
 const REREAD_WINDOW_MS  = 30_000;
 const REREAD_BLUR_ON    = 3;
-const ADVANCE_DWELL     = 2;
-const REGRESS_DWELL     = 4;
 let   startTime         = null;
 let   lastValidLine     = -1;
 let   lastValidLineTime = 0;
@@ -223,10 +221,8 @@ let   currentReadingLine     = -1;
 let   maxReadingLine         = -1;
 let   lineDwellLine          = -1;
 let   lineDwellCount         = 0;
-let   lineDwellMinX          = 0;
-let   lineDwellHasRight      = false;
+let   lineDwellRightCount    = 0;
 let   baselineLastChangedTime = 0;
-let   skimAlertActive        = false;
 const lineSegmentsVisited    = new Map();
 
 document.getElementById('reading-status').textContent = '👁 시선 추적 중';
@@ -244,10 +240,8 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
         maxReadingLine           = -1;
         lineDwellLine            = -1;
         lineDwellCount           = 0;
-        lineDwellMinX            = 0;
-        lineDwellHasRight        = false;
+        lineDwellRightCount      = 0;
         baselineLastChangedTime  = Date.now();
-        skimAlertActive          = false;
         lastValidLine            = -1;
         lastValidLineTime        = 0;
         oobSince                 = null;
@@ -456,26 +450,39 @@ function calcFocusRate(totalSec) {
     return Math.round(Math.max(0, (gazeSpanMs - unfocusedMs) / gazeSpanMs * 100));
 }
 
-// ── 역행비율 — 노이즈 필터 적용 ──────────────────────────
-// 분모: 방향 전환 + 정지 (still 포함)
-// 분자: 노이즈 제거된 left + up
-//   제외: left→down(줄바꿈)
 function calcRegressionRate() {
-    const allMoves = patternData.filter(p =>
-        p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down' || p.type === 'still'
-    );
-    if (!allMoves.length) return 0;
+    const moves = patternData.filter(p => ['right','left','up','down'].includes(p.type));
+    if (!moves.length) return 0;
 
-    const saccades = patternData.filter(p =>
-        p.type === 'right' || p.type === 'left' || p.type === 'up' || p.type === 'down'
-    );
-    const regCount = saccades.filter((p, i) => {
-        if (p.type === 'up') return true;
-        if (p.type !== 'left') return false;
-        if (saccades[i + 1]?.type === 'down') return false;
-        return true;
-    }).length;
-    return Math.round(regCount / allMoves.length * 100);
+    let regCount = 0;
+    let pendingLefts = 0;
+    let leftStartLine = -1;
+
+    for (const p of patternData) {
+        if (!['right','left','up','down'].includes(p.type)) continue;
+
+        if (p.type === 'up') {
+            regCount += pendingLefts + 1;
+            pendingLefts = 0;
+            leftStartLine = -1;
+        } else if (p.type === 'left') {
+            if (pendingLefts === 0) leftStartLine = p.line;
+            pendingLefts++;
+        } else if (p.type === 'right') {
+            if (leftStartLine >= 0 && p.line > leftStartLine) {
+                // 줄바꿈 → 버림
+            } else {
+                regCount += pendingLefts;
+            }
+            pendingLefts = 0;
+            leftStartLine = -1;
+        }
+        // down → 무시
+    }
+
+    regCount += pendingLefts;
+
+    return Math.round(regCount / moves.length * 100);
 }
 
 function calcRegressions(totalSec = 0) {
@@ -489,13 +496,7 @@ function calcRegressions(totalSec = 0) {
 // ── 줄 기반 역행 감지 ────────────────────────────────────
 function updateLineTracking(x, line, type = 'still') {
     if (line < 0) { lineDwellCount = 0; return; }
-
-    if (currentReadingLine < 0) {
-        currentReadingLine = line;
-        if (line > maxReadingLine) maxReadingLine = line;
-    }
-
-    // 세그먼트 방문 기록 — 시선이 닿는 모든 줄, Set으로 개별 추적
+    if (currentReadingLine < 0) { currentReadingLine = line; if (line > maxReadingLine) maxReadingLine = line; }
     const l = lineList[line];
     if (l) {
         const sw = (l.xMax - l.xMin) / 5;
@@ -505,37 +506,11 @@ function updateLineTracking(x, line, type = 'still') {
             lineSegmentsVisited.get(line).add(seg);
         }
     }
-
-    if (line === lineDwellLine) {
-        lineDwellCount++;
-        if (x < lineDwellMinX) lineDwellMinX = x;
-        if (type === 'right') lineDwellHasRight = true;
-    } else {
-        lineDwellLine     = line;
-        lineDwellCount    = 1;
-        lineDwellMinX     = x;
-        lineDwellHasRight = (type === 'right');
-    }
-
-    if (lineDwellCount >= ADVANCE_DWELL && lineDwellHasRight) {
-        if (line <= maxReadingLine) {
-            if (line < currentReadingLine) rereadingEvents.push(Date.now());
-            if (line !== currentReadingLine) baselineLastChangedTime = Date.now();
-            currentReadingLine = line;
-        } else if (line === currentReadingLine + 1) {
-            const maxSeg = lineSegmentsVisited.get(currentReadingLine)?.size ?? 0;
-            if (maxSeg >= 3) {
-                const nextL     = lineList[line];
-                const lineWidth = nextL ? nextL.xMax - nextL.xMin : 0;
-                const landedLeft = lineWidth > 0 && lineDwellMinX <= nextL.xMin + lineWidth * 0.5;
-                if (landedLeft) {
-                    currentReadingLine      = line;
-                    maxReadingLine          = line;
-                    baselineLastChangedTime = Date.now();
-                    skimAlertActive         = false;
-                }
-            }
-        }
+    if (line === lineDwellLine) { lineDwellCount++; if (type === 'right') lineDwellRightCount++; }
+    else { lineDwellLine = line; lineDwellCount = 1; lineDwellRightCount = (type === 'right') ? 1 : 0; }
+    if (lineDwellRightCount >= 3) {
+        if (line < currentReadingLine) { rereadingEvents.push(Date.now()); baselineLastChangedTime = Date.now(); currentReadingLine = line; }
+        else if (line > currentReadingLine) { baselineLastChangedTime = Date.now(); currentReadingLine = line; if (line > maxReadingLine) maxReadingLine = line; }
     }
 }
 

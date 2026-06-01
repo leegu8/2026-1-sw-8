@@ -424,16 +424,38 @@ function calcFocusRate(totalSec) {
 }
 
 function calcRegressionRate() {
-    const allMoves = patternData.filter(p => ['right','left','up','down','still'].includes(p.type));
-    if (!allMoves.length) return 0;
-    const saccades = patternData.filter(p => ['right','left','up','down'].includes(p.type));
-    const regCount = saccades.filter((p, i) => {
-        if (p.type === 'up') return true;
-        if (p.type !== 'left') return false;
-        if (saccades[i+1]?.type === 'down') return false;
-        return true;
-    }).length;
-    return Math.round(regCount / allMoves.length * 100);
+    const moves = patternData.filter(p => ['right','left','up','down'].includes(p.type));
+    if (!moves.length) return 0;
+
+    let regCount = 0;
+    let pendingLefts = 0;
+    let leftStartLine = -1;
+
+    for (const p of patternData) {
+        if (!['right','left','up','down'].includes(p.type)) continue;
+
+        if (p.type === 'up') {
+            regCount += pendingLefts + 1;
+            pendingLefts = 0;
+            leftStartLine = -1;
+        } else if (p.type === 'left') {
+            if (pendingLefts === 0) leftStartLine = p.line;
+            pendingLefts++;
+        } else if (p.type === 'right') {
+            if (leftStartLine >= 0 && p.line > leftStartLine) {
+                // 줄바꿈 → 버림
+            } else {
+                regCount += pendingLefts;
+            }
+            pendingLefts = 0;
+            leftStartLine = -1;
+        }
+        // down → 무시
+    }
+
+    regCount += pendingLefts;
+
+    return Math.round(regCount / moves.length * 100);
 }
 
 function calcRegressions(totalSec = 0) {
