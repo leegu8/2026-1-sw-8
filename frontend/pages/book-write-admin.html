@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>독서 아이트래킹 · 도서 등록</title>
 <link rel="stylesheet" href="/static/base.css" />
+<link rel="stylesheet" href="/static/reading-list.css" />
 <style>
   .page { position: relative; min-height: 100vh; }
   main { position: relative; z-index: 1; padding: 32px 0 80px; }
@@ -81,69 +82,8 @@
     color: var(--bad);
   }
 
-  /* preview */
-  .preview-cover {
-    aspect-ratio: 3 / 4; max-width: 200px;
-    margin: 0 auto 22px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--bg-2), #1B3A8B);
-    border: 1px solid var(--line);
-    position: relative; overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-  }
-  .preview-cover::before {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(135deg,
-      color-mix(in oklab, var(--accent), transparent 75%) 0%, transparent 50%);
-  }
-  .preview-cover::after {
-    content: ""; position: absolute; left: 14px; right: 14px; top: 16px;
-    height: 1px; background: rgba(255,255,255,0.10);
-    box-shadow:
-      0 12px 0 rgba(255,255,255,0.06),
-      0 24px 0 rgba(255,255,255,0.04),
-      0 36px 0 rgba(255,255,255,0.04),
-      0 48px 0 rgba(255,255,255,0.04);
-  }
-  .preview-title {
-    text-align: center; font-family: var(--serif); font-weight: 700;
-    font-size: 22px; letter-spacing: -0.022em; line-height: 1.25;
-    margin-bottom: 6px;
-  }
-  .preview-meta {
-    text-align: center; font-size: 12.5px; color: var(--muted);
-    margin-bottom: 18px;
-  }
-  .preview-stats {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-    padding: 16px 0;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    margin-bottom: 18px;
-  }
-  .preview-stats .s { text-align: center; }
-  .preview-stats .s .v {
-    font-family: var(--serif); font-weight: 600;
-    font-size: 18px; letter-spacing: -0.02em;
-  }
-  .preview-stats .s .k {
-    font-size: 10.5px; font-family: var(--mono);
-    letter-spacing: 0.16em; color: var(--muted); margin-top: 4px;
-  }
-
-  .preview-body {
-    font-family: var(--serif); font-size: 13.5px; line-height: 1.8;
-    color: rgba(232,238,255,0.85);
-    max-height: 200px; overflow: hidden;
-    position: relative;
-    padding: 4px 2px;
-  }
-  .preview-body.empty { color: var(--muted-2); font-style: italic; }
-  .preview-body.has-text::after {
-    content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 60px;
-    background: linear-gradient(transparent, #06091F 90%);
-    pointer-events: none;
-  }
+  /* preview — book-card는 reading-list.css에서 상속 */
+  .preview-card .book-card { pointer-events: none; margin-top: 0; }
 </style>
 </head>
 <body>
@@ -267,23 +207,16 @@
           <h2>라이브러리 미리보기</h2>
           <p class="desc">등록 후 라이브러리에서 이렇게 보입니다.</p>
 
-          <div class="preview-cover"></div>
-          <div class="preview-title" id="p-title">제목을 입력하세요</div>
-          <div class="preview-meta" id="p-meta">저자 · 장르</div>
-
-          <div class="preview-stats">
-            <div class="s">
-              <div class="v" id="p-words">0<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">자</span></div>
-              <div class="k">분량</div>
+          <div class="book-card">
+            <div class="book-card-top">
+              <span class="book-num">NEW</span>
+              <span class="book-level" id="p-level">—</span>
             </div>
-            <div class="s">
-              <div class="v" id="p-time">0<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">분</span></div>
-              <div class="k">예상</div>
-            </div>
-          </div>
-
-          <div class="preview-body empty" id="p-body">
-            본문을 입력하면 여기에 미리보기가 표시됩니다.
+            <div class="book-title" id="p-title">제목을 입력하세요</div>
+            <div class="book-genre" id="p-genre">장르 미지정</div>
+            <button class="book-card-btn" tabindex="-1">독서 시작 →</button>
+            <button class="book-card-btn-dev" tabindex="-1">개발자 모드로 시작</button>
+            <button class="book-card-btn-del" tabindex="-1">삭제</button>
           </div>
         </div>
 
@@ -307,10 +240,8 @@
   const content    = document.getElementById('content');
 
   const pTitle = document.getElementById('p-title');
-  const pMeta = document.getElementById('p-meta');
-  const pWords = document.getElementById('p-words');
-  const pTime = document.getElementById('p-time');
-  const pBody = document.getElementById('p-body');
+  const pGenre = document.getElementById('p-genre');
+  const pLevel = document.getElementById('p-level');
 
   const tCount = document.getElementById('title-count');
   const wCount = document.getElementById('word-count');
@@ -323,20 +254,10 @@
     const mins = Math.max(0, Math.round(wlen / 320));
 
     pTitle.textContent = t || '제목을 입력하세요';
-    const metaBits = [genre.value || '장르 미지정'].join(' · ');
-    pMeta.textContent = metaBits;
-    pWords.innerHTML = `${wlen}<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">자</span>`;
-    pTime.innerHTML = `${mins}<span style="font-size: 11px; color: var(--muted); margin-left: 3px;">분</span>`;
-
-    if (c.trim().length) {
-      pBody.classList.remove('empty');
-      pBody.classList.add('has-text');
-      pBody.textContent = c.slice(0, 280);
-    } else {
-      pBody.classList.add('empty');
-      pBody.classList.remove('has-text');
-      pBody.textContent = '본문을 입력하면 여기에 미리보기가 표시됩니다.';
-    }
+    pGenre.textContent = genre.value || '장르 미지정';
+    const diff = difficulty.value;
+    pLevel.textContent = diff || '—';
+    pLevel.className = diff ? `book-level lv-${diff}` : 'book-level';
 
     tCount.textContent = `${t.length} / 60`;
     wCount.textContent = `${wlen}자 · ${lines}줄 · 예상 ${mins}분`;

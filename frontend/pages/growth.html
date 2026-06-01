@@ -5,14 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>독서 아이트래킹 — 성장일지</title>
     <link rel="stylesheet" href="/static/base.css">
+    <link rel="stylesheet" href="/static/aurora-theme.css">
     <link rel="stylesheet" href="/static/growth.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/js/auth-guard.js"></script>
+    <style>
+        body { min-width: 0; }
+    </style>
 </head>
 <body>
+<div class="aurora-bg"><div class="aurora"></div></div>
 
     <nav class="top">
-      <div class="container" style="display:flex;align-items:center;justify-content:space-between;height:72px;">
+      <div class="container">
         <a class="brand" href="/">
           <div class="brand-mark">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -25,10 +30,10 @@
             <div class="brand-mono">EYE-TRACKING · READING</div>
           </div>
         </a>
-        <div class="nav-links">
+        <div class="nav-links" style="gap:24px;">
           <span class="navbar-user" id="navbar-user"></span>
-          <a id="back-to-list" href="/reading-list.html" class="btn btn-line">← 도서 목록</a>
-          <a href="/" class="btn btn-line" onclick="localStorage.clear();fetch('/api/webcam/stop',{method:'POST'})">로그아웃</a>
+          <a id="back-to-list" href="/reading-list.html" class="nav-link">← 도서 목록</a>
+          <a href="/" class="nav-link" onclick="localStorage.clear();fetch('/api/webcam/stop',{method:'POST'})">로그아웃</a>
         </div>
       </div>
     </nav>
@@ -36,6 +41,7 @@
     <div class="growth-wrap">
 
         <div class="growth-header">
+            <div class="growth-eyebrow">성장일지 · GROWTH JOURNAL</div>
             <h2 id="growth-title">성장일지</h2>
             <p id="growth-sub">최근 5회 독서 세션의 변화를 확인하세요</p>
         </div>
@@ -74,5 +80,16 @@
     </div>
 
     <script src="/static/js/growth.js"></script>
+    <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const el = document.getElementById('growth-title');
+        if (!el) return;
+        el.style.setProperty('display', 'inline-block', 'important');
+        el.style.setProperty('background', 'linear-gradient(135deg, #ffffff 0%, #3FB6FF 25%, #3FB6FF 52%, #a78bfa 65%, #e9b8f5 75%, #ffffff 92%)', 'important');
+        el.style.setProperty('-webkit-background-clip', 'text', 'important');
+        el.style.setProperty('-webkit-text-fill-color', 'transparent', 'important');
+        el.style.setProperty('background-clip', 'text', 'important');
+    });
+    </script>
 </body>
 </html>

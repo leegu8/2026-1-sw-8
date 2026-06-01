@@ -1,36 +1,53 @@
 .growth-wrap {
     max-width: 1000px;
-    margin: 40px auto;
-    padding: 0 24px 60px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
 }
 
 .growth-header {
-    margin-bottom: 28px;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.growth-eyebrow {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: rgba(63,182,255,0.65);
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+}
+.growth-eyebrow::before {
+    content: ""; width: 18px; height: 1px;
+    background: rgba(63,182,255,0.5);
 }
 
 .growth-header h2 {
-    font-size: 1.7rem;
+    font-size: 2.1rem;
     font-weight: 700;
-    color: #E8EEFF;
-    margin: 0 0 6px;
+    letter-spacing: -0.032em;
+    margin: 0 0 8px;
 }
 
 .growth-header p {
-    color: rgba(232,238,255,0.55);
+    color: rgba(232,238,255,0.45);
+    font-size: 0.9rem;
     margin: 0;
 }
 
 /* ── 출석 카드 ── */
 .attendance-card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,0.08);
-    padding: 20px 28px;
-    margin-bottom: 28px;
+    background: linear-gradient(140deg, rgba(10,22,55,0.88) 0%, rgba(6,9,28,0.92) 100%);
+    border-radius: 18px;
+    border: 1px solid rgba(255,197,107,0.15);
+    padding: 22px 30px;
+    margin-bottom: 24px;
     display: flex;
     align-items: center;
     gap: 32px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+    backdrop-filter: blur(18px);
 }
 
 .attendance-streak {
@@ -39,7 +56,7 @@
     gap: 6px;
 }
 
-.streak-fire { font-size: 1.8rem; }
+.streak-fire { font-size: 1.8rem; margin-right: 6px; }
 
 .streak-num {
     font-size: 2.2rem;
@@ -80,7 +97,7 @@
     height: 28px;
     border-radius: 50%;
     background: rgba(255,255,255,0.07);
-    border: 2px solid rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.12);
 }
 
 .attendance-dot.checked {
@@ -102,14 +119,20 @@
 }
 
 .session-card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.08);
-    padding: 16px 20px;
+    background: rgba(8, 14, 42, 0.82);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.09);
+    padding: 16px 22px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition: border-color 200ms;
+}
+.session-card:hover {
+    border-color: rgba(63,182,255,0.22);
 }
 
 .session-card-left {
@@ -171,17 +194,21 @@
 }
 
 .chart-card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,0.08);
-    padding: 20px 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    background: rgba(8, 14, 42, 0.82);
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.09);
+    padding: 22px 26px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+    backdrop-filter: blur(18px);
 }
 
 .chart-card h4 {
-    margin: 0 0 16px;
-    font-size: 0.95rem;
-    color: #E8EEFF;
+    margin: 0 0 18px;
+    font-size: 0.88rem;
+    font-family: "JetBrains Mono", monospace;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(232,238,255,0.5);
     font-weight: 600;
 }
 
@@ -195,12 +222,13 @@
 
 /* ── 성장 요약 카드 ── */
 .growth-summary-card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,0.08);
-    padding: 20px 28px;
-    margin-bottom: 28px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    background: rgba(8, 14, 42, 0.82);
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.09);
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+    backdrop-filter: blur(18px);
 }
 
 .summary-title {

@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>독서 아이트래킹 — 독서 목록</title>
     <link rel="stylesheet" href="/static/base.css">
+    <link rel="stylesheet" href="/static/aurora-theme.css">
     <link rel="stylesheet" href="/static/reading-list.css">
     <script src="/static/js/auth-guard.js"></script>
+    <style>body { min-width: 0; }</style>
 </head>
 <body>
+<div class="aurora-bg"><div class="aurora"></div></div>
 
     <nav class="top">
-      <div class="container" style="display:flex;align-items:center;justify-content:space-between;height:72px;">
+      <div class="container">
         <a class="brand" href="/">
           <div class="brand-mark">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -24,11 +27,11 @@
             <div class="brand-mono">EYE-TRACKING · READING</div>
           </div>
         </a>
-        <div class="nav-links">
+        <div class="nav-links" style="gap:24px;">
           <span class="navbar-user" id="navbar-user"></span>
-          <a href="/growth.html" class="btn btn-line">성장일지</a>
-          <a href="/guide.html" class="btn btn-line">가이드</a>
-          <a href="/" class="btn btn-line" onclick="localStorage.clear();fetch('/api/webcam/stop',{method:'POST'})">로그아웃</a>
+          <a href="/growth.html" class="nav-link">성장일지</a>
+          <a href="/guide.html" class="nav-link">가이드</a>
+          <a href="/" class="nav-link" onclick="localStorage.clear();fetch('/api/webcam/stop',{method:'POST'})">로그아웃</a>
         </div>
       </div>
     </nav>
@@ -37,6 +40,7 @@
 
         <div class="user-banner">
             <div class="user-banner-info">
+                <div class="user-banner-eyebrow">독서 아이트래킹 · READING</div>
                 <h2 id="banner-greeting">안녕하세요!</h2>
                 <p id="banner-level-desc"></p>
             </div>

@@ -109,8 +109,8 @@ function bookCardHTML(book, num, isCurriculum, isRead = false) {
             <div class="book-title">${book.title}</div>
             <div class="book-genre">${book.genre || ''}</div>
             <button class="book-card-btn" data-id="${book.id}">독서 시작 →</button>
-            <button class="book-card-btn-dev" data-id="${book.id}">🖱 개발자 모드로 시작</button>
-            <button class="book-card-btn-del" data-id="${book.id}">🗑 삭제</button>
+            <button class="book-card-btn-dev" data-id="${book.id}">개발자 모드로 시작</button>
+            <button class="book-card-btn-del" data-id="${book.id}">삭제</button>
         </div>
     `;
 }

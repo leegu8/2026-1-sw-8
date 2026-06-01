@@ -26,7 +26,7 @@
 }
 .brand-name {
     font-family: "Space Grotesk", "Pretendard", sans-serif;
-    font-weight: 700; font-size: 15px; letter-spacing: -0.02em; color: #E8EEFF;
+    font-weight: 700; font-size: 18px; letter-spacing: -0.02em; color: #E8EEFF;
 }
 .brand-mono {
     font-family: "JetBrains Mono", monospace;
@@ -250,7 +250,12 @@ html, body {
 }
 
 /* ── 성장일지 ── */
-.growth-header h2 { color: #E8EEFF !important; }
+.growth-header h2 {
+    background: linear-gradient(120deg, #3FB6FF, #B8DCFF 55%, #E8EEFF) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+}
 .growth-header p  { color: rgba(232,238,255,0.6) !important; }
 .growth-summary-card {
     background: rgba(8, 14, 42, 0.72) !important;
@@ -287,12 +292,12 @@ html, body {
 .dot-label { color: rgba(232,238,255,0.45) !important; }
 .attendance-dot {
     background: rgba(255,255,255,0.08) !important;
-    border-color: rgba(255,255,255,0.14) !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
 }
 .attendance-dot.checked {
-    background: linear-gradient(135deg, #e67e22, #f39c12) !important;
-    border-color: transparent !important;
-    box-shadow: 0 2px 8px rgba(243,156,18,0.4) !important;
+    background: linear-gradient(150deg, #ffd166 0%, #f39c12 45%, #d35400 100%) !important;
+    border: 1px solid rgba(255,213,102,0.5) !important;
+    box-shadow: 0 3px 10px rgba(243,156,18,0.45), inset 0 1px 0 rgba(255,255,255,0.25) !important;
 }
 .session-num {
     background: linear-gradient(135deg, #1E5BE0, #3FB6FF) !important;
@@ -371,24 +376,37 @@ html, body {
 .book-level.lv-고등 { background: rgba(155,89,182,0.14) !important; color: #c39bd3 !important; }
 
 .book-card-btn {
-    background: linear-gradient(135deg, #1E5BE0, #3FB6FF) !important;
-    box-shadow: 0 4px 14px rgba(63,182,255,0.25) !important;
+    background: rgba(63,182,255,0.16) !important;
+    border: 1px solid rgba(63,182,255,0.45) !important;
+    color: #7DD9FF !important;
+    box-shadow: none !important;
 }
-.book-card-btn:hover { filter: brightness(1.1) !important; }
+.book-card-btn:hover {
+    background: rgba(63,182,255,0.28) !important;
+    border-color: rgba(63,182,255,0.7) !important;
+    filter: none !important;
+}
 
 .book-card-btn-dev {
-    background: transparent !important;
-    border-color: rgba(167,139,250,0.45) !important;
-    color: #a78bfa !important;
+    background: rgba(167,139,250,0.16) !important;
+    border: 1px solid rgba(167,139,250,0.42) !important;
+    color: #c4b5fd !important;
 }
-.book-card-btn-dev:hover { background: rgba(167,139,250,0.1) !important; color: #a78bfa !important; }
+.book-card-btn-dev:hover {
+    background: rgba(167,139,250,0.28) !important;
+    border-color: rgba(167,139,250,0.65) !important;
+}
 
 .book-card-btn-del {
-    background: transparent !important;
-    border-color: rgba(231,76,60,0.45) !important;
-    color: #e74c3c !important;
+    background: rgba(255,118,118,0.13) !important;
+    border: 1px solid rgba(255,118,118,0.38) !important;
+    color: #fca5a5 !important;
 }
-.book-card-btn-del:hover { background: rgba(231,76,60,0.08) !important; color: #e74c3c !important; }
+.book-card-btn-del:hover {
+    background: rgba(255,118,118,0.25) !important;
+    border-color: rgba(255,118,118,0.62) !important;
+    color: #FF7676 !important;
+}
 
 .book-read-badge {
     background: rgba(46,204,113,0.12) !important;

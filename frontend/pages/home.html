@@ -264,8 +264,8 @@
   }
 
   /* ---------- Section ---------- */
-  section.bx { position: relative; padding: 120px 0; }
-  section.bx + section.bx { border-top: 1px solid var(--line); }
+  section.bx { position: relative; padding: 72px 0; }
+  section.bx + section.bx { border-top: none; }
   .sec-head { display: flex; flex-direction: column; gap: 16px; margin-bottom: 64px; max-width: 800px; }
   .sec-head h2 {
     font-family: "Space Grotesk", "Pretendard", sans-serif;
@@ -430,8 +430,6 @@
   /* ---------- CTA section ---------- */
   .cta-band {
     position: relative; padding: 96px 0;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
     overflow: hidden;
   }
   .cta-band .container {
@@ -509,6 +507,8 @@
   const signupBtn = document.getElementById('nav-signup');
   signupBtn.textContent = '로그아웃';
   signupBtn.href = '#';
+  signupBtn.className = 'nav-link';
+  signupBtn.style.marginLeft = '-14px';
   signupBtn.onclick = function(e) {
     e.preventDefault();
     localStorage.clear(); sessionStorage.clear();

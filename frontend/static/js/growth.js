@@ -1,7 +1,7 @@
-const userId = localStorage.getItem('user_id');
-const nick   = localStorage.getItem('user_nick') || '';
+const userId = localStorage.getItem('user_id') || sessionStorage.getItem('user_id');
+const nick   = localStorage.getItem('user_nick') || sessionStorage.getItem('user_nick') || '';
 
-document.getElementById('navbar-user').textContent = nick;
+if (nick) document.getElementById('navbar-user').innerHTML = `<span class="avatar">${nick[0]}</span>${nick}님`;
 if (nick) document.getElementById('growth-title').textContent = `${nick}의 성장일지`;
 if (userId === '100') document.getElementById('back-to-list').href = '/reading-list-admin.html';
 
