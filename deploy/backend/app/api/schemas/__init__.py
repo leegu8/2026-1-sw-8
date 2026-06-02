@@ -1,4 +1,3 @@
-from .gaze import CalibrationPoint, WebcamStartRequest
 from .db import (
     RegisterRequest, LoginRequest, AuthResponse,
     LevelHistoryResponse,
