@@ -1,0 +1,320 @@
+.growth-wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+}
+
+.growth-header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.growth-eyebrow {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: rgba(63,182,255,0.65);
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+}
+.growth-eyebrow::before {
+    content: ""; width: 18px; height: 1px;
+    background: rgba(63,182,255,0.5);
+}
+
+.growth-header h2 {
+    font-size: 2.1rem;
+    font-weight: 700;
+    letter-spacing: -0.032em;
+    margin: 0 0 8px;
+}
+
+.growth-header p {
+    color: rgba(232,238,255,0.45);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* ── 출석 카드 ── */
+.attendance-card {
+    background: linear-gradient(140deg, rgba(10,22,55,0.88) 0%, rgba(6,9,28,0.92) 100%);
+    border-radius: 18px;
+    border: 1px solid rgba(255,197,107,0.15);
+    padding: 22px 30px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+    backdrop-filter: blur(18px);
+}
+
+.attendance-streak {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.streak-fire { font-size: 1.8rem; margin-right: 6px; }
+
+.streak-num {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #FFC56B;
+    line-height: 1;
+}
+
+.streak-label {
+    font-size: 0.9rem;
+    color: rgba(232,238,255,0.5);
+    white-space: nowrap;
+}
+
+.attendance-total {
+    font-size: 0.9rem;
+    color: rgba(232,238,255,0.5);
+    white-space: nowrap;
+}
+
+.attendance-total strong { color: #E8EEFF; }
+
+.attendance-dots {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.attendance-dot-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.attendance-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+}
+
+.attendance-dot.checked {
+    background: rgba(255,197,107,0.35);
+    border-color: #FFC56B;
+}
+
+.dot-label {
+    font-size: 0.68rem;
+    color: rgba(232,238,255,0.4);
+}
+
+/* 세션 요약 카드 리스트 */
+.session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 36px;
+}
+
+.session-card {
+    background: rgba(8, 14, 42, 0.82);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.09);
+    padding: 16px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition: border-color 200ms;
+}
+.session-card:hover {
+    border-color: rgba(63,182,255,0.22);
+}
+
+.session-card-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.session-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1E5BE0, #3FB6FF);
+    color: #04102E;
+    font-size: 0.85rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.session-info h5 {
+    margin: 0 0 3px;
+    font-size: 0.97rem;
+    color: #E8EEFF;
+}
+
+.session-info p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: rgba(232,238,255,0.45);
+}
+
+.session-stats {
+    display: flex;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.stat-item { text-align: center; }
+
+.stat-item .val {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #E8EEFF;
+}
+
+.stat-item .lbl {
+    font-size: 0.72rem;
+    color: rgba(232,238,255,0.4);
+}
+
+/* 차트 그리드 */
+.chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.chart-card {
+    background: rgba(8, 14, 42, 0.82);
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.09);
+    padding: 22px 26px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+    backdrop-filter: blur(18px);
+}
+
+.chart-card h4 {
+    margin: 0 0 18px;
+    font-size: 0.88rem;
+    font-family: "JetBrains Mono", monospace;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(232,238,255,0.5);
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: rgba(232,238,255,0.4);
+    font-size: 1rem;
+    line-height: 1.8;
+}
+
+/* ── 성장 요약 카드 ── */
+.growth-summary-card {
+    background: rgba(8, 14, 42, 0.82);
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.09);
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+    backdrop-filter: blur(18px);
+}
+
+.summary-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: rgba(232,238,255,0.5);
+    letter-spacing: 0.04em;
+    margin-bottom: 14px;
+}
+
+.summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.summary-good    { background: rgba(110,231,166,0.1); border: 1px solid rgba(110,231,166,0.15); }
+.summary-bad     { background: rgba(255,197,107,0.1); border: 1px solid rgba(255,197,107,0.15); }
+.summary-neutral { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+
+.summary-icon { font-size: 1.05rem; flex-shrink: 0; }
+
+.summary-good    .summary-text { color: #6EE7A6; }
+.summary-bad     .summary-text { color: #FFC56B; }
+.summary-neutral .summary-text { color: rgba(232,238,255,0.7); }
+
+/* ── 직전 대비 델타 ── */
+.stat-delta {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-top: 1px;
+}
+
+/* ── 종합점수 추세 차트 (전폭) ── */
+.score-chart-card { margin-bottom: 20px; }
+
+/* ── 지표 선택 버튼 ── */
+.metric-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.metric-btn {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1.5px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: rgba(232,238,255,0.55);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.metric-btn:hover {
+    border-color: rgba(63,182,255,0.4);
+    color: #E8EEFF;
+}
+
+.metric-btn.active {
+    background: linear-gradient(135deg, #1E5BE0, #3FB6FF);
+    border-color: transparent;
+    color: #04102E;
+}
+
+/* ── 지표 기준 설명 ── */
+.metric-desc {
+    margin: -4px 0 12px;
+    font-size: 0.78rem;
+    color: rgba(232,238,255,0.4);
+}
+
+@media (max-width: 640px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    .session-stats { display: none; }
+}

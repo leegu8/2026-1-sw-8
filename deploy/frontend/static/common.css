@@ -1,0 +1,118 @@
+/* =============================================
+   common.css — 전 페이지 공통 스타일
+   ============================================= */
+
+html {
+    font-size: clamp(12px, 1.1vw, 16px);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: '맑은 고딕', 'Noto Sans KR', sans-serif;
+    background: #f5f7fa;
+    color: #2c3e50;
+    min-height: 100vh;
+}
+
+/* ── 내비게이션 바 ── */
+.navbar {
+    background: #2c3e50;
+    padding: 0 40px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.navbar-logo {
+    font-size: 1.15rem;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.navbar-link {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.navbar-link:hover { color: white; }
+
+/* ── 공통 버튼 ── */
+.btn {
+    padding: 8px 22px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    color: white;
+}
+
+.btn-outline:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: white;
+}
+
+.btn-blue {
+    background: #3498db;
+    border: 2px solid #3498db;
+    color: white;
+}
+
+.btn-blue:hover { background: #2980b9; border-color: #2980b9; }
+
+.btn-green {
+    background: #2ecc71;
+    border: 2px solid #2ecc71;
+    color: white;
+}
+
+.btn-green:hover { background: #27ae60; border-color: #27ae60; }
+
+.btn-large {
+    padding: 14px 36px;
+    border-radius: 10px;
+    font-size: 1.05rem;
+}
+
+.btn-large:hover { transform: translateY(-2px); }
+
+.btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ── 반응형 ── */
+@media (max-width: 700px) {
+    .navbar { padding: 0 1rem; }
+}

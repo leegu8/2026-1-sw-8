@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>독서 아이트래킹 · 로그인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+<style>
+  html, body { margin: 0; padding: 0; background: #04081C; }
+  .stage { min-height: 100vh; position: relative; overflow: hidden; }
+  .canvas {
+    width: 1000px; min-height: 100vh;
+    margin: 0 auto; position: relative;
+    display: flex; flex-direction: column;
+  }
+  body {
+    font-family: "Pretendard", -apple-system, system-ui, sans-serif;
+    color: #E8EEFF;
+    letter-spacing: -0.012em;
+    word-break: keep-all;
+    line-break: strict;
+    overflow-wrap: break-word;
+    -webkit-font-smoothing: antialiased;
+    min-width: 1000px;
+  }
+  h1, h2, h3, .head, .display { letter-spacing: -0.03em; }
+  * { box-sizing: border-box; }
+  input::placeholder { color: rgba(232,238,255,0.32); }
+  input, button, textarea { letter-spacing: inherit; }
+  a { color: inherit; }
+
+  .grad-text {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+  }
+
+  /* button hover/press */
+  .btn-primary { transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease; }
+  .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.08); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-ghost { transition: background 160ms ease, border-color 160ms ease; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.08) !important; }
+
+  /* gaze dot pulse */
+  @keyframes gaze-pulse {
+    0%, 100% { opacity: 0.85; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.6); }
+  }
+  .gaze-dot { animation: gaze-pulse 3.2s ease-in-out infinite; }
+
+  /* drift aurora softly */
+  @keyframes aurora-drift {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    50% { transform: translate(20px,-30px) scale(1.05); }
+  }
+  .aurora-layer { animation: aurora-drift 18s ease-in-out infinite; }
+
+  /* nav link */
+  .nav-link { color: rgba(232,238,255,0.7); text-decoration: none; transition: color 160ms; }
+  .nav-link:hover { color: #fff; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="/static/tweaks-panel.jsx"></script>
+
+<script type="text/babel">
+
+const TWEAKS = /*EDITMODE-BEGIN*/{
+  "primary": "#1E5BE0",
+  "accent": "#3FB6FF",
+  "headline": "오늘도",
+  "headlineGrad": "깊게 읽어요.",
+  "subtitle": "시선이 만든 독서 기록이 당신을 기다리고 있어요.",
+  "showStats": true,
+  "showDots": true
+}/*EDITMODE-END*/;
+
+const T = {
+  serif: '"Space Grotesk", "Pretendard", -apple-system, system-ui, sans-serif',
+  body: '"Pretendard", -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif',
+  mono: '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
+};
+
+function BrandMark({ accent, primary }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: 12,
+        background: `linear-gradient(135deg, ${primary}, ${accent})`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: `0 8px 24px ${primary}66`,
+      }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" strokeWidth="2" />
+          <circle cx="12" cy="12" r="3" fill="#04102E" />
+        </svg>
+      </div>
+      <div>
+        <div style={{ fontFamily: T.serif, fontWeight: 700, fontSize: 14, letterSpacing: '-0.02em' }}>독서 아이트래킹</div>
+        <div style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: '0.22em', color: 'rgba(232,238,255,0.5)', marginTop: 2 }}>
+          EYE-TRACKING · READING
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, type = 'text', placeholder, value, onChange, trailing, accent, autoFocus }) {
+  const [focused, setFocused] = React.useState(false);
+  return (
+    <label style={{ display: 'block' }}>
+      <div style={{
+        fontFamily: T.body, fontSize: 12, fontWeight: 500,
+        color: 'rgba(232,238,255,0.55)',
+        letterSpacing: '0.04em', marginBottom: 8, textTransform: 'uppercase',
+      }}>{label}</div>
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        background: 'rgba(255,255,255,0.04)',
+        border: focused ? `1px solid ${accent}` : '1px solid rgba(255,255,255,0.10)',
+        borderRadius: 12, padding: '0 16px', height: 52,
+        transition: 'border 160ms ease, box-shadow 160ms ease',
+        boxShadow: focused ? `0 0 0 4px ${accent}1F` : 'none',
+      }}>
+        <input
+          type={type} placeholder={placeholder} value={value} autoFocus={autoFocus}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          onChange={(e) => onChange?.(e.target.value)}
+          style={{
+            flex: 1, height: '100%', background: 'transparent', border: 'none', outline: 'none',
+            color: '#E8EEFF', fontFamily: T.body, fontSize: 15, fontWeight: 500,
+          }}
+        />
+        {trailing}
+      </div>
+    </label>
+  );
+}
+
+function EyeToggle({ on, onToggle }) {
+  return (
+    <button type="button" onClick={onToggle}
+      style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', color: 'rgba(232,238,255,0.55)' }}
+      aria-label="비밀번호 표시">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M2 12C4 7 7.5 4.5 12 4.5C16.5 4.5 20 7 22 12C20 17 16.5 19.5 12 19.5C7.5 19.5 4 17 2 12Z"
+          stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
+        {!on && <line x1="4" y1="20" x2="20" y2="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />}
+      </svg>
+    </button>
+  );
+}
+
+function LoginAurora() {
+  const [t, setTweak] = useTweaks(TWEAKS);
+  const [pw, setPw] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [showPw, setShowPw] = React.useState(false);
+  const [remember, setRemember] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleDevLogin = async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'admin@admin.com', password: 'admin1234' }),
+      });
+      if (!res.ok) { setError('개발자 계정 로그인 실패'); return; }
+      const user = await res.json();
+      localStorage.setItem('user_id', user.id);
+      localStorage.setItem('user_email', user.email);
+      localStorage.setItem('user_nick', user.nickname);
+      location.href = '/camera.html';
+    } catch {
+      setError('서버 연결 오류가 발생했습니다.');
+    } finally { setLoading(false); }
+  };
+
+  const handleLogin = async () => {
+    if (!email || !pw) { setError('이메일과 비밀번호를 입력해주세요.'); return; }
+    setLoading(true); setError('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pw }),
+      });
+      if (!res.ok) { setError('이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
+      const user = await res.json();
+      const store = remember ? localStorage : sessionStorage;
+      ['user_id','user_email','user_nick'].forEach(k => { localStorage.removeItem(k); sessionStorage.removeItem(k); });
+      store.setItem('user_id', user.id);
+      store.setItem('user_email', user.email);
+      store.setItem('user_nick', user.nickname);
+      fetch('/api/db/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id }),
+      }).catch(() => {});
+      location.href = '/camera.html';
+    } catch {
+      setError('서버 연결 오류가 발생했습니다.');
+    } finally { setLoading(false); }
+  };
+
+
+  const { accent, primary } = t;
+
+  return (
+    <React.Fragment>
+    <div className="stage">
+    <div className="canvas">
+    <div style={{
+      width: '100%', minHeight: '100vh', position: 'relative',
+      background: '#04081C', color: '#E8EEFF', fontFamily: T.body,
+    }}>
+      {/* aurora layer */}
+      <div className="aurora-layer" style={{
+        position: 'absolute', inset: '-10%',
+        background: `
+          radial-gradient(46% 38% at 15% 18%, ${accent}88 0%, transparent 70%),
+          radial-gradient(56% 48% at 85% 25%, ${primary}AA 0%, transparent 70%),
+          radial-gradient(50% 42% at 75% 80%, #765AFF55 0%, transparent 70%),
+          radial-gradient(40% 30% at 10% 85%, ${accent}66 0%, transparent 70%)
+        `,
+        filter: 'blur(24px)',
+      }} />
+      <svg style={{ position: 'absolute', inset: 0, opacity: 0.10, mixBlendMode: 'overlay', pointerEvents: 'none' }} width="100%" height="100%">
+        <filter id="noise"><feTurbulence baseFrequency="0.9" numOctaves="2" /></filter>
+        <rect width="100%" height="100%" filter="url(#noise)" />
+      </svg>
+
+      {/* floating gaze dots */}
+      {t.showDots && [
+        { l: '8%', t: '14%', s: 10, d: 0 },
+        { l: '23%', t: '7%', s: 4, d: 0.6 },
+        { l: '78%', t: '12%', s: 6, d: 1.2 },
+        { l: '92%', t: '40%', s: 12, d: 0.3 },
+        { l: '12%', t: '70%', s: 7, d: 1.8 },
+        { l: '85%', t: '80%', s: 5, d: 0.9 },
+        { l: '50%', t: '10%', s: 3, d: 2.1 },
+        { l: '38%', t: '90%', s: 8, d: 1.5 },
+        { l: '64%', t: '52%', s: 4, d: 0.4 },
+      ].map((d, i) => (
+        <div key={i} className="gaze-dot" style={{
+          position: 'absolute', left: d.l, top: d.t,
+          width: d.s, height: d.s, borderRadius: '50%',
+          background: accent, boxShadow: `0 0 24px ${accent}, 0 0 6px #fff`,
+          animationDelay: `${d.d}s`,
+        }} />
+      ))}
+
+      {/* top nav */}
+      <header style={{
+        position: 'relative', zIndex: 2, display: 'flex',
+        justifyContent: 'space-between', alignItems: 'center',
+        padding: '28px 56px',
+      }}>
+        <a href="/home.html" style={{ textDecoration: 'none' }}><BrandMark accent={accent} primary={primary} /></a>
+        <nav style={{ display: 'flex', gap: 28, alignItems: 'center', fontSize: 14 }}>
+          <a className="nav-link">제품 소개</a>
+          <a className="nav-link">요금</a>
+          <a className="nav-link">도움말</a>
+          <a href="/signup.html" style={{ color: accent, textDecoration: 'none', fontWeight: 600 }}>회원가입 →</a>
+        </nav>
+      </header>
+
+      {/* main grid */}
+      <main style={{
+        position: 'relative', zIndex: 2,
+        display: 'grid', gridTemplateColumns: '1fr 1fr',
+        padding: '8px 40px 48px', gap: 40, alignItems: 'center',
+        flex: 1,
+        maxWidth: 1640, margin: '0 auto',
+      }}>
+        {/* headline */}
+        <section>
+          <div style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: '0.3em', color: accent, marginBottom: 22, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ width: 24, height: 1, background: accent }} />
+            EYE-TRACKING · READING ANALYTICS
+          </div>
+          <h1 className="display" style={{
+            margin: 0,
+            fontFamily: T.serif, fontWeight: 700, fontSize: 76, lineHeight: 1.02,
+          }}>
+            {t.headline}<br/>
+            <span className="grad-text" style={{ backgroundImage: `linear-gradient(120deg, ${accent}, #B8DCFF 60%, #fff)` }}>
+              {t.headlineGrad}
+            </span>
+          </h1>
+          <p style={{ fontSize: 16.5, color: 'rgba(232,238,255,0.7)', marginTop: 22, lineHeight: 1.65, maxWidth: 480 }}>
+            {t.subtitle}<br/>다시 만나서 반가워요.
+          </p>
+
+          {t.showStats && (
+            <div style={{ display: 'flex', gap: 44, marginTop: 48 }}>
+              {[
+                { k: '평균 집중도', v: '87', u: '%' },
+                { k: '주간 역행', v: '12', u: '회' },
+                { k: '읽은 글', v: '46', u: '편' },
+              ].map((s) => (
+                <div key={s.k}>
+                  <div style={{ fontFamily: T.serif, fontWeight: 600, fontSize: 40, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    {s.v}
+                    <span style={{ fontSize: 16, marginLeft: 4, color: 'rgba(232,238,255,0.55)' }}>{s.u}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(232,238,255,0.55)', marginTop: 6, letterSpacing: '0.05em' }}>{s.k}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* form card */}
+        <section style={{
+          padding: 36, borderRadius: 28,
+          background: 'rgba(8,16,40,0.55)',
+          border: '1px solid rgba(255,255,255,0.10)',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)',
+          maxWidth: 400, justifySelf: 'end', width: '100%',
+        }}>
+          <div style={{ fontFamily: T.serif, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}>
+            계정으로 로그인
+          </div>
+          <div style={{ fontSize: 14, color: 'rgba(232,238,255,0.6)', marginTop: 6 }}>
+            계정이 없으신가요? <a href="/signup.html" style={{ color: accent, textDecoration: 'none', fontWeight: 600 }}>회원가입</a>
+          </div>
+
+          <div style={{ display: 'grid', gap: 14, marginTop: 26 }}>
+            <Field label="이메일" placeholder="you@example.com" value={email} onChange={setEmail} accent={accent} autoFocus />
+            <Field
+              label="비밀번호"
+              type={showPw ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={pw} onChange={setPw}
+              accent={accent}
+              trailing={<EyeToggle on={showPw} onToggle={() => setShowPw(!showPw)} />}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, fontSize: 13 }}>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', color: 'rgba(232,238,255,0.7)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} style={{ accentColor: accent, width: 15, height: 15 }} />
+              자동 로그인
+            </label>
+            <a style={{ color: accent, textDecoration: 'none', fontWeight: 500 }}>비밀번호 찾기</a>
+          </div>
+
+          {error && (
+            <div style={{ marginTop: 14, fontSize: 13, color: '#FF9494', display: 'flex', gap: 6, alignItems: 'center' }}>
+              <svg width="13" height="13" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.5" stroke="currentColor" /><path d="M6 3v3.5M6 8.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+              {error}
+            </div>
+          )}
+
+          <button className="btn-primary" onClick={handleLogin} disabled={loading} style={{
+            marginTop: 22, width: '100%', height: 56, borderRadius: 14, border: 'none',
+            background: `linear-gradient(135deg, ${accent} 0%, ${primary} 100%)`,
+            color: '#04102E', fontSize: 16, fontWeight: 700, fontFamily: T.body,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.7 : 1,
+            boxShadow: `0 14px 32px ${primary}80, inset 0 1px 0 rgba(255,255,255,0.5)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          }}>
+            {loading ? '로그인 중...' : '로그인하고 이어 읽기'}
+            {!loading && <svg width="18" height="18" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+          </button>
+
+          {/* DEV: 임시 개발자 로그인 버튼 */}
+          <button className="btn-ghost" onClick={handleDevLogin} disabled={loading} style={{
+            marginTop: 10, width: '100%', height: 38, borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer',
+            background: 'rgba(167,139,250,0.08)', border: '1px dashed rgba(167,139,250,0.35)',
+            color: '#a78bfa', fontSize: 12.5, fontWeight: 500, fontFamily: T.body, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', gap: 7, opacity: loading ? 0.6 : 1,
+          }}>
+            <span style={{ fontSize: 10, background: 'rgba(167,139,250,0.25)', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.06em', fontWeight: 700 }}>DEV</span>
+            개발자 모드로 로그인
+          </button>
+
+          <div style={{
+            marginTop: 14, paddingTop: 14, borderTop: '1px dashed rgba(255,255,255,0.08)',
+            fontSize: 12, color: 'rgba(232,238,255,0.45)', letterSpacing: '0.02em', lineHeight: 1.5,
+          }}>
+            로그인하면 <a style={{ color: accent, textDecoration: 'none' }}>이용약관</a>과{' '}
+            <a style={{ color: accent, textDecoration: 'none' }}>개인정보처리방침</a>에 동의하는 것으로 간주됩니다.
+          </div>
+        </section>
+      </main>
+
+    </div>
+    </div>
+    </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Theme">
+          <TweakColor label="Primary" value={t.primary} onChange={(v) => setTweak('primary', v)}
+            options={['#3D7BFF', '#1E5BE0', '#5B7CFF', '#2E66FF']} />
+          <TweakColor label="Accent" value={t.accent} onChange={(v) => setTweak('accent', v)}
+            options={['#5EC8FF', '#7DD9FF', '#3FB6FF', '#9BE0FF']} />
+        </TweakSection>
+        <TweakSection label="Copy">
+          <TweakText label="헤드라인 1" value={t.headline} onChange={(v) => setTweak('headline', v)} />
+          <TweakText label="헤드라인 2 (그라데이션)" value={t.headlineGrad} onChange={(v) => setTweak('headlineGrad', v)} />
+          <TweakText label="서브타이틀" value={t.subtitle} onChange={(v) => setTweak('subtitle', v)} />
+        </TweakSection>
+        <TweakSection label="Decor">
+          <TweakToggle label="통계 스트립" value={t.showStats} onChange={(v) => setTweak('showStats', v)} />
+          <TweakToggle label="시선 점 배경" value={t.showDots} onChange={(v) => setTweak('showDots', v)} />
+        </TweakSection>
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<LoginAurora />);
+</script>
+
+</body>
+</html>

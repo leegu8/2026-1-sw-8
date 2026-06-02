@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서 성장 리포트 - 독서 아이트래킹</title>
+    <link rel="stylesheet" href="/static/base.css">
+    <script src="/static/js/auth-guard.js"></script>
+    <style>
+        .page { position: relative; min-height: 100vh; }
+        main  { position: relative; z-index: 1; padding: 40px 0 80px; }
+        .aurora-bg { position: fixed; inset: 0; pointer-events: none; opacity: 0.4; }
+        .result-wrap { max-width: 900px; margin: 0 auto; padding: 0 40px; }
+        .result-head { margin-bottom: 28px; }
+        .result-head h2 { font-size: 1.8rem; margin-bottom: 6px; color: var(--ink); }
+        .result-head p  { color: var(--muted); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+<div class="page">
+  <div class="aurora-bg"><div class="aurora"></div></div>
+
+  <nav class="top">
+    <div class="container">
+      <a class="brand" href="/">
+        <div class="brand-mark">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2"/>
+            <circle cx="12" cy="12" r="3" fill="#04102E"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">독서 아이트래킹</div>
+          <div class="brand-mono">EYE-TRACKING · READING</div>
+        </div>
+      </a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="result-wrap">
+      <div class="result-head">
+        <h2>📊 독서 성장 리포트</h2>
+        <p>시선 추적 정확도의 한계로 인해 수치는 참고용입니다.</p>
+      </div>
+      <div id="result-metrics"></div>
+      <div id="result-feedback"></div>
+      <div id="cta-buttons" style="text-align:center; margin-top:32px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+        <button class="btn btn-line" onclick="goToBookList()">다른 도서 읽기</button>
+        <button class="btn btn-primary" onclick="goToGrowth()">성장일지 확인하기</button>
+      </div>
+      <script>
+      function goToBookList() {
+          const isDev = localStorage.getItem('user_id') === '100';
+          location.href = isDev ? '/reading-list-admin.html' : '/reading-list.html';
+      }
+      function goToGrowth() { location.href = '/growth.html'; }
+      </script>
+    </div>
+  </main>
+</div>
+
+<script>
+(async () => {
+const sessionId = new URLSearchParams(location.search).get('session_id');
+
+const CARD = `background:rgba(255,255,255,0.04);border-radius:16px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 24px rgba(0,0,0,0.35)`;
+const CARD_SM = `background:rgba(255,255,255,0.04);border-radius:14px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 20px rgba(0,0,0,0.3)`;
+
+function showNoData() {
+    document.getElementById('cta-buttons').style.display = 'none';
+    document.getElementById('result-metrics').innerHTML = `
+        <div style="${CARD};padding:48px 32px;margin-bottom:20px;text-align:center;">
+            <div style="font-size:2.4rem;margin-bottom:16px;">📖</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#E8EEFF;margin-bottom:10px;">
+                리포트를 생성하기에 데이터가 부족해요
+            </div>
+            <div style="font-size:0.92rem;color:rgba(232,238,255,0.5);line-height:1.8;margin-bottom:28px;">
+                처음부터 끝까지 완독하면 집중도·역행비율·WPM 등<br>
+                정밀한 독서 성장 리포트를 받을 수 있어요.
+            </div>
+            <button class="btn btn-line" onclick="history.back()" style="font-size:0.95rem;">
+                다시 읽기
+            </button>
+        </div>`;
+}
+
+if (!sessionId) { showNoData(); return; }
+
+const resultRes = await fetch(`/api/db/sessions/${sessionId}/result`);
+if (!resultRes.ok) { showNoData(); return; }
+
+const data = await resultRes.json();
+
+const totalSec   = data.total_duration_sec || 0;
+const focusRate  = data.summary.concentration_score != null ? Math.round(data.summary.concentration_score) : -1;
+const regRate    = data.summary.regression_ratio    != null ? Math.round(data.summary.regression_ratio)    : -1;
+const wpm        = Math.round(data.summary.wpm || 0);
+const linesdone  = data.visited_lines ?? 0;
+const totallines = data.total_lines   ?? 1;
+const wordCount  = data.word_count    ?? 0;
+
+if (focusRate === -1) { showNoData(); return; }
+
+{
+    function calcFocusScore(rate) {
+        if (rate >= 80) return Math.min(100, Math.round(90 + (rate - 80) * 0.5));
+        if (rate >= 65) return Math.round(70 + (rate - 65) * (20 / 15));
+        if (rate >= 50) return Math.round(50 + (rate - 50) * (20 / 15));
+        return Math.round(rate / 50 * 50);
+    }
+    function calcRegScore(rate) {
+        if (rate <= 5)  return Math.min(100, Math.round(90 + (5 - rate) * 2));
+        if (rate <= 15) return Math.round(70 + (15 - rate) * 2);
+        if (rate <= 25) return Math.round(40 + (25 - rate) * 3);
+        if (rate <= 40) return Math.round(20 + (40 - rate) * (20 / 15));
+        return Math.max(0, Math.round(20 - (rate - 40)));
+    }
+    function calcWpmScore(w) {
+        if (w > 800)  return 10;
+        if (w > 500)  return Math.round(40 - (w - 500) * (25 / 300));
+        if (w > 350)  return Math.round(65 - (w - 350) * (25 / 150));
+        if (w > 250)  return Math.round(85 - (w - 250) * (20 / 100));
+        if (w >= 160) return Math.round(90 + (w - 160) * (10 / 90));
+        if (w >= 80)  return Math.round(60 + (w - 80)  * (30 / 80));
+        if (w >= 40)  return Math.round(20 + (w - 40)  * (40 / 40));
+        return Math.max(0, Math.round(w / 40 * 20));
+    }
+    function calcDepthScore(done, total) {
+        if (total <= 0) return 0;
+        return Math.round(done / total * 100);
+    }
+    function calcTimeScore(sec, wc) {
+        if (!wc || wc === 0) {
+            if (sec >= 120) return Math.min(100, Math.round(90 + (sec - 120) / 60 * 10));
+            if (sec >= 60)  return Math.round(60 + (sec - 60) / 60 * 30);
+            if (sec >= 20)  return Math.round(20 + (sec - 20) / 40 * 40);
+            return Math.max(0, Math.round(sec / 20 * 20));
+        }
+        const t1    = wc / 500 * 60;
+        const t2    = wc / 400 * 60;
+        const tPeak = wc / 350 * 60;
+        const t3    = wc / 270 * 60;
+        const t4    = wc / 200 * 60;
+        const t5    = wc / 125 * 60;
+        if (sec < t1)    return 10;
+        if (sec < t2)    return Math.round(10  + (sec - t1)    / (t2 - t1)    * 50);
+        if (sec < tPeak) return Math.round(60  + (sec - t2)    / (tPeak - t2) * 40);
+        if (sec < t3)    return Math.round(100 - (sec - tPeak) / (t3 - tPeak) * 15);
+        if (sec < t4)    return Math.round(85  - (sec - t3)    / (t4 - t3)    * 20);
+        if (sec < t5)    return Math.round(65  - (sec - t4)    / (t5 - t4)    * 35);
+        return Math.max(0, Math.round(30 - (sec - t5) / t5 * 30));
+    }
+
+    const focusScore = calcFocusScore(focusRate);
+    const regScore   = calcRegScore(regRate);
+    const wpmScore   = calcWpmScore(wpm);
+    const depthScore = calcDepthScore(linesdone, totallines);
+    const timeScore  = calcTimeScore(totalSec, wordCount);
+
+    const composite = Math.round(
+        focusScore * 0.30 +
+        regScore   * 0.25 +
+        wpmScore   * 0.20 +
+        depthScore * 0.15 +
+        timeScore  * 0.10
+    );
+
+    if (sessionId) {
+        fetch(`/api/db/sessions/${sessionId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ score: composite }),
+        }).catch(() => {});
+    }
+
+    const grade =
+        composite >= 90 ? { msg: '훌륭한 독서 습관이에요!',           color: '#6EE7A6', icon: '🌟' } :
+        composite >= 75 ? { msg: '집중력 있게 읽었어요!',               color: '#3FB6FF', icon: '👏' } :
+        composite >= 60 ? { msg: '꾸준히 연습하면 더 나아질 거예요',    color: '#FFC56B', icon: '💪' } :
+                          { msg: '독서 환경을 개선해보세요',             color: '#FF7676', icon: '📚' };
+
+    function drawRadar(scores, labels) {
+        const cx = 130, cy = 130, r = 85, n = scores.length;
+        const ang = i => (i / n) * 2 * Math.PI - Math.PI / 2;
+        const pt  = (i, rad) => [cx + rad * Math.cos(ang(i)), cy + rad * Math.sin(ang(i))];
+
+        const grid = [1, 2, 3, 4].map(lvl => {
+            const pts = Array.from({length:n}, (_, i) => pt(i, r * lvl / 4).join(',')).join(' ');
+            return `<polygon points="${pts}" fill="${lvl===4?'rgba(255,255,255,0.03)':'none'}" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+        }).join('');
+
+        const axes = Array.from({length:n}, (_, i) => {
+            const [x, y] = pt(i, r);
+            return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;
+        }).join('');
+
+        const poly = scores.map((s, i) => pt(i, r * s / 100).join(',')).join(' ');
+
+        const dots = scores.map((s, i) => {
+            const [x, y] = pt(i, r * s / 100);
+            return `<circle cx="${x}" cy="${y}" r="4" fill="#3FB6FF" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>`;
+        }).join('');
+
+        const lbls = labels.map((l, i) => {
+            const [x, y] = pt(i, r + 26);
+            return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle"
+                font-size="10.5" fill="rgba(232,238,255,0.65)" font-family="'맑은 고딕',sans-serif">${l}</text>`;
+        }).join('');
+
+        return `<svg viewBox="0 0 260 260" width="240" height="240" style="display:block;margin:0 auto;">
+            ${grid}${axes}
+            <polygon points="${poly}" fill="rgba(63,182,255,0.18)" stroke="#3FB6FF" stroke-width="2.5"/>
+            ${dots}${lbls}
+        </svg>`;
+    }
+
+    function barColor(s) {
+        return s >= 75 ? '#6EE7A6' : s >= 50 ? '#FFC56B' : '#FF7676';
+    }
+
+    function metricBar(icon, label, criterion, score, detail) {
+        return `
+        <div style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">
+                <div>
+                    <span style="font-size:0.9rem;color:#E8EEFF;font-weight:600;">${icon} ${label}</span>
+                    <span style="font-size:0.75rem;color:rgba(232,238,255,0.4);margin-left:6px;">${criterion}</span>
+                </div>
+                <span style="font-size:0.88rem;font-weight:bold;color:${barColor(score)};">
+                    ${detail}
+                </span>
+            </div>
+            <div style="background:rgba(255,255,255,0.1);border-radius:6px;height:9px;overflow:hidden;">
+                <div style="width:${score}%;height:100%;background:${barColor(score)};
+                    border-radius:6px;transition:width 0.9s ease;"></div>
+            </div>
+            <div style="text-align:right;font-size:0.75rem;color:rgba(232,238,255,0.3);margin-top:2px;">${score}점</div>
+        </div>`;
+    }
+
+    const minuteStr = totalSec >= 60
+        ? `${Math.floor(totalSec / 60)}분 ${totalSec % 60}초`
+        : `${totalSec}초`;
+
+    function secToStr(s) {
+        s = Math.round(s);
+        return s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초` : `${s}초`;
+    }
+    const timeCriterion = wordCount > 0
+        ? `적정 ${secToStr(wordCount / 400 * 60)}~${secToStr(wordCount / 270 * 60)}`
+        : '≥2분→우수';
+
+    document.getElementById('result-metrics').innerHTML = `
+        <div style="${CARD};padding:28px 32px;margin-bottom:20px;text-align:center;">
+            <div style="font-size:0.85rem;color:rgba(232,238,255,0.45);margin-bottom:6px;letter-spacing:0.05em;">
+                종합 독서 성장 지수
+            </div>
+            <div style="font-size:3.8rem;font-weight:bold;color:${grade.color};line-height:1.1;">
+                ${composite}
+                <span style="font-size:1.4rem;color:rgba(232,238,255,0.25);">/ 100</span>
+            </div>
+            <div style="font-size:1rem;color:rgba(232,238,255,0.75);margin-top:10px;">${grade.icon} ${grade.msg}</div>
+            <div style="font-size:0.85rem;color:rgba(232,238,255,0.35);margin-top:6px;">총 독서 시간 ${minuteStr}</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+            <div style="${CARD_SM};padding:24px;">
+                <div style="font-size:0.8rem;color:rgba(232,238,255,0.45);margin-bottom:12px;text-align:center;letter-spacing:0.05em;">패턴 분석</div>
+                ${drawRadar(
+                    [timeScore, depthScore, focusScore, regScore, wpmScore],
+                    ['독서시간', '완독률', '집중도', '역행비율', 'WPM']
+                )}
+            </div>
+            <div style="${CARD_SM};padding:24px;">
+                <div style="font-size:0.8rem;color:rgba(232,238,255,0.45);margin-bottom:16px;letter-spacing:0.05em;">지표별 상세</div>
+                ${metricBar('⏱', '독서시간', timeCriterion, timeScore, minuteStr)}
+                ${metricBar('✅', '완독률', '줄 단위 방문 판정', depthScore, `${linesdone}/${totallines}줄`)}
+                ${metricBar('👁', '집중도', '≥80%→우수', focusScore, `${focusRate}%`)}
+                ${metricBar('↩', '역행비율', '≤5%→우수', regScore, `${regRate}%`)}
+                ${metricBar('📖', 'WPM', '80-250WPM 구간별', wpmScore, `${wpm} WPM`)}
+            </div>
+        </div>`;
+
+    const goods = [], improvements = [];
+
+    localStorage.removeItem('last_time_issue');
+    if (timeScore >= 75) {
+        goods.push(`${minuteStr} 동안 꾸준히 읽었습니다.`);
+    } else if (wordCount > 0) {
+        const tFastLimit = wordCount / 400 * 60;
+        const tSlowLimit = wordCount / 270 * 60;
+        if (totalSec < tFastLimit) {
+            improvements.push(`독서 속도가 너무 빠릅니다(${minuteStr}). 내용을 충분히 소화하며 읽어보세요.`);
+            localStorage.setItem('last_time_issue', 'fast');
+        } else if (totalSec > tSlowLimit) {
+            improvements.push(`독서 시간이 길었어요(${minuteStr}). 집중력을 유지하며 읽어보세요.`);
+            localStorage.setItem('last_time_issue', 'slow');
+        }
+    } else if (totalSec < 60) {
+        improvements.push('독서 시간이 너무 짧아요. 충분히 읽은 후 완료 버튼을 눌러주세요.');
+    }
+
+    if (depthScore >= 90)
+        goods.push(`전체 ${totallines}줄을 모두 읽었습니다.`);
+    else if (depthScore < 60)
+        improvements.push(`${totallines}줄 중 ${linesdone}줄만 방문했어요. 후반부 집중력을 높여보세요.`);
+
+    if (focusScore >= 75) {
+        if (wpm > 250) {
+            improvements.push(`집중도(${focusRate}%)는 높지만 독서 속도(${wpm} WPM)가 너무 빠릅니다. 내용을 충분히 소화하며 읽고 있는지 확인해보세요.`);
+        } else if (depthScore < 60) {
+            improvements.push(`집중도(${focusRate}%)는 양호하지만 전체 ${totallines}줄 중 ${linesdone}줄만 읽었어요. 끝까지 읽는 습관을 들여보세요.`);
+        } else {
+            goods.push('텍스트에 잘 집중하며 읽었습니다.');
+        }
+    } else if (focusScore >= 50) {
+        improvements.push('가끔 시선이 텍스트 밖으로 벗어났어요. 화면 중앙을 의식해보세요.');
+    } else {
+        improvements.push('시선이 자주 벗어났어요. 독서 환경을 조용히 만들어보세요.');
+    }
+
+    if (regScore >= 75)
+        goods.push(`역행 비율이 낮아(${regRate}%) 읽기 흐름이 좋습니다.`);
+    else if (regScore >= 50)
+        improvements.push(`역행이 다소 있었어요(${regRate}%). 읽기 전 전체 구조를 파악하면 도움이 됩니다.`);
+    else
+        improvements.push(`역행 비율이 높아요(${regRate}%). 한 번에 이해하려 집중하는 연습을 해보세요.`);
+
+    if (wpm <= 250 && wpmScore >= 75)
+        goods.push(`독서 속도(${wpm} WPM)가 적정 범위입니다.`);
+    else if (wpm > 0 && wpm <= 250 && wpmScore < 40)
+        improvements.push('독서 속도가 느린 편이에요. 어절 단위로 묶어 읽는 연습을 해보세요.');
+
+    const maxRe = localStorage.getItem('max_rereadings_30s');
+    if (maxRe !== null) {
+        goods.push(`30초 동안 재독 최대 횟수는 ${parseInt(maxRe)}번입니다.`);
+        localStorage.removeItem('max_rereadings_30s');
+    }
+
+    if (improvements.length > 0)
+        localStorage.setItem('last_improvements', JSON.stringify(improvements));
+    else
+        localStorage.removeItem('last_improvements');
+
+    document.getElementById('result-feedback').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="${CARD_SM.replace('border-radius:14px','border-radius:12px')};padding:20px;border-color:rgba(110,231,166,0.2);">
+                <div style="font-weight:bold;color:#6EE7A6;margin-bottom:10px;font-size:0.95rem;">
+                    ✅ 잘하고 있어요
+                </div>
+                ${goods.length > 0
+                    ? goods.map(g =>
+                        `<p style="font-size:0.88rem;color:rgba(232,238,255,0.75);margin-bottom:7px;line-height:1.6;">· ${g}</p>`
+                      ).join('')
+                    : '<p style="font-size:0.88rem;color:rgba(232,238,255,0.35);">계속 연습해보세요!</p>'}
+            </div>
+            <div style="${CARD_SM.replace('border-radius:14px','border-radius:12px')};padding:20px;border-color:rgba(255,197,107,0.2);">
+                <div style="font-weight:bold;color:#FFC56B;margin-bottom:10px;font-size:0.95rem;">
+                    ⚠️ 개선 포인트
+                </div>
+                ${improvements.length > 0
+                    ? improvements.map(i =>
+                        `<p style="font-size:0.88rem;color:rgba(232,238,255,0.75);margin-bottom:7px;line-height:1.6;">· ${i}</p>`
+                      ).join('')
+                    : '<p style="font-size:0.88rem;color:rgba(232,238,255,0.35);">이번 세션은 완벽해요!</p>'}
+            </div>
+        </div>`;
+}
+})();
+</script>
+</body>
+</html>

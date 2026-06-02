@@ -8,7 +8,6 @@ from .config import MODEL_PATH, MODEL_PATH_LEGACY, MODEL_URL
 def ensure_model() -> None:
     if os.path.exists(MODEL_PATH):
         return
-    # 기존 레거시 경로(한국어 포함)에 파일이 있으면 복사
     if os.path.exists(MODEL_PATH_LEGACY):
         import shutil
         print("모델 파일을 ASCII 경로로 복사 중...")

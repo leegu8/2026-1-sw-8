@@ -1,0 +1,255 @@
+/* ── 전체 레이아웃 ── */
+.library-wrap {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+}
+
+/* ── 유저 배너 ── */
+.user-banner {
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2rem 2.5rem; margin-bottom: 2.25rem;
+    border-radius: 24px;
+    background: rgba(8, 14, 42, 0.97);
+    border: 1px solid rgba(63,182,255,0.18);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07);
+    backdrop-filter: blur(24px);
+}
+
+.user-banner-eyebrow {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: rgba(63,182,255,0.65);
+    display: inline-flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+}
+.user-banner-eyebrow::before {
+    content: ""; width: 18px; height: 1px;
+    background: rgba(63,182,255,0.5);
+}
+
+.user-banner-info h2 {
+    font-size: 1.75rem; font-weight: 700;
+    letter-spacing: -0.03em; line-height: 1.15;
+    background: linear-gradient(120deg, #3FB6FF, #B8DCFF 55%, #E8EEFF);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 7px;
+}
+.user-banner-info p { font-size: 13px; color: rgba(232,238,255,0.45); line-height: 1.55; }
+
+.level-badge {
+    padding: 11px 24px; border-radius: 999px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em;
+    white-space: nowrap; flex-shrink: 0;
+}
+.level-badge.lv-초등 { background: rgba(110,231,166,0.12); color: #6EE7A6; border: 1px solid rgba(110,231,166,0.30); }
+.level-badge.lv-중등 { background: rgba(63,182,255,0.12);  color: #3FB6FF; border: 1px solid rgba(63,182,255,0.30); }
+.level-badge.lv-고등 { background: rgba(167,139,250,0.12); color: #a78bfa; border: 1px solid rgba(167,139,250,0.30); }
+
+/* ── 탭 ── */
+.tab-bar {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    margin-bottom: 2rem;
+}
+
+.tab-btn {
+    padding: 11px 22px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(232,238,255,0.38);
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+    transition: color 0.18s, border-color 0.18s;
+}
+.tab-btn:hover  { color: rgba(232,238,255,0.75); }
+.tab-btn.active { color: #3FB6FF; border-bottom-color: #3FB6FF; }
+
+/* ── 섹션 헤더 ── */
+.section-header { margin-bottom: 22px; }
+.section-header h3 {
+    font-size: 0.78rem; font-weight: 600; letter-spacing: 0.18em;
+    text-transform: uppercase; color: rgba(232,238,255,0.35);
+    font-family: "JetBrains Mono", monospace;
+    margin-bottom: 0;
+}
+.section-header p  { font-size: 0.85rem; color: rgba(232,238,255,0.4); margin-top: 6px; }
+
+.filter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+.filter-group { display: flex; gap: 6px; }
+
+.filter-btn {
+    padding: 5px 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(232,238,255,0.5);
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.filter-btn:hover  { border-color: rgba(63,182,255,0.4); color: #E8EEFF; }
+.filter-btn.active {
+    border-color: #3FB6FF; color: #3FB6FF;
+    background: rgba(63,182,255,0.1);
+}
+
+/* ── 도서 그리드 ── */
+.book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
+}
+
+/* ── 도서 카드 ── */
+.book-card {
+    padding: 22px;
+    border-radius: 16px;
+    background: rgba(8, 14, 42, 0.92);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.06);
+    backdrop-filter: blur(18px);
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column; gap: 0;
+    transition: border-color 220ms, transform 220ms, box-shadow 220ms;
+}
+.book-card:hover {
+    border-color: rgba(63,182,255,0.38);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.48), 0 0 0 1px rgba(63,182,255,0.12);
+}
+.book-card.curriculum {
+    border-color: rgba(63,182,255,0.22);
+    background: linear-gradient(180deg, rgba(63,182,255,0.05), rgba(255,255,255,0.01));
+}
+.book-card.read { opacity: 0.7; }
+
+.book-card-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.book-num {
+    font-size: 10px; letter-spacing: 0.16em;
+    color: rgba(232,238,255,0.35);
+    font-family: "JetBrains Mono", monospace;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 2px 7px; border-radius: 4px;
+}
+
+.book-read-badge {
+    font-size: 11px; color: #6EE7A6;
+    display: inline-flex; align-items: center; gap: 3px;
+}
+
+.book-level {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    padding: 3px 10px; border-radius: 20px;
+    margin-left: auto;
+}
+.book-level.lv-초등 { background: rgba(110,231,166,0.12); color: #6EE7A6; }
+.book-level.lv-중등 { background: rgba(63,182,255,0.12);  color: #3FB6FF; }
+.book-level.lv-고등 { background: rgba(167,139,250,0.12); color: #a78bfa; }
+
+.book-title {
+    font-size: 1rem; font-weight: 700; color: #E8EEFF;
+    line-height: 1.4; letter-spacing: -0.02em;
+    margin-bottom: 6px;
+}
+.book-genre {
+    font-size: 12px; color: rgba(232,238,255,0.4);
+    margin-bottom: 16px; flex: 1;
+}
+
+/* ── 카드 버튼 ── */
+.book-card-btn {
+    width: 100%;
+    padding: 9px 0;
+    border-radius: 10px;
+    background: rgba(63,182,255,0.16);
+    border: 1px solid rgba(63,182,255,0.45);
+    color: #7DD9FF;
+    font-size: 0.85rem; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: background 200ms, border-color 200ms;
+    margin-top: auto;
+    letter-spacing: -0.01em;
+}
+.book-card-btn:hover {
+    background: rgba(63,182,255,0.28);
+    border-color: rgba(63,182,255,0.7);
+}
+
+.book-card-btn-dev {
+    width: 100%;
+    padding: 7px 0;
+    border-radius: 10px;
+    background: rgba(167,139,250,0.16);
+    border: 1px solid rgba(167,139,250,0.42);
+    color: #c4b5fd;
+    font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: background 200ms, border-color 200ms;
+    margin-top: 6px;
+}
+.book-card-btn-dev:hover {
+    background: rgba(167,139,250,0.28);
+    border-color: rgba(167,139,250,0.65);
+}
+
+.book-card-btn-del {
+    width: 100%;
+    padding: 7px 0;
+    border-radius: 10px;
+    background: rgba(255,118,118,0.13);
+    border: 1px solid rgba(255,118,118,0.38);
+    color: #fca5a5;
+    font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: background 200ms, border-color 200ms;
+    margin-top: 6px;
+}
+.book-card-btn-del:hover {
+    background: rgba(255,118,118,0.25);
+    border-color: rgba(255,118,118,0.62);
+    color: #FF7676;
+}
+
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(232,238,255,0.35);
+    font-size: 0.95rem;
+    line-height: 1.8;
+}
+
+@media (max-width: 700px) {
+    .library-wrap  { padding: 16px 14px 32px; }
+    .user-banner   { flex-direction: column; align-items: flex-start; gap: 14px; }
+    .filter-row    { flex-direction: column; align-items: flex-start; }
+    .book-grid     { grid-template-columns: 1fr; }
+}

@@ -16,8 +16,6 @@ _LIPS   = [61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,14
 
 
 class FaceMeshVisualizer:
-    """얼굴 랜드마크 및 홍채 중심을 프레임에 그린다."""
-
     def draw(self, frame: np.ndarray, landmarks) -> np.ndarray:
         h, w = frame.shape[:2]
 

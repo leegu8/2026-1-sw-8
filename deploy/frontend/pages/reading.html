@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서하기 - 독서 아이트래킹</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/base.css">
+    <link rel="stylesheet" href="/static/aurora-theme.css">
+    <script src="/static/js/auth-guard.js"></script>
+    <style>
+        body { background: #04081C !important; min-width: 0; }
+        .page-content { padding-top: 1rem; padding-bottom: 1rem; }
+        .reading-area    { position: relative; }
+        .reading-wrapper { position: relative; }
+        #book-title {
+            position: absolute;
+            right: calc(100% + 0.8rem);
+            top: 0;
+            font-size: 1rem !important;
+            color: #bbb;
+            line-height: 1.5;
+            word-break: keep-all;
+            width: 90px;
+            margin: 0 !important;
+            padding: 0 !important;
+            border-bottom: none !important;
+            text-align: right;
+        }
+        .reading-text   { position: relative; z-index: 1; font-size: 1.35rem; line-height: 2.2; }
+        .reading-text p { margin: 0 0 1.2em; }
+        .word           { display: inline; transition: filter 0.25s; }
+        .word-blur      { filter: blur(2px); opacity: 0.55; user-select: none; }
+        #gaze-dot       { display: none !important; }
+        #intervention-panel {
+            position: fixed; top: 68px; left: 20px;
+            background: rgba(15,15,25,0.90);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px; padding: 10px 14px;
+            z-index: 9997; min-width: 130px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            font-size: 0.82rem;
+        }
+        .iv-title  { color:#a78bfa; font-weight:700; font-size:0.80rem; margin-bottom:8px;
+                     padding-bottom:5px; border-bottom:1px solid rgba(139,92,246,0.25); }
+        .iv-row    { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+        .iv-row:last-child { margin-bottom:0; }
+        .iv-check  { accent-color:#a78bfa; width:14px; height:14px; cursor:pointer; }
+        .iv-label  { color:#d1d5db; cursor:pointer; font-size:0.80rem; flex:1; }
+        #line-highlight-bar {
+            position: absolute; left: 0; right: 0;
+            background: rgba(52, 152, 219, 0.13);
+            border-left: 3px solid rgba(52, 152, 219, 0.55);
+            border-radius: 0 4px 4px 0;
+            pointer-events: none;
+            display: none;
+            opacity: 0;
+            transition: top 0.08s ease, opacity 0.4s ease;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <div id="gaze-dot"></div>
+
+    <nav class="top">
+      <div class="container">
+        <a class="brand" href="/">
+          <div class="brand-mark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2"/>
+              <circle cx="12" cy="12" r="3" fill="#04102E"/>
+            </svg>
+          </div>
+          <div>
+            <div class="brand-name">독서 아이트래킹</div>
+            <div class="brand-mono">EYE-TRACKING · READING</div>
+          </div>
+        </a>
+      </div>
+    </nav>
+
+    <div class="page-content">
+        <div class="reading-wrapper">
+            <h2 id="book-title">📖 불러오는 중...</h2>
+            <div class="reading-area">
+                <div id="line-highlight-bar"></div>
+                <div id="reading-clip">
+                    <div class="reading-text"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-nav" style="display:none; justify-content:center; align-items:center; gap:16px; margin-bottom:0.75rem;">
+            <button id="prev-page-btn" class="btn" style="padding:0.4rem 1.2rem; font-size:0.9rem;">← 이전</button>
+            <span id="page-indicator" style="color:#666; font-size:0.9rem; min-width:60px; text-align:center;">1 / 1</span>
+            <button id="next-page-btn" class="btn" style="padding:0.4rem 1.2rem; font-size:0.9rem;">다음 →</button>
+        </div>
+
+        <div class="reading-controls">
+            <button id="done-btn"  class="btn btn-success">다 읽었어요 →</button>
+            <div id="reading-status" style="color:#666; font-size:0.95rem;"></div>
+        </div>
+    </div>
+
+    <!-- 독서 보조 개입 패널 -->
+    <div id="intervention-panel">
+        <div class="iv-title">🛡 독서 보조</div>
+        <div class="iv-row">
+            <input type="checkbox" id="iv-blur-check" class="iv-check" checked>
+            <label class="iv-label" for="iv-blur-check">역행 블러</label>
+        </div>
+        <div class="iv-row">
+            <input type="checkbox" id="iv-highlight-check" class="iv-check" checked>
+            <label class="iv-label" for="iv-highlight-check">하이라이트</label>
+        </div>
+    </div>
+
+    <!-- 이전 독서 개선 포인트 팝업 -->
+    <div id="improvement-popup" style="display:none; position:fixed; inset:0;
+        background:rgba(0,0,0,0.55); z-index:10000; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:32px 28px;
+            max-width:460px; width:90%; box-shadow:0 8px 40px rgba(0,0,0,0.25);">
+            <div style="font-size:1.15rem; font-weight:700; color:#2c3e50; margin-bottom:6px;">
+                📋 이번 독서에 신경써주세요
+            </div>
+            <div style="font-size:0.83rem; color:#aaa; margin-bottom:20px;">
+                지난 독서에서 발견된 개선 포인트예요
+            </div>
+            <div id="popup-improvement-list"
+                style="background:#fef9e7; border-radius:10px; padding:16px 18px; margin-bottom:24px;">
+            </div>
+            <button onclick="closeImprovementPopup()" class="btn btn-primary"
+                style="width:100%; font-size:0.95rem;">
+                확인, 시작할게요!
+            </button>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        const raw = localStorage.getItem('last_improvements');
+        if (!raw) return;
+        let items;
+        try { items = JSON.parse(raw); } catch { return; }
+        if (!Array.isArray(items) || items.length === 0) return;
+
+        const list = document.getElementById('popup-improvement-list');
+        list.innerHTML = items.map((t, i) =>
+            `<p style="font-size:0.88rem;color:#444;line-height:1.65;
+                margin:0 0 ${i < items.length - 1 ? '8px' : '0'};">· ${t}</p>`
+        ).join('');
+
+        document.getElementById('improvement-popup').style.display = 'flex';
+    })();
+
+    function closeImprovementPopup() {
+        document.getElementById('improvement-popup').style.display = 'none';
+        localStorage.removeItem('last_improvements');
+    }
+    </script>
+
+    <script src="/static/js/reading.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+[
+  {
+    "book_title": "소나기",
+    "started_at": "2026-05-10T10:00:00",
+    "ended_at":   "2026-05-10T10:05:12",
+    "total_duration_sec": 312,
+    "wpm": 142,
+    "concentration_score": 74,
+    "regression_ratio": 12,
+    "visited_lines": 22,
+    "total_lines": 25,
+    "word_count": 738,
+    "score": 83
+  },
+  {
+    "book_title": "독서란 무엇인가",
+    "started_at": "2026-05-13T14:20:00",
+    "ended_at":   "2026-05-13T14:24:44",
+    "total_duration_sec": 284,
+    "wpm": 155,
+    "concentration_score": 80,
+    "regression_ratio": 9,
+    "visited_lines": 23,
+    "total_lines": 25,
+    "word_count": 733,
+    "score": 89
+  },
+  {
+    "book_title": "인터넷과 현대 사회",
+    "started_at": "2026-05-16T09:30:00",
+    "ended_at":   "2026-05-16T09:34:20",
+    "total_duration_sec": 260,
+    "wpm": 161,
+    "concentration_score": 83,
+    "regression_ratio": 7,
+    "visited_lines": 24,
+    "total_lines": 25,
+    "word_count": 697,
+    "score": 92
+  },
+  {
+    "book_title": "날개",
+    "started_at": "2026-05-20T11:00:00",
+    "ended_at":   "2026-05-20T11:06:10",
+    "total_duration_sec": 370,
+    "wpm": 148,
+    "concentration_score": 77,
+    "regression_ratio": 14,
+    "visited_lines": 21,
+    "total_lines": 26,
+    "word_count": 911,
+    "score": 83
+  },
+  {
+    "book_title": "기후 변화와 인류의 미래",
+    "started_at": "2026-05-22T16:10:00",
+    "ended_at":   "2026-05-22T16:16:55",
+    "total_duration_sec": 415,
+    "wpm": 167,
+    "concentration_score": 86,
+    "regression_ratio": 6,
+    "visited_lines": 25,
+    "total_lines": 26,
+    "word_count": 1154,
+    "score": 93
+  }
+]
