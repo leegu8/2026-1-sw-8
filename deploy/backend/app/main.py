@@ -6,9 +6,9 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import select, text
 
-from .db.session import init_db, async_session
+from .db.session import init_db, async_session, engine
 from .db.models import Book, User, LevelHistory, ReadingSession, Attendance
 from .api.routers import database, auth
 
@@ -100,6 +100,25 @@ async def _seed_books():
         await db.commit()
 
 
+async def _reset_sequences():
+    """PostgreSQL 시퀀스를 seed 데이터의 max ID 이후로 초기화."""
+    from .core.config import DATABASE_URL
+    if "postgresql" not in DATABASE_URL:
+        return
+    async with engine.begin() as conn:
+        for table, col in [
+            ("users", "users_id_seq"),
+            ("level_history", "level_history_id_seq"),
+            ("attendance", "attendance_id_seq"),
+            ("books", "books_id_seq"),
+            ("reading_sessions", "reading_sessions_id_seq"),
+            ("correction_events", "correction_events_id_seq"),
+        ]:
+            await conn.execute(
+                text(f"SELECT setval('{col}', COALESCE((SELECT MAX(id) FROM {table}), 1))")
+            )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
@@ -107,6 +126,7 @@ async def lifespan(app: FastAPI):
     await _seed_guest()
     await _seed_books()
     await _seed_sessions()
+    await _reset_sequences()
     yield
 
 
