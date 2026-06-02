@@ -275,7 +275,7 @@ if (focusRate === -1) { showNoData(); return; }
             <div style="${CARD_SM};padding:24px;">
                 <div style="font-size:0.8rem;color:rgba(232,238,255,0.45);margin-bottom:16px;letter-spacing:0.05em;">지표별 상세</div>
                 ${metricBar('⏱', '독서시간', timeCriterion, timeScore, minuteStr)}
-                ${metricBar('✅', '완독률', '줄 단위 방문 판정', depthScore, `${linesdone}/${totallines}줄`)}
+                ${metricBar('✅', '완독률', '줄 단위 방문 판정', depthScore, `${linesdone}/${totallines}`)}
                 ${metricBar('👁', '집중도', '≥80%→우수', focusScore, `${focusRate}%`)}
                 ${metricBar('↩', '역행비율', '≤5%→우수', regScore, `${regRate}%`)}
                 ${metricBar('📖', 'WPM', '80-250WPM 구간별', wpmScore, `${wpm} WPM`)}
