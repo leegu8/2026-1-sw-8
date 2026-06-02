@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
 
 from .config import MODEL_PATH, MODEL_URL, DEADZONE_PX, Y_CORRECTION_K
@@ -39,14 +40,30 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class _PrivateNetworkMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if (request.method == "OPTIONS"
+                and "access-control-request-private-network" in request.headers):
+            res = Response()
+            res.headers["Access-Control-Allow-Origin"] = request.headers.get("origin", "*")
+            res.headers["Access-Control-Allow-Private-Network"] = "true"
+            res.headers["Access-Control-Allow-Methods"] = "*"
+            res.headers["Access-Control-Allow-Headers"] = "*"
+            return res
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
+        return response
+
+
+app.add_middleware(_PrivateNetworkMiddleware)
 
 
 def _tracker(request: Request):
@@ -179,7 +196,7 @@ async def gaze_websocket(websocket: WebSocket):
             except WebSocketDisconnect:
                 raise
             except Exception as e:
-                print(f"⚠ WebSocket 내부 오류: {e}")
+                print(f"[WARN] WebSocket 내부 오류: {e}")
             await asyncio.sleep(0.033)
     except WebSocketDisconnect:
         pass

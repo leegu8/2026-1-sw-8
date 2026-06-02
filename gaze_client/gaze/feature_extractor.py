@@ -29,7 +29,7 @@ class GazeFeatureExtractor:
             r_flat = r_patch.flatten().astype(np.float64)
             return np.concatenate([self._normalize(l_flat), self._normalize(r_flat)])
         except Exception as e:
-            print(f"❌ feature_extractor 오류: {e}")
+            print(f"[ERROR] feature_extractor 오류: {e}")
             return np.zeros(PATCH_H * PATCH_W * 2, dtype=np.float64)
 
     def _normalize(self, v: np.ndarray) -> np.ndarray:

@@ -75,9 +75,9 @@ class GazeTracker:
             self.stop()
         self._cap = cv2.VideoCapture(camera_index)
         if not self._cap.isOpened():
-            print(f"❌ 웹캠 {camera_index}번을 열 수 없습니다.")
+            print(f"[ERROR] 웹캠 {camera_index}번을 열 수 없습니다.")
             return
-        print(f"✅ 웹캠 {camera_index}번 열기 성공")
+        print(f"[OK] 웹캠 {camera_index}번 열기 성공")
         self._running = True
         threading.Thread(target=self._capture_loop, daemon=True).start()
 
@@ -102,7 +102,7 @@ class GazeTracker:
             corrected_y = smooth_y * np.exp(-Y_CORRECTION_K * max(0.0, smooth_y - 100)) if self.y_correction_active else smooth_y
             new_x, new_y = int(smooth_x), int(corrected_y)
         except Exception as e:
-            print(f"⚠ get_screen_pos 예외: {type(e).__name__}: {e}")
+            print(f"[WARN] get_screen_pos 예외: {type(e).__name__}: {e}")
             return None
         if self._out_x is not None:
             if (abs(new_x - self._out_x) < DEADZONE_PX
@@ -119,7 +119,7 @@ class GazeTracker:
                 continue
             frame_count += 1
             if frame_count == 1:
-                print("✅ 웹캠 프레임 읽기 성공 - 시선 추적 시작됨")
+                print("[OK] 웹캠 프레임 읽기 성공 - 시선 추적 시작됨")
             try:
                 rgb      = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB).copy()
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
@@ -134,6 +134,6 @@ class GazeTracker:
                     self.latest_frame = cv2.flip(frame, 1)
             except Exception as e:
                 import traceback
-                print(f"❌ 캡처 루프 오류 (frame={frame_count}): {e}")
+                print(f"[ERROR] 캡처 루프 오류 (frame={frame_count}): {e}")
                 traceback.print_exc()
                 break
