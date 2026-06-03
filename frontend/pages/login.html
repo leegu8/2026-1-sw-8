@@ -385,16 +385,6 @@ function LoginAurora() {
             {!loading && <svg width="18" height="18" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="#04102E" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
           </button>
 
-          {/* DEV: 임시 개발자 로그인 버튼 */}
-          <button className="btn-ghost" onClick={handleDevLogin} disabled={loading} style={{
-            marginTop: 10, width: '100%', height: 38, borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer',
-            background: 'rgba(167,139,250,0.08)', border: '1px dashed rgba(167,139,250,0.35)',
-            color: '#a78bfa', fontSize: 12.5, fontWeight: 500, fontFamily: T.body, display: 'flex',
-            alignItems: 'center', justifyContent: 'center', gap: 7, opacity: loading ? 0.6 : 1,
-          }}>
-            <span style={{ fontSize: 10, background: 'rgba(167,139,250,0.25)', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.06em', fontWeight: 700 }}>DEV</span>
-            개발자 모드로 로그인
-          </button>
 
           <div style={{
             marginTop: 14, paddingTop: 14, borderTop: '1px dashed rgba(255,255,255,0.08)',

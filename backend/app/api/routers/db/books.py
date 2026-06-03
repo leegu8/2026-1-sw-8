@@ -2,9 +2,10 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import delete
 from ...schemas import BookCreate, BookResponse, BookListResponse, CompletedBookItem
 from ....db.session import get_db, get_or_404
-from ....db.models import Book, ReadingSession
+from ....db.models import Book, ReadingSession, CorrectionEvent
 
 router = APIRouter()
 
@@ -32,6 +33,10 @@ async def get_book(book_id: int, db: AsyncSession = Depends(get_db)):
 @router.delete("/books/{book_id}", status_code=204)
 async def delete_book(book_id: int, db: AsyncSession = Depends(get_db)):
     book = await get_or_404(db, Book, book_id, "도서를 찾을 수 없습니다")
+    sessions = await db.execute(select(ReadingSession).where(ReadingSession.book_id == book_id))
+    for session in sessions.scalars().all():
+        await db.execute(delete(CorrectionEvent).where(CorrectionEvent.session_id == session.id))
+    await db.execute(delete(ReadingSession).where(ReadingSession.book_id == book_id))
     await db.delete(book)
     await db.commit()
 
