@@ -117,7 +117,7 @@ function bookCardHTML(book, num, isCurriculum, isRead = false) {
 function bindStartButtons(container) {
     container.querySelectorAll('.book-card-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            location.href = `/reading.html?book_id=${btn.dataset.id}`;
+            location.href = `/reading.html?book_id=${btn.dataset.id}&demo=true`;
         });
     });
 }

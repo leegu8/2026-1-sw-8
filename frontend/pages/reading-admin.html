@@ -290,5 +290,27 @@
     </script>
 
     <script src="/static/js/reading-admin.js" defer></script>
+
+    <div id="cal-mode-badge" style="display:none;position:fixed;top:80px;right:20px;background:linear-gradient(135deg,#c0392b,#e74c3c);color:white;padding:9px 18px;border-radius:10px;font-size:0.82rem;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(231,76,60,0.4);pointer-events:none;letter-spacing:0.01em;backdrop-filter:blur(8px);">🎯 마우스 보정 모드 &nbsp;|&nbsp; Q 로 해제</div>
+
+    <script type="module">
+    import { addCalibrationPoint, setYCorrection } from '/static/js/api/gazeApi.js';
+    const CLICK_COUNT = 20;
+    let calMode = false, sending = false;
+    const badge = document.getElementById('cal-mode-badge');
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'q' && e.key !== 'Q') return;
+        calMode = !calMode;
+        badge.style.display = calMode ? 'block' : 'none';
+        document.body.style.cursor = calMode ? 'crosshair' : '';
+        setYCorrection(!calMode);
+    });
+    document.addEventListener('click', async (e) => {
+        if (!calMode || sending) return;
+        sending = true;
+        try { await addCalibrationPoint(e.clientX, e.clientY, CLICK_COUNT); }
+        finally { sending = false; }
+    });
+    </script>
 </body>
 </html>

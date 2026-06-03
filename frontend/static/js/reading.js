@@ -39,6 +39,15 @@ let _paginationMaxH   = 0;
     allLineList = lineList.map(l => ({ ...l }));
     initPagination();
     await createSession(bookId);
+    if (DEMO_MODE) {
+        startTime = Date.now();
+        gazeData.length = patternData.length = rereadingEvents.length = 0;
+        lineSegmentsVisited.clear();
+        currentReadingLine = maxReadingLine = lineDwellLine = -1;
+        lineDwellCount = lineDwellRightCount = 0;
+        baselineLastChangedTime = Date.now();
+        lastValidLine = -1; lastValidLineTime = 0; oobSince = null;
+    }
 })();
 
 function buildLineList() {
@@ -191,7 +200,32 @@ function getSegIdx(p) {
 }
 
 // ── 실제 시선 추적 로드 ───────────────────────────────────
-import('/static/js/gaze.js');
+const DEV_MODE  = new URLSearchParams(location.search).has('dev');
+const DEMO_MODE = new URLSearchParams(location.search).has('demo');
+
+if (DEMO_MODE) {
+    window._demoMode = true;
+    import('/static/js/gaze.js');
+    let lastX = 0, lastY = 0;
+    document.addEventListener('mousemove', e => { lastX = e.clientX; lastY = e.clientY; });
+    setInterval(() => {
+        window.dispatchEvent(new CustomEvent('gaze:tracking', { detail: { x: lastX, y: lastY } }));
+    }, 33);
+} else if (DEV_MODE) {
+    document.getElementById('reading-status').textContent = '🖱 개발자 모드 (마우스 = 시선)';
+    const gazeDot = document.getElementById('gaze-dot');
+    if (gazeDot) { gazeDot.style.display = 'block'; document.body.style.cursor = 'none'; }
+    let lastX = 0, lastY = 0;
+    document.addEventListener('mousemove', e => {
+        lastX = e.clientX; lastY = e.clientY;
+        if (gazeDot) { gazeDot.style.left = e.clientX + 'px'; gazeDot.style.top = e.clientY + 'px'; }
+    });
+    setInterval(() => {
+        window.dispatchEvent(new CustomEvent('gaze:tracking', { detail: { x: lastX, y: lastY } }));
+    }, 33);
+} else {
+    import('/static/js/gaze.js');
+}
 
 // ── 상태 변수 ────────────────────────────────────────────
 let   sessionId       = null;

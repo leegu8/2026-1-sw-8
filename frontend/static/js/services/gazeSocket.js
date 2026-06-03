@@ -19,6 +19,7 @@ export class GazeSocket {
 
     #dispatch(data) {
         if (data.type === 'gaze' && data.calibrated) {
+            if (window._demoMode) return;
             this.#sx = this.#sx === null ? data.x : _EMA_ALPHA * data.x + (1 - _EMA_ALPHA) * this.#sx;
             this.#sy = this.#sy === null ? data.y : _EMA_ALPHA * data.y + (1 - _EMA_ALPHA) * this.#sy;
             window.dispatchEvent(
