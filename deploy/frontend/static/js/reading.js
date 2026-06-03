@@ -1,6 +1,6 @@
 // ── 책 로드 ──────────────────────────────────────────────
-let lineList        = [];
-let allLineList     = [];
+let lineList    = [];
+let allLineList = [];
 let readingAreaRect = null;
 let currentPage       = 0;
 let totalPages        = 1;
@@ -21,6 +21,7 @@ let _paginationMaxH   = 0;
     ).join('');
     bookWordCount = document.querySelector('.reading-text').innerText
         .trim().split(/\s+/).filter(w => w.length > 0).length;
+
     const timeIssue = localStorage.getItem('last_time_issue');
     if (timeIssue && bookWordCount > 0) {
         const popup = document.getElementById('improvement-popup');
@@ -57,13 +58,11 @@ function buildLineList() {
     });
     lineList = [...map.entries()].sort((a, b) => a[0] - b[0]).map(([, v]) => v);
     readingAreaRect = document.querySelector('.reading-area')?.getBoundingClientRect() ?? null;
-
     const rawTops = lineList.map(l => l.top);
     for (let i = 0; i < lineList.length; i++) {
         if (i > 0) {
-            const mid = Math.round((lineList[i - 1].bottom + lineList[i].top) / 2);
-            lineList[i - 1].bottom = mid;
-            lineList[i].top = mid + 1;
+            const mid = Math.round((lineList[i-1].bottom + lineList[i].top) / 2);
+            lineList[i-1].bottom = mid; lineList[i].top = mid + 1;
         }
     }
     const topToIdx = new Map(rawTops.map((t, i) => [t, i]));
@@ -73,25 +72,16 @@ function buildLineList() {
     });
 }
 
-// ── 페이지네이션 ──────────────────────────────────────────
 function initPagination() {
     if (!allLineList.length) return;
-
-    const area     = document.querySelector('.reading-area');
+    const area = document.querySelector('.reading-area');
     const controls = document.querySelector('.reading-controls');
-    const nav      = document.getElementById('page-nav');
+    const nav = document.getElementById('page-nav');
     const areaRect = area.getBoundingClientRect();
-
     _paginationTopPad = allLineList[0].top - areaRect.top;
-    _paginationMaxH   = window.innerHeight
-        - areaRect.top
-        - 50
-        - controls.offsetHeight
-        - 36;
-
+    _paginationMaxH   = window.innerHeight - areaRect.top - 50 - controls.offsetHeight - 36;
     const bottomPad   = parseFloat(getComputedStyle(area).paddingBottom) || _paginationTopPad;
     const maxContentH = _paginationMaxH - _paginationTopPad - bottomPad;
-
     pageBoundaries = [];
     let s = 0;
     while (s < allLineList.length) {
@@ -99,46 +89,29 @@ function initPagination() {
         while (e < allLineList.length) {
             const lh = allLineList[e].bottom - allLineList[e].top;
             if (h + lh > maxContentH && e > s) break;
-            h += lh;
-            e++;
+            h += lh; e++;
         }
-        pageBoundaries.push({ start: s, end: e - 1 });
-        s = e;
+        pageBoundaries.push({ start: s, end: e - 1 }); s = e;
     }
     totalPages = pageBoundaries.length;
-
     const clip = document.getElementById('reading-clip');
-    if (clip) {
-        clip.style.overflow = 'hidden';
-        clip.style.height   = maxContentH + 'px';
-    }
-
-    area.style.overflow        = 'hidden';
-    area.style.height          = _paginationMaxH + 'px';
+    if (clip) { clip.style.overflow = 'hidden'; clip.style.height = maxContentH + 'px'; }
+    area.style.overflow = 'hidden';
+    area.style.height   = _paginationMaxH + 'px';
     document.body.style.overflowY = 'hidden';
     if (nav) nav.style.display = totalPages > 1 ? 'flex' : 'none';
-
     goToPage(0);
 }
 
 function goToPage(page) {
     if (page < 0 || page >= totalPages) return;
     currentPage = page;
-
     const { start: startIdx } = pageBoundaries[page];
     const translateY = allLineList[0].top - allLineList[startIdx].top;
-
     document.querySelector('.reading-text').style.transform = `translateY(${translateY}px)`;
-
     const area = document.querySelector('.reading-area');
     area.style.height = _paginationMaxH + 'px';
-
-    lineList = allLineList.map(l => ({
-        ...l,
-        top:    l.top    + translateY,
-        bottom: l.bottom + translateY,
-    }));
-
+    lineList = allLineList.map(l => ({ ...l, top: l.top + translateY, bottom: l.bottom + translateY }));
     readingAreaRect = area.getBoundingClientRect();
     updatePageNav();
 }
@@ -168,15 +141,14 @@ function getLineIndex(y) {
     return -1;
 }
 
-// ── 패턴 분류 ─────────────────────────────────────────────
 function classifyTransition(prev, curr) {
     if (curr.line < 0) return 'oob';
     const dLine = curr.line - prev.line;
     if (dLine > 0) return 'down';
     if (dLine < 0) return 'up';
     const l = lineList[curr.line];
-    const lineWidth = l ? l.xMax - l.xMin : 1;
     const dx = curr.x - prev.x;
+    const lineWidth = l ? l.xMax - l.xMin : 1;
     if (dx >  lineWidth * 0.02) return 'right';
     if (dx < -lineWidth * 0.02) return 'left';
     return 'still';
@@ -184,22 +156,19 @@ function classifyTransition(prev, curr) {
 
 function getSegIdx(p) {
     if (p.line < 0 || p.line >= lineList.length) return -1;
-    const l  = lineList[p.line];
+    const l = lineList[p.line];
     const sw = (l.xMax - l.xMin) / 5;
     if (sw <= 0 || p.x < l.xMin || p.x > l.xMax) return -1;
     return Math.min(4, Math.floor((p.x - l.xMin) / sw));
 }
 
-// ── 실제 시선 추적 로드 ───────────────────────────────────
 import('/static/js/gaze.js');
 
-// ── 상태 변수 ────────────────────────────────────────────
 let   sessionId       = null;
 let   bookWordCount   = 0;
 const gazeData        = [];
 const patternData     = [];
 const rereadingEvents = [];
-
 let blurEventSent      = false;
 let highlightEventSent = false;
 const pendingCorrectionEvents = [];
@@ -210,13 +179,12 @@ function sendCorrectionEvent(type, lineIndex) {
 
 const REREAD_WINDOW_MS  = 30_000;
 const REREAD_BLUR_ON    = 3;
-let   startTime         = null;
-let   lastValidLine     = -1;
-let   lastValidLineTime = 0;
-let   blurActive        = false;
-let   blurLine          = -1;
-let   oobSince          = null;
-
+let   startTime              = null;
+let   lastValidLine          = -1;
+let   lastValidLineTime      = 0;
+let   blurActive             = false;
+let   blurLine               = -1;
+let   oobSince               = null;
 let   currentReadingLine     = -1;
 let   maxReadingLine         = -1;
 let   lineDwellLine          = -1;
@@ -227,82 +195,6 @@ const lineSegmentsVisited    = new Map();
 
 document.getElementById('reading-status').textContent = '👁 시선 추적 중';
 
-// ── 시선 이벤트 수집 ──────────────────────────────────────
-window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
-    if (document.getElementById('improvement-popup')?.style.display === 'flex') return;
-    if (!startTime && isReadingStart(x, y)) {
-        startTime = Date.now();
-        gazeData.length        = 0;
-        patternData.length     = 0;
-        rereadingEvents.length = 0;
-        lineSegmentsVisited.clear();
-        currentReadingLine       = -1;
-        maxReadingLine           = -1;
-        lineDwellLine            = -1;
-        lineDwellCount           = 0;
-        lineDwellRightCount      = 0;
-        baselineLastChangedTime  = Date.now();
-        lastValidLine            = -1;
-        lastValidLineTime        = 0;
-        oobSince                 = null;
-        return;
-    }
-
-    const now     = Date.now();
-    const rawLine = getLineIndex(y);
-
-    const rawFiltered = rawLine >= 0 ? rawLine
-                      : (lastValidLine >= 0 && now - lastValidLineTime < 300) ? lastValidLine
-                      : -1;
-
-    const blurOob = blurActive && rawFiltered >= 0 && blurLine >= 0 && rawFiltered < blurLine;
-    const xOob    = readingAreaRect ? (x < readingAreaRect.left || x > readingAreaRect.right) : false;
-    const line    = (blurOob || xOob) ? -1 : rawFiltered;
-
-    if (!startTime) return;
-
-    if (gazeData.length === 0 || now - gazeData[gazeData.length - 1].t >= 100) {
-        const curr = { x, line, t: now };
-        let type = 'still';
-        if (gazeData.length > 0) {
-            type = classifyTransition(gazeData[gazeData.length - 1], curr);
-            patternData.push({ type, t: now, line, x });
-        }
-        updateLineTracking(x, line, type);
-        gazeData.push(curr);
-        if (rawLine >= 0) {
-            lastValidLine     = rawLine;
-            lastValidLineTime = now;
-            oobSince          = null;
-        } else {
-            if (oobSince === null) oobSince = now;
-        }
-    }
-});
-
-async function createSession(bookId) {
-    const userId = +(localStorage.getItem('user_id') || '0');
-    if (!userId) return;
-    try {
-        const res = await fetch('/api/db/sessions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id:     userId,
-                book_id:     bookId,
-                total_lines: lineList.length || null,
-            }),
-        });
-        if (res.ok) {
-            sessionId = (await res.json()).id;
-        } else {
-            console.error('createSession 실패:', res.status, await res.text());
-        }
-    } catch (err) {
-        console.error('createSession 오류:', err);
-    }
-}
-
 function isReadingStart(x, y) {
     if (!lineList.length) return false;
     const line = getLineIndex(y);
@@ -312,20 +204,60 @@ function isReadingStart(x, y) {
     return x >= l.xMin && x <= l.xMin + (l.xMax - l.xMin) / 5;
 }
 
-// ── 다 읽었어요 버튼 ──────────────────────────────────────
+window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
+    if (document.getElementById('improvement-popup')?.style.display === 'flex') return;
+    if (!startTime && isReadingStart(x, y)) {
+        startTime = Date.now();
+        gazeData.length = patternData.length = rereadingEvents.length = 0;
+        lineSegmentsVisited.clear();
+        currentReadingLine = maxReadingLine = lineDwellLine = -1;
+        lineDwellCount = lineDwellRightCount = 0;
+        baselineLastChangedTime = Date.now();
+        lastValidLine = 0; lastValidLineTime = 0; oobSince = null;
+        return;
+    }
+    const now     = Date.now();
+    const rawLine = getLineIndex(y);
+    const rawFiltered = rawLine >= 0 ? rawLine : (lastValidLine >= 0 && now - lastValidLineTime < 300) ? lastValidLine : -1;
+    const blurOob = blurActive && rawFiltered >= 0 && blurLine >= 0 && rawFiltered < blurLine;
+    const xOob    = readingAreaRect ? (x < readingAreaRect.left || x > readingAreaRect.right) : false;
+    const line    = (blurOob || xOob) ? -1 : rawFiltered;
+    if (!startTime) return;
+    if (gazeData.length === 0 || now - gazeData[gazeData.length-1].t >= 100) {
+        const curr = { x, line, t: now };
+        let type = 'still';
+        if (gazeData.length > 0) { type = classifyTransition(gazeData[gazeData.length-1], curr); patternData.push({ type, t: now, line, x }); }
+        updateLineTracking(x, line, type);
+        gazeData.push(curr);
+        if (rawLine >= 0) { lastValidLine = rawLine; lastValidLineTime = now; oobSince = null; }
+        else { if (oobSince === null) oobSince = now; }
+    }
+});
+
+async function createSession(bookId) {
+    const userId = +(localStorage.getItem('user_id') || '0');
+    if (!userId) return;
+    try {
+        const res = await fetch('/api/db/sessions', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, book_id: bookId, total_lines: lineList.length || null }),
+        });
+        if (res.ok) sessionId = (await res.json()).id;
+    } catch {}
+}
+
 document.getElementById('done-btn').addEventListener('click', async () => {
     const result = analyzeReading();
     if (sessionId) {
         try {
             await fetch(`/api/db/sessions/${sessionId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    ended_at:            new Date().toISOString().slice(0, 19),
+                    ended_at:            new Date().toISOString().slice(0,19),
                     total_duration_sec:  Math.round(result.totalSec),
-                    wpm:                 result.error ? null : (result.wpm             ?? null),
-                    concentration_score: result.error ? null : (result.focusRate       ?? null),
-                    regression_ratio:    result.error ? null : (result.regressionRate  ?? null),
+                    wpm:                 result.error ? null : (result.wpm            ?? null),
+                    concentration_score: result.error ? null : (result.focusRate      ?? null),
+                    regression_ratio:    result.error ? null : (result.regressionRate ?? null),
                     visited_lines:       result.visitedLines ?? null,
                     total_lines:         result.totalLines   ?? null,
                     word_count:          bookWordCount || null,
@@ -333,8 +265,7 @@ document.getElementById('done-btn').addEventListener('click', async () => {
             });
             for (const ev of pendingCorrectionEvents) {
                 await fetch('/api/db/correction-events', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ session_id: sessionId, ...ev }),
                 }).catch(() => {});
             }
@@ -344,73 +275,46 @@ document.getElementById('done-btn').addEventListener('click', async () => {
     window.location.href = `/result.html?session_id=${sessionId ?? ''}`;
 });
 
-document.getElementById('recal-btn').addEventListener('click', () => {
-    window.location.href = '/guide.html';
-});
-
+document.getElementById('recal-btn')?.addEventListener('click', () => { window.location.href = '/guide.html'; });
 document.getElementById('prev-page-btn')?.addEventListener('click', () => goToPage(currentPage - 1));
 document.getElementById('next-page-btn')?.addEventListener('click', () => goToPage(currentPage + 1));
 
-// ── 역행 블러 ─────────────────────────────────────────────
 function applyRegressionBlur() {
     document.querySelectorAll('.word[data-line]').forEach(w => {
         const ln = +w.dataset.line;
         if (ln >= 0 && ln < blurLine) w.classList.add('word-blur');
-        else                          w.classList.remove('word-blur');
+        else w.classList.remove('word-blur');
     });
 }
+function clearRegressionBlur() { document.querySelectorAll('.word-blur').forEach(w => w.classList.remove('word-blur')); }
 
-function clearRegressionBlur() {
-    document.querySelectorAll('.word-blur').forEach(w => w.classList.remove('word-blur'));
-}
-
-const ivBlurCheck      = document.getElementById('iv-blur-check');
-const ivHighlightCheck = document.getElementById('iv-highlight-check');
-
+const ivBlurCheck = document.getElementById('iv-blur-check');
 setInterval(() => {
     if (!startTime || !ivBlurCheck.checked) {
-        if (blurActive) { blurActive = false; blurLine = -1; clearRegressionBlur(); blurEventSent = false; }
-        return;
+        if (blurActive) { blurActive = false; blurLine = -1; clearRegressionBlur(); blurEventSent = false; } return;
     }
-    const rereadCount = rereadingsInWindow();
-    if (!blurActive && rereadCount >= REREAD_BLUR_ON) {
-        blurActive = true;
-        if (!blurEventSent) {
-            blurEventSent = true;
-            sendCorrectionEvent('BLUR', currentReadingLine);
-        }
-    }
-    if (blurActive) {
-        if (rereadCount >= REREAD_BLUR_ON) blurLine = currentReadingLine;
-        applyRegressionBlur();
-    }
+    const rc = rereadingsInWindow();
+    if (!blurActive && rc >= REREAD_BLUR_ON) { blurActive = true; if (!blurEventSent) { blurEventSent = true; sendCorrectionEvent('BLUR', currentReadingLine); } }
+    if (blurActive) { if (rc >= REREAD_BLUR_ON) blurLine = currentReadingLine; applyRegressionBlur(); }
 }, 500);
 
-// ── 세션 전체 분석 ────────────────────────────────────────
 function analyzeReading() {
     const totalSec = startTime ? (Date.now() - startTime) / 1000 : 0;
     if (gazeData.length < 10) return { error: true, totalSec };
-
     const { visitedLines, totalLines, completionRate } = calcCompletion();
-    const focusRate       = calcFocusRate(totalSec);
+    const focusRate      = calcFocusRate(totalSec);
     const { regressionCount, regRate } = calcRegressions(totalSec);
-    const regressionRate  = calcRegressionRate();
-    const wordCount = document.querySelector('.reading-text').innerText
-        .trim().split(/\s+/).filter(w => w.length > 0).length;
+    const regressionRate = calcRegressionRate();
+    const wordCount = document.querySelector('.reading-text').innerText.trim().split(/\s+/).filter(w=>w.length>0).length;
     const wpm = totalSec > 0 ? Math.round(wordCount / (totalSec / 60)) : 0;
-
     return { totalSec, completionRate, focusRate, regressionCount, regRate, regressionRate, wpm, visitedLines, totalLines, error: false };
 }
 
-// ── 완독률 — 방문한 세그먼트 합 / 전체 세그먼트(줄 수 × 5) ──
 function calcCompletion() {
     const totalLines = lineList.length;
     if (!totalLines) return { visitedLines: 0, totalLines: 0, completionRate: 0 };
-
     let visitedSegs = 0;
-    for (let i = 0; i < totalLines; i++) {
-        visitedSegs += lineSegmentsVisited.get(i)?.size ?? 0;
-    }
+    for (let i = 0; i < totalLines; i++) visitedSegs += lineSegmentsVisited.get(i)?.size ?? 0;
     const totalSegs = totalLines * 5;
     return { visitedLines: visitedSegs, totalLines: totalSegs, completionRate: Math.round(visitedSegs / totalSegs * 100) };
 }
@@ -419,81 +323,44 @@ function calcFocusRate(totalSec) {
     if (!patternData.length || totalSec <= 0) return 0;
     const distracted = new Array(patternData.length).fill(false);
     function markRun(type, minMs) {
-        let runStart = null;
+        let rs = null;
         for (let i = 0; i < patternData.length; i++) {
-            if (patternData[i].type === type) {
-                if (runStart === null) runStart = i;
-            } else {
-                if (runStart !== null) {
-                    const dur = patternData[i].t - patternData[runStart].t;
-                    if (dur >= minMs) for (let k = runStart; k < i; k++) distracted[k] = true;
-                    runStart = null;
-                }
-            }
+            if (patternData[i].type === type) { if (rs === null) rs = i; }
+            else { if (rs !== null) { const dur = patternData[i].t - patternData[rs].t; if (dur >= minMs) for (let k = rs; k < i; k++) distracted[k] = true; rs = null; } }
         }
-        if (runStart !== null) {
-            const dur = patternData[patternData.length - 1].t - patternData[runStart].t;
-            if (dur >= minMs) for (let k = runStart; k < patternData.length; k++) distracted[k] = true;
-        }
+        if (rs !== null) { const dur = patternData[patternData.length-1].t - patternData[rs].t; if (dur >= minMs) for (let k = rs; k < patternData.length; k++) distracted[k] = true; }
     }
-    markRun('oob',   100);
-    markRun('still', 1500);
+    markRun('oob', 100); markRun('still', 1500);
     let unfocusedMs = 0;
-    for (let i = 0; i < patternData.length; i++) {
-        if (distracted[i]) {
-            const next = patternData[i + 1];
-            unfocusedMs += next ? next.t - patternData[i].t : 100;
-        }
-    }
-    const gazeSpanMs = gazeData[gazeData.length - 1].t - gazeData[0].t;
-    if (gazeSpanMs <= 0) return 100;
-    return Math.round(Math.max(0, (gazeSpanMs - unfocusedMs) / gazeSpanMs * 100));
+    for (let i = 0; i < patternData.length; i++) { if (distracted[i]) { const next = patternData[i+1]; unfocusedMs += next ? next.t - patternData[i].t : 100; } }
+    const span = gazeData[gazeData.length-1].t - gazeData[0].t;
+    if (span <= 0) return 100;
+    return Math.round(Math.max(0, (span - unfocusedMs) / span * 100));
 }
 
 function calcRegressionRate() {
     const moves = patternData.filter(p => ['right','left','up','down'].includes(p.type));
     if (!moves.length) return 0;
-
-    let regCount = 0;
-    let pendingLefts = 0;
-    let leftStartLine = -1;
-
+    let regCount = 0, pendingLefts = 0, leftStartLine = -1;
     for (const p of patternData) {
         if (!['right','left','up','down'].includes(p.type)) continue;
-
-        if (p.type === 'up') {
-            regCount += pendingLefts + 1;
-            pendingLefts = 0;
-            leftStartLine = -1;
-        } else if (p.type === 'left') {
-            if (pendingLefts === 0) leftStartLine = p.line;
-            pendingLefts++;
-        } else if (p.type === 'right') {
-            if (leftStartLine >= 0 && p.line > leftStartLine) {
-                // 줄바꿈 → 버림
-            } else {
-                regCount += pendingLefts;
-            }
-            pendingLefts = 0;
-            leftStartLine = -1;
+        if (p.type === 'up') { regCount += pendingLefts + 1; pendingLefts = 0; leftStartLine = -1; }
+        else if (p.type === 'left') { if (pendingLefts === 0) leftStartLine = p.line; pendingLefts++; }
+        else if (p.type === 'right') {
+            if (leftStartLine >= 0 && p.line > leftStartLine) { } else { regCount += pendingLefts; }
+            pendingLefts = 0; leftStartLine = -1;
         }
-        // down → 무시
     }
-
     regCount += pendingLefts;
-
     return Math.round(regCount / moves.length * 100);
 }
 
 function calcRegressions(totalSec = 0) {
     const regressionCount = rereadingEvents.length;
-    const regRate = totalSec > 0
-        ? Math.round(regressionCount / (totalSec / 30) * 10) / 10
-        : 0;
+    const regRate = totalSec > 0 ? Math.round(regressionCount / (totalSec / 30) * 10) / 10 : 0;
     return { regressionCount, regRate };
 }
 
-// ── 줄 기반 역행 감지 ────────────────────────────────────
 function updateLineTracking(x, line, type = 'still') {
     if (line < 0) { lineDwellCount = 0; return; }
     if (currentReadingLine < 0) { currentReadingLine = line; if (line > maxReadingLine) maxReadingLine = line; }
@@ -514,15 +381,11 @@ function updateLineTracking(x, line, type = 'still') {
     }
 }
 
-function rereadingsInWindow(windowMs = REREAD_WINDOW_MS) {
-    const cutoff = Date.now() - windowMs;
-    return rereadingEvents.filter(t => t >= cutoff).length;
-}
+function rereadingsInWindow(windowMs = REREAD_WINDOW_MS) { return rereadingEvents.filter(t => t >= Date.now() - windowMs).length; }
 
 function calcMaxRereadingsIn30s() {
     if (!rereadingEvents.length) return 0;
-    const W = 30000;
-    let max = 0;
+    const W = 30000; let max = 0;
     for (let i = 0; i < rereadingEvents.length; i++) {
         let count = 0;
         for (let j = i; j < rereadingEvents.length && rereadingEvents[j] - rereadingEvents[i] <= W; j++) count++;
@@ -531,24 +394,32 @@ function calcMaxRereadingsIn30s() {
     return max;
 }
 
-// ── 집중 이탈 판정 ────────────────────────────────────────
 function isLostFocus() {
     if (!startTime || patternData.length < 3) return false;
-    const cutoff = Date.now() - 2000;
-    const recent = patternData.filter(p => p.t >= cutoff);
+    const recent = patternData.filter(p => p.t >= Date.now() - 2000);
     if (recent.length < 3) return false;
     return recent.every(p => p.type === 'oob' || p.type === 'still');
 }
 
-// ── 하이라이트 바 ─────────────────────────────────────────
-function showOverlay(el) {
-    el.style.display = 'block';
-    requestAnimationFrame(() => { el.style.opacity = '1'; });
+function showOverlay(el) { el.style.display = 'block'; requestAnimationFrame(() => { el.style.opacity = '1'; }); }
+function hideOverlay(el) { el.style.opacity = '0'; setTimeout(() => { if (el.style.opacity === '0') el.style.display = 'none'; }, 450); }
+
+const _calloutFocus = document.getElementById('callout-focus');
+function _positionCallout(el, lineIdx, side) {
+    if (lineIdx < 0 || lineIdx >= lineList.length) return;
+    const ln = lineList[lineIdx];
+    const centerY = (ln.top + ln.bottom) / 2 - window.scrollY;
+    if (side === 'left') { el.style.left = ''; el.style.right = (window.innerWidth - (readingAreaRect?.left ?? 0) + 6) + 'px'; }
+    else { el.style.right = ''; el.style.left = ((readingAreaRect?.right ?? window.innerWidth * 0.75) + 6) + 'px'; }
+    el.style.top = (centerY - el.offsetHeight / 2) + 'px';
 }
-function hideOverlay(el) {
-    el.style.opacity = '0';
-    setTimeout(() => { if (el.style.opacity === '0') el.style.display = 'none'; }, 450);
+function showFocusCallout(lineIdx) {
+    if (lineIdx < 0 || lineIdx >= lineList.length) { hideFocusCallout(); return; }
+    _calloutFocus.querySelector('.callout-box').textContent = '👁 집중하세요';
+    _calloutFocus.classList.add('show');
+    _positionCallout(_calloutFocus, lineIdx, 'left');
 }
+function hideFocusCallout() { _calloutFocus.classList.remove('show'); }
 
 function updateHighlightBar(lineIdx) {
     const bar = document.getElementById('line-highlight-bar');
@@ -560,17 +431,13 @@ function updateHighlightBar(lineIdx) {
     showOverlay(bar);
 }
 
+const ivHighlightCheck = document.getElementById('iv-highlight-check');
 setInterval(() => {
     const bar = document.getElementById('line-highlight-bar');
-    if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); highlightEventSent = false; return; }
+    if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); hideFocusCallout(); return; }
     if (isLostFocus()) {
         updateHighlightBar(currentReadingLine);
-        if (!highlightEventSent) {
-            highlightEventSent = true;
-            sendCorrectionEvent('HIGHLIGHT', currentReadingLine);
-        }
-    } else {
-        hideOverlay(bar);
-        highlightEventSent = false;
-    }
+        showFocusCallout(currentReadingLine);
+        if (!highlightEventSent) { highlightEventSent = true; sendCorrectionEvent('HIGHLIGHT', currentReadingLine); }
+    } else { hideOverlay(bar); hideFocusCallout(); highlightEventSent = false; }
 }, 500);

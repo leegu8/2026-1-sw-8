@@ -58,10 +58,30 @@
             transition: top 0.08s ease, opacity 0.4s ease;
             z-index: 2;
         }
+        #callout-focus {
+            position: fixed; display: none;
+            align-items: center; z-index: 9990; pointer-events: none;
+        }
+        #callout-focus.show { display: flex; }
+        #callout-focus .callout-arrow {
+            width: 0; height: 0; flex-shrink: 0;
+            border-top: 7px solid transparent;
+            border-bottom: 7px solid transparent;
+            border-left: 8px solid rgba(52,152,219,0.9);
+        }
+        #callout-focus .callout-box {
+            padding: 5px 10px; border-radius: 6px;
+            font-size: 0.78rem; font-weight: 700; white-space: nowrap;
+            background: rgba(52,152,219,0.9); color: #fff;
+        }
     </style>
 </head>
 <body>
     <div id="gaze-dot"></div>
+    <div id="callout-focus">
+        <div class="callout-arrow"></div>
+        <div class="callout-box">👁 집중하세요</div>
+    </div>
 
     <nav class="top">
       <div class="container">
