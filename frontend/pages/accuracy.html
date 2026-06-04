@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시선 정확도 검사 - 독서 아이트래킹</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/base.css">
+    <link rel="stylesheet" href="/static/aurora-theme.css">
+    <script src="/static/js/auth-guard.js"></script>
+    <style>
+        body { background: #04081C !important; min-width: 0; }
+        .page-content { padding-top: 1rem; padding-bottom: 2rem; }
+        .reading-area    { position: relative; overflow: hidden; }
+        .reading-wrapper { position: relative; }
+        .reading-text    { position: relative; z-index: 1; font-size: 1.35rem; line-height: 2.2; }
+        .reading-text p  { margin: 0 0 1.2em; }
+        .word            { display: inline; color: rgba(200,210,230,0.35); user-select: none; }
+
+        #accuracy-canvas {
+            position: absolute; top: 0; left: 0;
+            pointer-events: none; z-index: 10;
+        }
+
+        #target-dot {
+            position: fixed;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: rgba(59,130,246,0.92);
+            border: 3px solid #fff;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 200;
+            display: none; opacity: 0;
+            transition: left 0.35s ease, top 0.35s ease, opacity 0.2s ease;
+            animation: tpulse 0.9s ease-in-out infinite;
+        }
+        @keyframes tpulse {
+            0%   { box-shadow: 0 0 0 0   rgba(59,130,246,0.55); }
+            70%  { box-shadow: 0 0 0 10px rgba(59,130,246,0);   }
+            100% { box-shadow: 0 0 0 0   rgba(59,130,246,0);    }
+        }
+
+        #status-bar {
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(10,10,22,0.93);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px; padding: 9px 22px;
+            color: #d1d5db; font-size: 0.88rem;
+            z-index: 9999; white-space: nowrap; display: none;
+        }
+        #progress-wrap {
+            position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 5px;
+            background: rgba(255,255,255,0.08); border-radius: 8px;
+            z-index: 9999; display: none;
+        }
+        #progress-bar { height: 100%; width: 0%; background: #3b82f6; border-radius: 8px; transition: width 0.25s; }
+
+        #start-area { text-align: center; margin-top: 1.8rem; }
+        #start-desc { color: #6b7280; font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.7; }
+
+        /* 범례 */
+        #legend {
+            display: none; margin-top: 1rem;
+            background: rgba(10,10,22,0.85);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px; padding: 10px 16px;
+            font-size: 0.78rem; color: #9ca3af; line-height: 2;
+        }
+        .legend-row { display: inline-flex; align-items: center; gap: 7px; margin-right: 18px; }
+        .ld { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+        /* 결과 섹션 (인라인) */
+        #result-section { display: none; margin-top: 2rem; }
+        .rs-divider {
+            border: none; border-top: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem;
+        }
+        .rs-title { font-size: 1rem; font-weight: 700; color: #a78bfa; margin-bottom: 1.2rem; }
+        .rs-main  { display: flex; align-items: baseline; gap: 10px; margin-bottom: 0.5rem; }
+        .rs-px    { font-size: 3rem; font-weight: 800; color: #4ade80; line-height: 1; }
+        .rs-unit  { font-size: 0.85rem; color: #6b7280; }
+        .rs-grade { font-size: 0.88rem; color: #d1d5db; margin-bottom: 1.2rem; }
+        .rs-lines {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 8px; margin-bottom: 1.5rem;
+        }
+        .rs-line-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 8px; padding: 10px 8px; text-align: center;
+        }
+        .rs-line-label { font-size: 0.72rem; color: #6b7280; margin-bottom: 4px; }
+        .rs-line-val   { font-size: 1.1rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <nav class="top">
+      <div class="container">
+        <a class="brand" href="/">
+          <div class="brand-mark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2"/>
+              <circle cx="12" cy="12" r="3" fill="#04102E"/>
+            </svg>
+          </div>
+          <div>
+            <div class="brand-name">독서 아이트래킹</div>
+            <div class="brand-mono">EYE-TRACKING · READING</div>
+          </div>
+        </a>
+      </div>
+    </nav>
+
+    <div class="page-content">
+        <div class="reading-wrapper">
+            <div class="reading-area" id="reading-area">
+                <canvas id="accuracy-canvas"></canvas>
+                <div class="reading-text" id="reading-text"></div>
+            </div>
+        </div>
+
+        <div id="start-area">
+            <p id="start-desc">
+                파란 점이 각 줄을 천천히 가로지릅니다.<br>
+                점을 시선으로 따라가세요. 약 25초 소요
+            </p>
+            <button id="start-btn" class="btn btn-primary"
+                style="padding:0.6rem 2.2rem; font-size:0.95rem;" disabled>
+                정확도 검사 시작
+            </button>
+        </div>
+
+        <div id="legend">
+            <span class="legend-row"><span class="ld" style="border:2px solid #3b82f6; background:rgba(59,130,246,0.1);"></span>타겟</span>
+            <span class="legend-row"><span class="ld" style="background:rgba(239,68,68,0.65);"></span>시선 샘플</span>
+            <span class="legend-row"><span class="ld" style="background:#fb923c;"></span>평균 시선</span>
+            <span class="legend-row"><span style="display:inline-block;width:18px;height:2px;background:rgba(250,204,21,0.7);border-top:2px dashed rgba(250,204,21,0.7);vertical-align:middle;"></span>오차</span>
+        </div>
+
+        <div id="result-section">
+            <hr class="rs-divider">
+            <div class="rs-title">🎯 시선 정확도 결과</div>
+            <div class="rs-main">
+                <span class="rs-px" id="result-px">--</span>
+                <span class="rs-unit">px 평균 오차</span>
+            </div>
+            <div class="rs-grade" id="result-grade"></div>
+            <div class="rs-lines" id="result-lines"></div>
+            <button class="btn" onclick="location.reload()"
+                style="background:rgba(255,255,255,0.07); color:#9ca3af; padding:0.5rem 1.6rem; font-size:0.88rem;">
+                다시 검사하기
+            </button>
+        </div>
+    </div>
+
+    <div id="target-dot"></div>
+    <div id="status-bar"></div>
+    <div id="progress-wrap"><div id="progress-bar"></div></div>
+
+    <script src="/static/js/accuracy.js" defer></script>
+</body>
+</html>

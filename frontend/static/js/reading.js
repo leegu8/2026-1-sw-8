@@ -39,15 +39,6 @@ let _paginationMaxH   = 0;
     allLineList = lineList.map(l => ({ ...l }));
     initPagination();
     await createSession(bookId);
-    if (DEMO_MODE) {
-        startTime = Date.now();
-        gazeData.length = patternData.length = rereadingEvents.length = 0;
-        lineSegmentsVisited.clear();
-        currentReadingLine = maxReadingLine = lineDwellLine = -1;
-        lineDwellCount = lineDwellRightCount = 0;
-        baselineLastChangedTime = Date.now();
-        lastValidLine = -1; lastValidLineTime = 0; oobSince = null;
-    }
 })();
 
 function buildLineList() {
@@ -200,18 +191,9 @@ function getSegIdx(p) {
 }
 
 // ── 실제 시선 추적 로드 ───────────────────────────────────
-const DEV_MODE  = new URLSearchParams(location.search).has('dev');
-const DEMO_MODE = new URLSearchParams(location.search).has('demo');
+const DEV_MODE = new URLSearchParams(location.search).has('dev');
 
-if (DEMO_MODE) {
-    window._demoMode = true;
-    import('/static/js/gaze.js');
-    let lastX = 0, lastY = 0;
-    document.addEventListener('mousemove', e => { lastX = e.clientX; lastY = e.clientY; });
-    setInterval(() => {
-        window.dispatchEvent(new CustomEvent('gaze:tracking', { detail: { x: lastX, y: lastY } }));
-    }, 33);
-} else if (DEV_MODE) {
+if (DEV_MODE) {
     document.getElementById('reading-status').textContent = '🖱 개발자 모드 (마우스 = 시선)';
     const gazeDot = document.getElementById('gaze-dot');
     if (gazeDot) { gazeDot.style.display = 'block'; document.body.style.cursor = 'none'; }
@@ -378,7 +360,7 @@ document.getElementById('done-btn').addEventListener('click', async () => {
     window.location.href = `/result.html?session_id=${sessionId ?? ''}`;
 });
 
-document.getElementById('recal-btn').addEventListener('click', () => {
+document.getElementById('recal-btn')?.addEventListener('click', () => {
     window.location.href = '/guide.html';
 });
 
@@ -390,34 +372,19 @@ function applyRegressionBlur() {
     document.querySelectorAll('.word[data-line]').forEach(w => {
         const ln = +w.dataset.line;
         if (ln >= 0 && ln < blurLine) w.classList.add('word-blur');
-        else                          w.classList.remove('word-blur');
+        else w.classList.remove('word-blur');
     });
 }
+function clearRegressionBlur() { document.querySelectorAll('.word-blur').forEach(w => w.classList.remove('word-blur')); }
 
-function clearRegressionBlur() {
-    document.querySelectorAll('.word-blur').forEach(w => w.classList.remove('word-blur'));
-}
-
-const ivBlurCheck      = document.getElementById('iv-blur-check');
-const ivHighlightCheck = document.getElementById('iv-highlight-check');
-
+const ivBlurCheck = document.getElementById('iv-blur-check');
 setInterval(() => {
     if (!startTime || !ivBlurCheck.checked) {
-        if (blurActive) { blurActive = false; blurLine = -1; clearRegressionBlur(); blurEventSent = false; }
-        return;
+        if (blurActive) { blurActive = false; blurLine = -1; clearRegressionBlur(); blurEventSent = false; } return;
     }
-    const rereadCount = rereadingsInWindow();
-    if (!blurActive && rereadCount >= REREAD_BLUR_ON) {
-        blurActive = true;
-        if (!blurEventSent) {
-            blurEventSent = true;
-            sendCorrectionEvent('BLUR', currentReadingLine);
-        }
-    }
-    if (blurActive) {
-        if (rereadCount >= REREAD_BLUR_ON) blurLine = currentReadingLine;
-        applyRegressionBlur();
-    }
+    const rc = rereadingsInWindow();
+    if (!blurActive && rc >= REREAD_BLUR_ON) { blurActive = true; if (!blurEventSent) { blurEventSent = true; sendCorrectionEvent('BLUR', currentReadingLine); } }
+    if (blurActive) { if (rc >= REREAD_BLUR_ON) blurLine = currentReadingLine; applyRegressionBlur(); }
 }, 500);
 
 // ── 세션 전체 분석 ────────────────────────────────────────
@@ -594,17 +561,30 @@ function updateHighlightBar(lineIdx) {
     showOverlay(bar);
 }
 
+const _calloutFocus = document.getElementById('callout-focus');
+function _positionCallout(el, lineIdx, side) {
+    if (lineIdx < 0 || lineIdx >= lineList.length) return;
+    const ln = lineList[lineIdx];
+    const centerY = (ln.top + ln.bottom) / 2 - window.scrollY;
+    if (side === 'left') { el.style.left = ''; el.style.right = (window.innerWidth - (readingAreaRect?.left ?? 0) + 6) + 'px'; }
+    else { el.style.right = ''; el.style.left = ((readingAreaRect?.right ?? window.innerWidth * 0.75) + 6) + 'px'; }
+    el.style.top = (centerY - el.offsetHeight / 2) + 'px';
+}
+function showFocusCallout(lineIdx) {
+    if (lineIdx < 0 || lineIdx >= lineList.length) { hideFocusCallout(); return; }
+    _calloutFocus.querySelector('.callout-box').textContent = '👁 집중하세요';
+    _calloutFocus.classList.add('show');
+    _positionCallout(_calloutFocus, lineIdx, 'left');
+}
+function hideFocusCallout() { _calloutFocus.classList.remove('show'); }
+
+const ivHighlightCheck = document.getElementById('iv-highlight-check');
 setInterval(() => {
     const bar = document.getElementById('line-highlight-bar');
-    if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); highlightEventSent = false; return; }
+    if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); hideFocusCallout(); return; }
     if (isLostFocus()) {
         updateHighlightBar(currentReadingLine);
-        if (!highlightEventSent) {
-            highlightEventSent = true;
-            sendCorrectionEvent('HIGHLIGHT', currentReadingLine);
-        }
-    } else {
-        hideOverlay(bar);
-        highlightEventSent = false;
-    }
+        showFocusCallout(currentReadingLine);
+        if (!highlightEventSent) { highlightEventSent = true; sendCorrectionEvent('HIGHLIGHT', currentReadingLine); }
+    } else { hideOverlay(bar); hideFocusCallout(); highlightEventSent = false; }
 }, 500);

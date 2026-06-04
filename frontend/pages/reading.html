@@ -30,8 +30,33 @@
         .reading-text   { position: relative; z-index: 1; font-size: 1.35rem; line-height: 2.2; }
         .reading-text p { margin: 0 0 1.2em; }
         .word           { display: inline; transition: filter 0.25s; }
-        .word-blur      { filter: blur(2px); opacity: 0.55; user-select: none; }
-        #gaze-dot       { display: none !important; }
+        .word-blur      { filter: blur(4px); opacity: 0.3; user-select: none; }
+        /* 라인 콜아웃 공통 */
+        #callout-focus {
+            position: fixed;
+            display: none;
+            align-items: center;
+            z-index: 9990;
+            pointer-events: none;
+        }
+        #callout-focus.show { display: flex; }
+        .callout-arrow {
+            width: 0; height: 0;
+            border-top: 7px solid transparent;
+            border-bottom: 7px solid transparent;
+            flex-shrink: 0;
+        }
+        .callout-box {
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        #callout-focus .callout-arrow { border-left: 8px solid rgba(52,152,219,0.9); }
+        #callout-focus .callout-box   { background: rgba(52,152,219,0.9); color: #fff; }
+        #gaze-dot                { display: none !important; }
+        body.cal-mode #gaze-dot  { display: block !important; }
         #intervention-panel {
             position: fixed; top: 68px; left: 20px;
             background: rgba(15,15,25,0.90);
@@ -116,6 +141,12 @@
         </div>
     </div>
 
+    <!-- 라인 콜아웃 말풍선 -->
+    <div id="callout-focus">
+        <div class="callout-box"></div>
+        <div class="callout-arrow"></div>
+    </div>
+
     <!-- 이전 독서 개선 포인트 팝업 -->
     <div id="improvement-popup" style="display:none; position:fixed; inset:0;
         background:rgba(0,0,0,0.55); z-index:10000; align-items:center; justify-content:center;">
@@ -173,6 +204,7 @@
         if (e.key !== 'q' && e.key !== 'Q') return;
         calMode = !calMode;
         badge.style.display = calMode ? 'block' : 'none';
+        document.body.classList.toggle('cal-mode', calMode);
         document.body.style.cursor = calMode ? 'crosshair' : '';
         setYCorrection(!calMode);
     });
