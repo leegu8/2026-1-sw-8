@@ -28,7 +28,7 @@ function buildLineList() {
     lineList = [...map.entries()]
         .sort((a, b) => a[0] - b[0])
         .map(([, v]) => v)
-        .slice(0, 5);
+        .slice(0, 4);
 }
 
 (function renderText() {
@@ -38,14 +38,14 @@ function buildLineList() {
 
     requestAnimationFrame(() => requestAnimationFrame(() => {
         buildLineList();
-        if (lineList.length < 5) {
+        if (lineList.length < 4) {
             document.getElementById('start-desc').textContent =
-                '⚠ 텍스트 줄이 5줄 미만입니다. 창 크기를 키워주세요.';
+                '⚠ 텍스트 줄이 4줄 미만입니다. 창 크기를 키워주세요.';
             return;
         }
         const area    = document.getElementById('reading-area');
         const areaTop = area.getBoundingClientRect().top;
-        const h       = lineList[4].bottom - window.scrollY - areaTop + 10;
+        const h       = lineList[3].bottom - window.scrollY - areaTop + 10;
         area.style.height = h + 'px';
 
         const canvas  = document.getElementById('accuracy-canvas');
@@ -81,8 +81,8 @@ function filterOutliers(points) {
 }
 
 // ── 이동 경로 ─────────────────────────────────────────────
-const MOVE_SPEED_PX_S  = 120;  // 가로 이동 속도 (px/s)
-const TRANSITION_MS    = 450;  // 줄 이동 시간 (수집 안 함)
+const MOVE_SPEED_PX_S  = 280;  // 가로 이동 속도 (px/s)
+const TRANSITION_MS    = 350;  // 줄 이동 시간 (수집 안 함)
 
 let trackPoints = []; // { dotX, dotY, gazeX, gazeY }
 
@@ -92,14 +92,7 @@ function buildSegments() {
         const l  = lineList[li];
         const cy = (l.top + l.bottom) / 2 - window.scrollY;
         const duration = (l.xMax - l.xMin) / MOVE_SPEED_PX_S * 1000;
-
-        segs.push({ fromX: l.xMin, fromY: cy, toX: l.xMax, toY: cy, duration, collect: true });
-
-        if (li < lineList.length - 1) {
-            const n  = lineList[li + 1];
-            const ny = (n.top + n.bottom) / 2 - window.scrollY;
-            segs.push({ fromX: l.xMax, fromY: cy, toX: n.xMin, toY: ny, duration: TRANSITION_MS, collect: false });
-        }
+        segs.push({ fromX: l.xMin, fromY: cy, toX: l.xMax, toY: cy, duration, lineIdx: li });
     }
     return segs;
 }
@@ -116,7 +109,7 @@ function runSegment(seg) {
             targetDot.style.left = dotX + 'px';
             targetDot.style.top  = dotY + 'px';
 
-            if (seg.collect) trackPoints.push({ dotX, dotY, gazeX, gazeY });
+            trackPoints.push({ dotX, dotY, gazeX, gazeY, lineIdx: seg.lineIdx });
 
             if (t < 1) requestAnimationFrame(frame);
             else resolve();
@@ -130,42 +123,66 @@ const statusEl     = document.getElementById('status-bar');
 const progressEl   = document.getElementById('progress-bar');
 const progressWrap = document.getElementById('progress-wrap');
 const targetDot    = document.getElementById('target-dot');
+const nextArea     = document.getElementById('next-area');
+const nextBtn      = document.getElementById('next-btn');
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function waitNext() {
+    return new Promise(resolve => {
+        nextArea.style.display = 'block';
+        nextBtn.onclick = () => { nextArea.style.display = 'none'; resolve(); };
+    });
+}
+
+async function blinkDot(x, y) {
+    targetDot.style.left    = x + 'px';
+    targetDot.style.top     = y + 'px';
+    targetDot.style.display = 'block';
+    for (let i = 0; i < 3; i++) {
+        targetDot.style.opacity = '1';
+        await delay(180);
+        targetDot.style.opacity = '0.1';
+        await delay(130);
+    }
+    targetDot.style.opacity = '1';
+    await delay(200);
+}
 
 async function startTest() {
     document.getElementById('start-area').style.display = 'none';
     document.body.style.overflowY = 'hidden';
     progressWrap.style.display    = 'block';
     statusEl.style.display        = 'block';
-    statusEl.textContent          = '파란 점을 시선으로 따라가세요';
     trackPoints = [];
 
     const segs    = buildSegments();
-    const sweeps  = segs.filter(s => s.collect);
     const totalMs = segs.reduce((s, g) => s + g.duration, 0);
     let elapsed   = 0;
 
-    // 첫 점 등장
-    const first = segs[0];
-    targetDot.style.left    = first.fromX + 'px';
-    targetDot.style.top     = first.fromY + 'px';
-    targetDot.style.display = 'block';
-    void targetDot.offsetWidth;
-    targetDot.style.opacity = '1';
-    await delay(400);
-
     for (let i = 0; i < segs.length; i++) {
-        await runSegment(segs[i]);
-        elapsed += segs[i].duration;
-        progressEl.style.width = (elapsed / totalMs * 100) + '%';
-        await delay(30);
-    }
+        const seg = segs[i];
 
-    // 점 페이드 아웃
-    targetDot.style.opacity = '0';
-    await delay(250);
-    targetDot.style.display = 'none';
+        // 첫 줄 제외 — 버튼 누를 때까지 대기
+        if (i > 0) {
+            statusEl.textContent = `줄 ${seg.lineIdx + 1} 준비되면 버튼을 누르세요`;
+            await waitNext();
+        }
+
+        statusEl.textContent = `줄 ${seg.lineIdx + 1} / ${lineList.length}  —  점을 따라가세요`;
+
+        // 시작점 깜박임
+        await blinkDot(seg.fromX, seg.fromY);
+
+        await runSegment(seg);
+        elapsed += seg.duration;
+        progressEl.style.width = (elapsed / totalMs * 100) + '%';
+
+        // 줄 끝 → 점 사라짐
+        targetDot.style.opacity = '0';
+        await delay(400);
+        targetDot.style.display = 'none';
+    }
 
     progressEl.style.width        = '100%';
     statusEl.style.display        = 'none';
@@ -180,6 +197,14 @@ async function startTest() {
 document.getElementById('start-btn').addEventListener('click', startTest);
 
 // ── 결과 시각화 ───────────────────────────────────────────
+const LINE_COLORS = [
+    [59,  130, 246],  // 파랑  줄 1
+    [34,  197, 94 ],  // 초록  줄 2
+    [234, 179, 8  ],  // 노랑  줄 3
+    [249, 115, 22 ],  // 주황  줄 4
+    [236, 72,  153],  // 분홍  줄 5
+];
+
 function drawResults() {
     const area   = document.getElementById('reading-area');
     const canvas = document.getElementById('accuracy-canvas');
@@ -194,21 +219,27 @@ function drawResults() {
 
     const toC = (vx, vy) => ({ x: vx - rect.left, y: vy - rect.top });
 
-    // 시선 경로 (주황 점)
+    // 오차선 (점 위치 → 시선 위치, 오차 크기별 색상)
     for (const p of filtered) {
-        const { x, y } = toC(p.gazeX, p.gazeY);
+        const d  = toC(p.dotX,  p.dotY);
+        const g  = toC(p.gazeX, p.gazeY);
         const err = Math.hypot(p.gazeX - p.dotX, p.gazeY - p.dotY);
-        const alpha = Math.max(0.15, 0.6 - err / 400);
-        ctx.fillStyle = `rgba(251,146,60,${alpha.toFixed(2)})`;
+        const t   = Math.min(err / 120, 1); // 0(작음)→1(큼)
+        const rr  = Math.round(t * 239 + (1 - t) * 74);
+        const gg  = Math.round(t * 68  + (1 - t) * 222);
+        const bb  = Math.round(t * 68  + (1 - t) * 128);
+        ctx.strokeStyle = `rgba(${rr},${gg},${bb},0.3)`;
+        ctx.lineWidth   = 1;
         ctx.beginPath();
-        ctx.arc(x, y, 3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(g.x, g.y);
+        ctx.stroke();
     }
 
-    // 점 경로 (파란 선)
-    ctx.strokeStyle = 'rgba(59,130,246,0.55)';
-    ctx.lineWidth   = 2;
-    ctx.setLineDash([6, 3]);
+    // 점 경로 (흰색 점선)
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([5, 4]);
     ctx.beginPath();
     filtered.forEach((p, i) => {
         const { x, y } = toC(p.dotX, p.dotY);
@@ -216,6 +247,18 @@ function drawResults() {
     });
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // 줄별 시선 점 (색상 구분)
+    for (const p of filtered) {
+        const { x, y } = toC(p.gazeX, p.gazeY);
+        const [r, g, b] = LINE_COLORS[p.lineIdx ?? 0];
+        const err   = Math.hypot(p.gazeX - p.dotX, p.gazeY - p.dotY);
+        const alpha = Math.max(0.25, 0.8 - err / 300);
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }
 
 // ── 결과 요약 (인라인) ─────────────────────────────────────
@@ -226,16 +269,9 @@ function showSummary() {
     const errors  = filtered.map(p => Math.hypot(p.gazeX - p.dotX, p.gazeY - p.dotY));
     const avg     = errors.reduce((s, e) => s + e, 0) / errors.length;
 
-    // 줄별 평균
-    const area    = document.getElementById('reading-area');
-    const rect    = area.getBoundingClientRect();
-    const lineAvgs = Array.from({ length: 5 }, (_, li) => {
-        const l  = lineList[li];
-        const cy = (l.top + l.bottom) / 2 - window.scrollY;
-        const lr = filtered.filter(p =>
-            p.dotY >= cy - 20 && p.dotY <= cy + 20 &&
-            p.dotX >= l.xMin  && p.dotX <= l.xMax
-        );
+    // 줄별 평균 (lineIdx 기준)
+    const lineAvgs = Array.from({ length: lineList.length }, (_, li) => {
+        const lr = filtered.filter(p => p.lineIdx === li);
         return lr.length
             ? lr.reduce((s, p) => s + Math.hypot(p.gazeX - p.dotX, p.gazeY - p.dotY), 0) / lr.length
             : null;
