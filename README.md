@@ -62,7 +62,7 @@ python -m gaze_client
 
 ## 기술 스택
 
-- **Backend**: Python, FastAPI, SQLAlchemy, SQLite
+- **Backend**: Python, FastAPI, SQLAlchemy, PostgreSQL
 - **Gaze Client**: MediaPipe, OpenCV, NumPy, FastAPI
 - **Frontend**: HTML / CSS / JavaScript (Vanilla)
 - **통신**: WebSocket (시선 스트리밍), REST API
