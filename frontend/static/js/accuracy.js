@@ -70,6 +70,15 @@ if (DEV_MODE) {
 let gazeX = 0, gazeY = 0;
 window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => { gazeX = x; gazeY = y; });
 
+// ── 줄 박스 안에 있는지 판별 ──────────────────────────────
+function isInLineBox(gazeX, gazeY, li) {
+    if (li < 0 || li >= lineList.length) return false;
+    const l  = lineList[li];
+    const vt = l.top    - window.scrollY;
+    const vb = l.bottom - window.scrollY;
+    return gazeX >= l.xMin && gazeX <= l.xMax && gazeY >= vt && gazeY <= vb;
+}
+
 // ── 이상치 필터 ───────────────────────────────────────────
 function filterOutliers(points) {
     if (points.length < 4) return points;
@@ -197,14 +206,6 @@ async function startTest() {
 document.getElementById('start-btn').addEventListener('click', startTest);
 
 // ── 결과 시각화 ───────────────────────────────────────────
-const LINE_COLORS = [
-    [59,  130, 246],  // 파랑  줄 1
-    [34,  197, 94 ],  // 초록  줄 2
-    [234, 179, 8  ],  // 노랑  줄 3
-    [249, 115, 22 ],  // 주황  줄 4
-    [236, 72,  153],  // 분홍  줄 5
-];
-
 function drawResults() {
     const area   = document.getElementById('reading-area');
     const canvas = document.getElementById('accuracy-canvas');
@@ -219,42 +220,38 @@ function drawResults() {
 
     const toC = (vx, vy) => ({ x: vx - rect.left, y: vy - rect.top });
 
-    // 오차선 (점 위치 → 시선 위치, 오차 크기별 색상)
-    for (const p of filtered) {
-        const d  = toC(p.dotX,  p.dotY);
-        const g  = toC(p.gazeX, p.gazeY);
-        const err = Math.hypot(p.gazeX - p.dotX, p.gazeY - p.dotY);
-        const t   = Math.min(err / 120, 1); // 0(작음)→1(큼)
-        const rr  = Math.round(t * 239 + (1 - t) * 74);
-        const gg  = Math.round(t * 68  + (1 - t) * 222);
-        const bb  = Math.round(t * 68  + (1 - t) * 128);
-        ctx.strokeStyle = `rgba(${rr},${gg},${bb},0.3)`;
+    // 줄 박스 테두리
+    for (let li = 0; li < lineList.length; li++) {
+        const l  = lineList[li];
+        const bx = l.xMin   - rect.left;
+        const by = l.top    - window.scrollY - rect.top;
+        const bw = l.xMax   - l.xMin;
+        const bh = l.bottom - l.top;
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
         ctx.lineWidth   = 1;
-        ctx.beginPath();
-        ctx.moveTo(d.x, d.y);
-        ctx.lineTo(g.x, g.y);
-        ctx.stroke();
+        ctx.strokeRect(bx, by, bw, bh);
     }
 
-    // 점 경로 (흰색 점선)
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    // 점 경로 (흰색 점선, 줄별로 끊김)
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth   = 1.5;
     ctx.setLineDash([5, 4]);
     ctx.beginPath();
-    filtered.forEach((p, i) => {
+    let prevLi = -1;
+    filtered.forEach(p => {
         const { x, y } = toC(p.dotX, p.dotY);
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        if (p.lineIdx !== prevLi) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        prevLi = p.lineIdx;
     });
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // 줄별 시선 점 (색상 구분)
+    // 시선 점 — 박스 안이면 초록, 밖이면 빨강
     for (const p of filtered) {
         const { x, y } = toC(p.gazeX, p.gazeY);
-        const [r, g, b] = LINE_COLORS[p.lineIdx ?? 0];
-        const err   = Math.hypot(p.gazeX - p.dotX, p.gazeY - p.dotY);
-        const alpha = Math.max(0.25, 0.8 - err / 300);
-        ctx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+        const inside = isInLineBox(p.gazeX, p.gazeY, p.lineIdx);
+        ctx.fillStyle = inside ? 'rgba(74,222,128,0.65)' : 'rgba(248,113,113,0.65)';
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, Math.PI * 2);
         ctx.fill();
@@ -266,32 +263,33 @@ function showSummary() {
     const filtered = filterOutliers(trackPoints);
     if (!filtered.length) return;
 
-    const errors  = filtered.map(p => Math.hypot(p.gazeX - p.dotX, p.gazeY - p.dotY));
-    const avg     = errors.reduce((s, e) => s + e, 0) / errors.length;
+    // 전체 정확도 (줄 박스 안에 있는 비율)
+    const totalCorrect = filtered.filter(p => isInLineBox(p.gazeX, p.gazeY, p.lineIdx)).length;
+    const overallAcc   = Math.round(totalCorrect / filtered.length * 100);
 
-    // 줄별 평균 (lineIdx 기준)
-    const lineAvgs = Array.from({ length: lineList.length }, (_, li) => {
+    // 줄별 정확도
+    const lineAccs = Array.from({ length: lineList.length }, (_, li) => {
         const lr = filtered.filter(p => p.lineIdx === li);
-        return lr.length
-            ? lr.reduce((s, p) => s + Math.hypot(p.gazeX - p.dotX, p.gazeY - p.dotY), 0) / lr.length
-            : null;
+        if (!lr.length) return null;
+        const correct = lr.filter(p => isInLineBox(p.gazeX, p.gazeY, li)).length;
+        return Math.round(correct / lr.length * 100);
     });
 
-    document.getElementById('result-px').textContent = Math.round(avg);
+    document.getElementById('result-px').textContent = overallAcc;
 
     let grade;
-    if      (avg < 30)  grade = '✅ 우수 — 독서 시선 추적에 충분한 정확도입니다.';
-    else if (avg < 60)  grade = '🟡 양호 — 대부분의 줄을 정확히 인식할 수 있습니다.';
-    else if (avg < 100) grade = '🟠 보통 — 재보정 시 정확도가 향상될 수 있습니다.';
-    else                grade = '🔴 낮음 — 보정 페이지에서 재보정을 권장합니다.';
+    if      (overallAcc >= 80) grade = '✅ 우수 — 독서 시선 추적에 충분한 정확도입니다.';
+    else if (overallAcc >= 60) grade = '🟡 양호 — 대부분의 줄을 정확히 인식할 수 있습니다.';
+    else if (overallAcc >= 40) grade = '🟠 보통 — 재보정 시 정확도가 향상될 수 있습니다.';
+    else                       grade = '🔴 낮음 — 보정 페이지에서 재보정을 권장합니다.';
     document.getElementById('result-grade').textContent = grade;
 
-    const colorFor = e => e < 30 ? '#4ade80' : e < 60 ? '#facc15' : e < 100 ? '#fb923c' : '#f87171';
-    document.getElementById('result-lines').innerHTML = lineAvgs.map((e, i) =>
+    const colorFor = pct => pct >= 80 ? '#4ade80' : pct >= 60 ? '#facc15' : pct >= 40 ? '#fb923c' : '#f87171';
+    document.getElementById('result-lines').innerHTML = lineAccs.map((pct, i) =>
         `<div class="rs-line-card">
             <div class="rs-line-label">줄 ${i + 1}</div>
-            <div class="rs-line-val" style="color:${e != null ? colorFor(e) : '#4b5563'}">
-                ${e != null ? Math.round(e) + 'px' : '—'}
+            <div class="rs-line-val" style="color:${pct != null ? colorFor(pct) : '#4b5563'}">
+                ${pct != null ? pct + '%' : '—'}
             </div>
         </div>`
     ).join('');

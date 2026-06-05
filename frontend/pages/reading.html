@@ -27,8 +27,10 @@
             border-bottom: none !important;
             text-align: right;
         }
-        .reading-text   { position: relative; z-index: 1; font-size: 1.35rem; line-height: 2.2; }
+        .reading-text   { position: relative; z-index: 1; font-size: 1.35rem; line-height: 2.2;
+                          width: 100%; box-sizing: border-box; overflow-wrap: break-word; word-break: keep-all; }
         .reading-text p { margin: 0 0 1.2em; }
+        .reading-area, #reading-clip { width: 100%; box-sizing: border-box; }
         .word           { display: inline; transition: filter 0.25s; }
         .word-blur      { filter: blur(4px); opacity: 0.3; user-select: none; }
         /* 라인 콜아웃 공통 */

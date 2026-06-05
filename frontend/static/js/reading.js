@@ -92,13 +92,15 @@ function initPagination() {
     const bottomPad   = parseFloat(getComputedStyle(area).paddingBottom) || _paginationTopPad;
     const maxContentH = _paginationMaxH - _paginationTopPad - bottomPad;
 
+    const pageH = maxContentH - _paginationTopPad;
+
     pageBoundaries = [];
     let s = 0;
     while (s < allLineList.length) {
         let e = s, h = 0;
         while (e < allLineList.length) {
             const lh = allLineList[e].bottom - allLineList[e].top;
-            if (h + lh > maxContentH && e > s) break;
+            if (h + lh > pageH && e > s) break;
             h += lh;
             e++;
         }
@@ -111,10 +113,12 @@ function initPagination() {
     if (clip) {
         clip.style.overflow = 'hidden';
         clip.style.height   = maxContentH + 'px';
+        clip.style.width    = area.clientWidth + 'px';
     }
 
-    area.style.overflow        = 'hidden';
-    area.style.height          = _paginationMaxH + 'px';
+    area.style.overflow = 'hidden';
+    area.style.height   = _paginationMaxH + 'px';
+    area.style.width    = area.clientWidth + 'px';
     document.body.style.overflowY = 'hidden';
     if (nav) nav.style.display = totalPages > 1 ? 'flex' : 'none';
 
