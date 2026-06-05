@@ -7,6 +7,8 @@ let totalPages        = 1;
 let pageBoundaries    = [];
 let _paginationTopPad = 0;
 let _paginationMaxH   = 0;
+let _originalParas    = [];
+let _lineOffset       = 0;
 
 (async () => {
     const bookId = +new URLSearchParams(location.search).get('book_id');
@@ -15,7 +17,8 @@ let _paginationMaxH   = 0;
     if (!book) return;
     document.getElementById('book-title').textContent = `📖 ${book.title}`;
     document.title = `${book.title} - 독서 아이트래킹`;
-    const paras = book.content.split(/\n+/).map(s => s.trim()).filter(Boolean);
+    _originalParas = book.content.split(/\n+/).map(s => s.trim()).filter(Boolean);
+    const paras = _originalParas;
     document.querySelector('.reading-text').innerHTML = paras.map(para =>
         `<p>${para.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`
     ).join('');
@@ -40,6 +43,19 @@ let _paginationMaxH   = 0;
     allLineList = lineList.map(l => ({ ...l }));
     initPagination();
     await createSession(bookId);
+
+    let _resizeTimer = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(_resizeTimer);
+        _resizeTimer = setTimeout(() => {
+            document.querySelector('.reading-text').innerHTML = _originalParas.map(para =>
+                `<p>${para.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`
+            ).join('');
+            buildLineList();
+            allLineList = lineList.map(l => ({ ...l }));
+            initPagination();
+        }, 200);
+    });
 })();
 
 function buildLineList() {
@@ -74,45 +90,117 @@ function buildLineList() {
 
 function initPagination() {
     if (!allLineList.length) return;
-    const area = document.querySelector('.reading-area');
+    const area     = document.querySelector('.reading-area');
     const controls = document.querySelector('.reading-controls');
-    const nav = document.getElementById('page-nav');
+    const nav      = document.getElementById('page-nav');
     const areaRect = area.getBoundingClientRect();
     _paginationTopPad = allLineList[0].top - areaRect.top;
     _paginationMaxH   = window.innerHeight - areaRect.top - 50 - controls.offsetHeight - 36;
     const bottomPad   = parseFloat(getComputedStyle(area).paddingBottom) || _paginationTopPad;
     const maxContentH = _paginationMaxH - _paginationTopPad - bottomPad;
+    const pageH       = maxContentH - _paginationTopPad;
     pageBoundaries = [];
     let s = 0;
     while (s < allLineList.length) {
-        let e = s, h = 0;
+        let e = s;
         while (e < allLineList.length) {
-            const lh = allLineList[e].bottom - allLineList[e].top;
-            if (h + lh > maxContentH && e > s) break;
-            h += lh; e++;
+            if (allLineList[e].bottom - allLineList[s].top > pageH && e > s) break;
+            e++;
         }
         pageBoundaries.push({ start: s, end: e - 1 }); s = e;
     }
     totalPages = pageBoundaries.length;
-    const clip = document.getElementById('reading-clip');
-    if (clip) { clip.style.overflow = 'hidden'; clip.style.height = maxContentH + 'px'; }
-    area.style.overflow = 'hidden';
-    area.style.height   = _paginationMaxH + 'px';
+    area.style.height = _paginationMaxH + 'px';
     document.body.style.overflowY = 'hidden';
     if (nav) nav.style.display = totalPages > 1 ? 'flex' : 'none';
-    goToPage(0);
+    buildPageDivs();
+}
+
+function buildPageDivs() {
+    const container = document.querySelector('.reading-text');
+    const allWords = [...container.querySelectorAll('.word')];
+
+    const pageData = pageBoundaries.map(({ start, end }) => {
+        const words = allWords.filter(w => { const l = +w.dataset.line; return l >= start && l <= end; });
+        const paras = [];
+        let lastPara = null;
+        words.forEach(w => {
+            const p = w.closest('p');
+            if (p !== lastPara) { paras.push([]); lastPara = p; }
+            paras[paras.length - 1].push(w.textContent);
+        });
+        return paras;
+    });
+
+    container.innerHTML = '';
+    pageData.forEach((paras, i) => {
+        const div = document.createElement('div');
+        div.className = 'reading-page';
+        div.dataset.page = i;
+        div.style.display = i === 0 ? '' : 'none';
+        div.innerHTML = paras.map(ws =>
+            `<p>${ws.map(w => `<span class="word">${w}</span>`).join(' ')}</p>`
+        ).join('');
+        container.appendChild(div);
+    });
+
+    _remeasurePage(0);
+    currentPage = 0;
+    updatePageNav();
+}
+
+function _remeasurePage(page) {
+    const pageDiv = document.querySelector(`.reading-page[data-page="${page}"]`);
+    if (!pageDiv) return;
+
+    const map = new Map();
+    pageDiv.querySelectorAll('.word').forEach(w => {
+        const r = w.getBoundingClientRect();
+        const top = Math.round(r.top + window.scrollY);
+        if (!map.has(top)) {
+            map.set(top, { top, bottom: r.bottom + window.scrollY, xMin: r.left, xMax: r.right });
+        } else {
+            const l = map.get(top);
+            l.bottom = Math.max(l.bottom, r.bottom + window.scrollY);
+            l.xMin   = Math.min(l.xMin, r.left);
+            l.xMax   = Math.max(l.xMax, r.right);
+        }
+    });
+
+    const sortedTops = [...map.keys()].sort((a, b) => a - b);
+    const local = sortedTops.map(t => map.get(t));
+    for (let i = 1; i < local.length; i++) {
+        const mid = Math.round((local[i-1].bottom + local[i].top) / 2);
+        local[i-1].bottom = mid; local[i].top = mid + 1;
+    }
+
+    const offset   = pageBoundaries[page]?.start ?? 0;
+    const topToIdx = new Map(sortedTops.map((t, i) => [t, i + offset]));
+    pageDiv.querySelectorAll('.word').forEach(w => {
+        const top = Math.round(w.getBoundingClientRect().top + window.scrollY);
+        w.dataset.line = topToIdx.get(top) ?? -1;
+    });
+
+    lineList = local;
+    readingAreaRect = document.querySelector('.reading-area')?.getBoundingClientRect() ?? null;
 }
 
 function goToPage(page) {
     if (page < 0 || page >= totalPages) return;
     currentPage = page;
-    const { start: startIdx } = pageBoundaries[page];
-    const translateY = allLineList[0].top - allLineList[startIdx].top;
-    document.querySelector('.reading-text').style.transform = `translateY(${translateY}px)`;
-    const area = document.querySelector('.reading-area');
-    area.style.height = _paginationMaxH + 'px';
-    lineList = allLineList.map(l => ({ ...l, top: l.top + translateY, bottom: l.bottom + translateY }));
-    readingAreaRect = area.getBoundingClientRect();
+
+    document.querySelectorAll('.reading-page').forEach(d => { d.style.display = 'none'; });
+    const pageDiv = document.querySelector(`.reading-page[data-page="${page}"]`);
+    if (pageDiv) pageDiv.style.display = '';
+
+    _remeasurePage(page);
+
+    lineDwellLine       = -1;
+    lineDwellCount      = 0;
+    lineDwellRightCount = 0;
+    lastValidLine       = -1;
+    lastValidLineTime   = 0;
+
     updatePageNav();
 }
 
@@ -184,7 +272,7 @@ let   startTime              = null;
 let   lastValidLine          = -1;
 let   lastValidLineTime      = 0;
 let   blurActive             = false;
-let   blurLine               = -1;
+let   maxGlobalBlurLine      = -1;
 let   oobSince               = null;
 let   currentReadingLine     = -1;
 let   maxReadingLine         = -1;
@@ -232,7 +320,7 @@ if (DEV_MODE) {
             case 'completion':     return `${calcCompletion().completionRate}%`;
             case 'focus':          return `${calcFocusRate(elapsed)}%`;
             case 'regressionRate': return `${calcRegressionRate()}%`;
-            case 'wpm': { const wc = document.querySelector('.reading-text').innerText.trim().split(/\s+/).filter(w=>w.length>0).length; return `${elapsed>0?Math.round(wc/(elapsed/60)):0}`; }
+            case 'wpm': { return `${elapsed>0?Math.round(bookWordCount/(elapsed/60)):0}`; }
             case 'baseLine': { if (currentReadingLine < 0) return '--'; const segsSet = lineSegmentsVisited.get(currentReadingLine); const maxSeg = segsSet?.size>0?Math.max(...segsSet):-1; return `${currentReadingLine+1}줄 (${maxSeg+1}/5) ${maxReadingLine>=0?'↑'+(maxReadingLine+1):''}`.trim(); }
             case 'behavior': { const m={reading:'📖 정상독서',wrap:'↩ 줄바꿈',rereading:'🔄 재독',distracted:'😶 집중이탈',oob:'⊗ 이탈',idle:'대기중'}; return m[getReadingBehavior()]||'--'; }
             default: return '--';
@@ -303,8 +391,9 @@ window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => {
     const now     = Date.now();
     const rawLine = getLineIndex(y);
     const rawFiltered = rawLine >= 0 ? rawLine : (lastValidLine >= 0 && now - lastValidLineTime < 300) ? lastValidLine : -1;
-    updateGazeLineHighlight(currentReadingLine);
-    const blurOob = blurActive && rawFiltered >= 0 && blurLine >= 0 && rawFiltered < blurLine;
+    updateGazeLineHighlight(currentReadingLine - (pageBoundaries[currentPage]?.start ?? 0));
+    const globalRaw = (pageBoundaries[currentPage]?.start ?? 0) + rawFiltered;
+    const blurOob   = blurActive && rawFiltered >= 0 && maxGlobalBlurLine >= 0 && globalRaw < maxGlobalBlurLine;
     const xOob    = readingAreaRect ? (x < readingAreaRect.left || x > readingAreaRect.right) : false;
     const line    = (blurOob || xOob) ? -1 : rawFiltered;
     if (!startTime) return;
@@ -367,7 +456,7 @@ document.getElementById('next-page-btn')?.addEventListener('click', () => goToPa
 function applyRegressionBlur() {
     document.querySelectorAll('.word[data-line]').forEach(w => {
         const ln = +w.dataset.line;
-        if (ln >= 0 && ln < blurLine) w.classList.add('word-blur');
+        if (ln >= 0 && ln < maxGlobalBlurLine) w.classList.add('word-blur');
         else w.classList.remove('word-blur');
     });
 }
@@ -376,11 +465,16 @@ function clearRegressionBlur() { document.querySelectorAll('.word-blur').forEach
 const ivBlurCheck = document.getElementById('iv-blur-check');
 setInterval(() => {
     if (!startTime || !ivBlurCheck.checked) {
-        if (blurActive) { blurActive = false; blurLine = -1; clearRegressionBlur(); blurEventSent = false; } return;
+        if (blurActive) { blurActive = false; maxGlobalBlurLine = -1; clearRegressionBlur(); blurEventSent = false; } return;
     }
     const rc = rereadingsInWindow();
     if (!blurActive && rc >= REREAD_BLUR_ON) { blurActive = true; if (!blurEventSent) { blurEventSent = true; sendCorrectionEvent('BLUR', currentReadingLine); } }
-    if (blurActive) { if (rc >= REREAD_BLUR_ON) blurLine = currentReadingLine; applyRegressionBlur(); }
+    if (blurActive) {
+        if (rc >= REREAD_BLUR_ON && currentReadingLine >= 0) {
+            maxGlobalBlurLine = Math.max(maxGlobalBlurLine, currentReadingLine);
+        }
+        applyRegressionBlur();
+    }
 }, 500);
 
 function analyzeReading() {
@@ -390,17 +484,15 @@ function analyzeReading() {
     const focusRate      = calcFocusRate(totalSec);
     const { regressionCount, regRate } = calcRegressions(totalSec);
     const regressionRate = calcRegressionRate();
-    const wordCount = document.querySelector('.reading-text').innerText.trim().split(/\s+/).filter(w=>w.length>0).length;
-    const wpm = totalSec > 0 ? Math.round(wordCount / (totalSec / 60)) : 0;
+    const wpm = totalSec > 0 ? Math.round(bookWordCount / (totalSec / 60)) : 0;
     return { totalSec, completionRate, focusRate, regressionCount, regRate, regressionRate, wpm, visitedLines, totalLines, error: false };
 }
 
 function calcCompletion() {
-    const totalLines = lineList.length;
-    if (!totalLines) return { visitedLines: 0, totalLines: 0, completionRate: 0 };
+    const totalSegs = allLineList.length * 5;
+    if (!totalSegs) return { visitedLines: 0, totalLines: 0, completionRate: 0 };
     let visitedSegs = 0;
-    for (let i = 0; i < totalLines; i++) visitedSegs += lineSegmentsVisited.get(i)?.size ?? 0;
-    const totalSegs = totalLines * 5;
+    for (const segs of lineSegmentsVisited.values()) visitedSegs += segs.size;
     return { visitedLines: visitedSegs, totalLines: totalSegs, completionRate: Math.round(visitedSegs / totalSegs * 100) };
 }
 
@@ -466,21 +558,25 @@ function calcRegressions(totalSec = 0) {
 
 function updateLineTracking(x, line, type = 'still') {
     if (line < 0) { lineDwellCount = 0; return; }
-    if (currentReadingLine < 0) { currentReadingLine = line; if (line > maxReadingLine) maxReadingLine = line; }
+    const globalLine = (pageBoundaries[currentPage]?.start ?? 0) + line;
     const l = lineList[line];
     if (l) {
         const sw = (l.xMax - l.xMin) / 5;
         if (sw > 0) {
             const seg = Math.max(0, Math.min(4, Math.floor((x - l.xMin) / sw)));
-            if (!lineSegmentsVisited.has(line)) lineSegmentsVisited.set(line, new Set());
-            lineSegmentsVisited.get(line).add(seg);
+            if (!lineSegmentsVisited.has(globalLine)) lineSegmentsVisited.set(globalLine, new Set());
+            lineSegmentsVisited.get(globalLine).add(seg);
         }
     }
     if (line === lineDwellLine) { lineDwellCount++; if (type === 'right') lineDwellRightCount++; }
     else { lineDwellLine = line; lineDwellCount = 1; lineDwellRightCount = (type === 'right') ? 1 : 0; }
+    if (currentReadingLine < 0) {
+        if (lineDwellRightCount >= 3) { currentReadingLine = globalLine; maxReadingLine = globalLine; }
+        return;
+    }
     if (lineDwellRightCount >= 3) {
-        if (line < currentReadingLine) { rereadingEvents.push(Date.now()); baselineLastChangedTime = Date.now(); currentReadingLine = line; }
-        else if (line > currentReadingLine) { baselineLastChangedTime = Date.now(); currentReadingLine = line; if (line > maxReadingLine) maxReadingLine = line; }
+        if (globalLine < currentReadingLine) { rereadingEvents.push(Date.now()); baselineLastChangedTime = Date.now(); currentReadingLine = globalLine; }
+        else if (globalLine > currentReadingLine) { baselineLastChangedTime = Date.now(); currentReadingLine = globalLine; if (globalLine > maxReadingLine) maxReadingLine = globalLine; }
     }
 }
 
@@ -560,8 +656,9 @@ setInterval(() => {
     const bar = document.getElementById('line-highlight-bar');
     if (!startTime || !ivHighlightCheck.checked) { hideOverlay(bar); hideFocusCallout(); return; }
     if (isLostFocus()) {
-        updateHighlightBar(currentReadingLine);
-        showFocusCallout(currentReadingLine);
+        const _localCur = currentReadingLine - (pageBoundaries[currentPage]?.start ?? 0);
+        updateHighlightBar(_localCur);
+        showFocusCallout(_localCur);
         if (!highlightEventSent) { highlightEventSent = true; sendCorrectionEvent('HIGHLIGHT', currentReadingLine); }
     } else { hideOverlay(bar); hideFocusCallout(); highlightEventSent = false; }
 }, 500);
