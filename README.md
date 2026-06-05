@@ -19,6 +19,13 @@
 
 ## 설치 및 실행
 
+### ⭐️웹 브라우저로 접속 시⭐️ (배포 완료)
+
+```
+https://two026-1-sw-8.onrender.com
+```
+
+### 로컬 서버로 접속 시
 ### 1. 저장소 클론
 
 ```bash
@@ -45,13 +52,6 @@ uvicorn backend.app.main:app --reload
 ```
 http://localhost:8000
 ```
-
-### 5. ⭐️웹 브라우저 접속⭐️ (배포 완료)
-
-```
-https://two026-1-sw-8.onrender.com
-```
-
 
 ## 사용 방법
 
