@@ -32,7 +32,7 @@ cd RET_2ver
 pip install -r requirements.txt
 ```
 
-### 3. 서버 실행
+### 3. 로컬 서버 실행
 
 ```bash
 uvicorn backend.app.main:app --reload
@@ -40,11 +40,18 @@ uvicorn backend.app.main:app --reload
 
 > 첫 실행 시 `face_landmarker.task` 모델 파일이 자동으로 다운로드됩니다 (약 30MB, 한 번만).
 
-### 4. 브라우저 접속
+### 4. 로컬 서버 접속
 
 ```
 http://localhost:8000
 ```
+
+### 5. ⭐️웹 브라우저 접속⭐️ (배포 완료)
+
+```
+https://two026-1-sw-8.onrender.com
+```
+
 
 ## 사용 방법
 
@@ -58,6 +65,6 @@ http://localhost:8000
 
 ## 기술 스택
 
-- **Backend**: Python, FastAPI, MediaPipe, OpenCV, MySQL
+- **Backend**: Python, FastAPI, MediaPipe, OpenCV, SQLite(branch main, 로컬 서버용), PostgreSQL(branch release, 배포 서버용)
 - **Frontend**: HTML / CSS / JavaScript (Vanilla)
 - **통신**: WebSocket (실시간 시선 스트리밍), REST API (보정)
