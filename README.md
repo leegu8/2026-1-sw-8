@@ -26,20 +26,20 @@ https://two026-1-sw-8.onrender.com
 ```
 
 ### 로컬 서버로 접속 시
-### 1. 저장소 클론
+#### 1. 저장소 클론
 
 ```bash
 git clone https://github.com/사용자명/저장소명.git
 cd RET_2ver
 ```
 
-### 2. 패키지 설치
+#### 2. 패키지 설치
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. 로컬 서버 실행
+#### 3. 로컬 서버 실행
 
 ```bash
 uvicorn backend.app.main:app --reload
@@ -47,7 +47,7 @@ uvicorn backend.app.main:app --reload
 
 > 첫 실행 시 `face_landmarker.task` 모델 파일이 자동으로 다운로드됩니다 (약 30MB, 한 번만).
 
-### 4. 로컬 서버 접속
+#### 4. 로컬 서버 접속
 
 ```
 http://localhost:8000
