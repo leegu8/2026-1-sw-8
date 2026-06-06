@@ -31,6 +31,21 @@
 https://two026-1-sw-8.onrender.com
 ```
 
+> **⚠️ 웹 브라우저로 접속하더라도 시선 추적을 위해 아래 `gaze_client`를 로컬에서 반드시 실행해야 합니다.**
+
+#### gaze_client 설치 및 실행
+
+```bash
+# 1. 패키지 설치 (최초 1회)
+pip install -r gaze_client/requirements.txt
+
+# 2. 시선 추적 서버 실행
+python -m gaze_client
+```
+
+- 포트 `8765`에서 실행되며, 첫 실행 시 MediaPipe 모델(약 30MB)이 자동 다운로드됩니다.
+- 브라우저에서 서비스 이용 중에는 이 창을 종료하지 마세요.
+
 ### 로컬 서버로 접속 시
 #### 1. 저장소 클론
 
