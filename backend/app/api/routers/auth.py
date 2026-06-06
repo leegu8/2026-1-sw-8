@@ -1,4 +1,5 @@
 import bcrypt
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -17,7 +18,7 @@ def _verify(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
 
-async def _latest_level(db: AsyncSession, user_id: int) -> str | None:
+async def _latest_level(db: AsyncSession, user_id: int) -> Optional[str]:
     result = await db.execute(
         select(LevelHistory)
         .where(LevelHistory.user_id == user_id)

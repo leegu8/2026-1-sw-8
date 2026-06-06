@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 
 RIDGE_ALPHA = 1.0
