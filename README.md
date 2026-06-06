@@ -27,6 +27,8 @@
 
 ### ⭐️웹 브라우저로 접속 시⭐️ (배포 완료)
 
+> `release` 브랜치의 `deploy/` 폴더를 Render 서버에 배포 중입니다.
+
 ```
 https://two026-1-sw-8.onrender.com
 ```
