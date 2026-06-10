@@ -9,7 +9,7 @@ from .visualizer import FaceMeshVisualizer
 from ..config import DEADZONE_PX, Y_CORRECTION_K
 
 _PROCESS_NOISE     = 20.0
-_MEASUREMENT_NOISE = 600.0
+_MEASUREMENT_NOISE = 300.0
 _DT                = 1 / 30
 
 
