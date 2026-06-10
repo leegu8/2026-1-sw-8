@@ -3,192 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>시선 정확도 검사 - 독서 아이트래킹</title>
+    <title>시선 추적 정확도 측정</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="/static/base.css">
     <link rel="stylesheet" href="/static/aurora-theme.css">
     <script src="/static/js/auth-guard.js"></script>
     <style>
-        body { background: #04081C !important; min-width: 0; }
-        .page-content { padding-top: 1rem; padding-bottom: 2rem; }
-        .reading-area    { position: relative; overflow: hidden; }
-        .reading-wrapper { position: relative; }
-        .reading-text    { position: relative; z-index: 1; font-size: 1.35rem; line-height: 2.2; }
-        .reading-text p  { margin: 0 0 1.2em; }
-        .word            { display: inline; color: rgba(200,210,230,0.35); user-select: none; }
+        body { background: #04081C !important; }
+        .acc-wrap  { max-width: 860px; margin: 0 auto; padding: 32px 24px 80px; }
+        .acc-title { font-size: 1.4rem; font-weight: 700; color: #E8EEFF; margin-bottom: 6px; }
+        .acc-sub   { font-size: 0.88rem; color: rgba(232,238,255,0.45); margin-bottom: 28px; }
 
-        #accuracy-canvas {
-            position: absolute; top: 0; left: 0;
-            pointer-events: none; z-index: 10;
+        .reading-area {
+            position: relative;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 12px;
+            padding: 28px 36px;
+            overflow: hidden;
+        }
+        .reading-text { font-size: 1.05rem; line-height: 1.9; color: #dde6ff; word-break: keep-all; }
+        .reading-text p { margin: 0 0 0.5em; }
+
+        #target-highlight {
+            position: absolute; left: 0; right: 0;
+            background: rgba(110,231,166,0.15);
+            border-left: 3px solid rgba(110,231,166,0.75);
+            border-radius: 0 4px 4px 0;
+            pointer-events: none;
+            display: none;
+            transition: top 0.08s ease;
+            z-index: 10;
         }
 
-        #target-dot {
+        #status-box {
+            margin-top: 18px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 14px 20px;
+            display: flex; align-items: center; gap: 16px;
+        }
+        #status-msg  { font-size: 1rem; font-weight: 600; color: #E8EEFF; flex: 1; }
+        #status-prog { font-size: 0.85rem; color: rgba(232,238,255,0.4); white-space: nowrap; }
+
+        #moving-dot {
             position: fixed;
-            width: 20px; height: 20px;
+            width: 16px; height: 16px;
+            background: #6EE7A6;
             border-radius: 50%;
-            background: rgba(59,130,246,0.92);
-            border: 3px solid #fff;
+            pointer-events: none;
+            display: none;
             transform: translate(-50%, -50%);
-            pointer-events: none; z-index: 200;
-            display: none; opacity: 0;
-            transition: left 0.35s ease, top 0.35s ease, opacity 0.2s ease;
-            animation: tpulse 0.9s ease-in-out infinite;
-        }
-        @keyframes tpulse {
-            0%   { box-shadow: 0 0 0 0   rgba(59,130,246,0.55); }
-            70%  { box-shadow: 0 0 0 10px rgba(59,130,246,0);   }
-            100% { box-shadow: 0 0 0 0   rgba(59,130,246,0);    }
+            z-index: 9999;
+            box-shadow: 0 0 10px rgba(110,231,166,0.7);
         }
 
-        #status-bar {
-            position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
-            background: rgba(10,10,22,0.93);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 10px; padding: 9px 22px;
-            color: #d1d5db; font-size: 0.88rem;
-            z-index: 9999; white-space: nowrap; display: none;
+        #start-box {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; padding: 36px 32px;
+            margin-top: 24px; text-align: center;
         }
-        #progress-wrap {
-            position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
-            width: 200px; height: 5px;
-            background: rgba(255,255,255,0.08); border-radius: 8px;
+        #start-box ul {
+            text-align: left; display: inline-block;
+            margin: 16px 0 28px; padding: 0 0 0 20px;
+            color: rgba(232,238,255,0.65); font-size: 0.9rem; line-height: 2.1;
+        }
+
+        #results-box { display: none; margin-top: 28px; }
+        .result-score { font-size: 3.2rem; font-weight: 700; text-align: center; margin-bottom: 4px; }
+        .result-label { text-align: center; font-size: 0.88rem; color: rgba(232,238,255,0.4); margin-bottom: 24px; }
+        .result-table { width: 100%; border-collapse: collapse; }
+        .result-table th, .result-table td {
+            padding: 9px 14px; font-size: 0.88rem; text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            color: rgba(232,238,255,0.8);
+        }
+        .result-table th { color: rgba(232,238,255,0.4); font-weight: 500; }
+        .mini-bar { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.08); width: 140px; }
+        .mini-fill { height: 100%; border-radius: 4px; }
+
+        #gaze-dot {
+            position: fixed; width: 12px; height: 12px;
+            background: rgba(110,231,166,0.8); border-radius: 50%;
+            pointer-events: none; transform: translate(-50%,-50%);
             z-index: 9999; display: none;
         }
-        #progress-bar { height: 100%; width: 0%; background: #3b82f6; border-radius: 8px; transition: width 0.25s; }
-
-        #start-area { text-align: center; margin-top: 1.8rem; }
-        #start-desc { color: #6b7280; font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.7; }
-
-        body.cal-mode #gaze-dot { display: block !important; }
-
-        /* 범례 */
-        #legend {
-            display: none; margin-top: 1rem;
-            background: rgba(10,10,22,0.85);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 10px; padding: 10px 16px;
-            font-size: 0.78rem; color: #9ca3af; line-height: 2;
-        }
-        .legend-row { display: inline-flex; align-items: center; gap: 7px; margin-right: 18px; }
-        .ld { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-
-        /* 결과 섹션 (인라인) */
-        #result-section { display: none; margin-top: 2rem; }
-        .rs-divider {
-            border: none; border-top: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem;
-        }
-        .rs-title { font-size: 1rem; font-weight: 700; color: #a78bfa; margin-bottom: 1.2rem; }
-        .rs-main  { display: flex; align-items: baseline; gap: 10px; margin-bottom: 0.5rem; }
-        .rs-px    { font-size: 3rem; font-weight: 800; color: #4ade80; line-height: 1; }
-        .rs-unit  { font-size: 0.85rem; color: #6b7280; }
-        .rs-grade { font-size: 0.88rem; color: #d1d5db; margin-bottom: 1.2rem; }
-        .rs-lines {
-            display: grid; grid-template-columns: repeat(5, 1fr);
-            gap: 8px; margin-bottom: 1.5rem;
-        }
-        .rs-line-card {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.07);
-            border-radius: 8px; padding: 10px 8px; text-align: center;
-        }
-        .rs-line-label { font-size: 0.72rem; color: #6b7280; margin-bottom: 4px; }
-        .rs-line-val   { font-size: 1.1rem; font-weight: 700; }
     </style>
 </head>
 <body>
-    <nav class="top">
-      <div class="container">
-        <a class="brand" href="/">
-          <div class="brand-mark">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2"/>
-              <circle cx="12" cy="12" r="3" fill="#04102E"/>
-            </svg>
-          </div>
-          <div>
-            <div class="brand-name">독서 아이트래킹</div>
-            <div class="brand-mono">EYE-TRACKING · READING</div>
-          </div>
-        </a>
-      </div>
-    </nav>
+<div id="gaze-dot"></div>
+<div id="moving-dot"></div>
 
-    <div class="page-content">
-        <div class="reading-wrapper">
+<nav class="top">
+    <div class="container">
+        <a class="brand" href="/">
+            <div class="brand-mark">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M2 12C4 7 7.5 5 12 5C16.5 5 20 7 22 12C20 17 16.5 19 12 19C7.5 19 4 17 2 12Z" stroke="#04102E" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" fill="#04102E"/>
+                </svg>
+            </div>
+            <div>
+                <div class="brand-name">독서 아이트래킹</div>
+                <div class="brand-mono">EYE-TRACKING · ACCURACY</div>
+            </div>
+        </a>
+    </div>
+</nav>
+
+<main style="position:relative;z-index:1;padding-top:24px;">
+<div class="acc-wrap">
+    <div class="acc-title">👁 시선 추적 정확도 측정</div>
+    <div class="acc-sub">독서 페이지와 동일한 줄 단위 감지 방식으로 정확도를 측정합니다.</div>
+
+    <div id="start-box">
+        <div style="font-size:1.05rem;font-weight:600;color:#E8EEFF;margin-bottom:4px;">측정 전 확인 사항</div>
+        <ul>
+            <li>카메라와 <strong>40~70cm</strong> 거리를 유지해 주세요</li>
+            <li>측정 중 <strong>고개는 고정</strong>하고 눈만 움직여 주세요</li>
+            <li>초록색으로 강조된 줄을 응시하면 자동으로 진행됩니다</li>
+            <li>줄당 약 3초 소요 · 전체 약 20~30초</li>
+        </ul>
+        <button class="btn btn-primary" onclick="startTest()" style="min-width:140px;">측정 시작</button>
+    </div>
+
+    <div id="test-section" style="display:none;">
+        <div style="position:relative;">
             <div class="reading-area" id="reading-area">
-                <canvas id="accuracy-canvas"></canvas>
+                <div id="target-highlight"></div>
                 <div class="reading-text" id="reading-text"></div>
             </div>
         </div>
-
-        <div id="start-area">
-            <p id="start-desc">
-                파란 점이 각 줄을 천천히 가로지릅니다.<br>
-                점을 시선으로 따라가세요.
-            </p>
-            <button id="start-btn" class="btn btn-primary"
-                style="padding:0.6rem 2.2rem; font-size:0.95rem;" disabled>
-                정확도 검사 시작
-            </button>
+        <div id="status-box">
+            <div id="status-msg">준비 중...</div>
+            <div id="status-prog"></div>
         </div>
-
-        <div id="next-area" style="display:none; text-align:center; margin-top:1.2rem;">
-            <button id="next-btn" class="btn btn-primary"
-                style="padding:0.6rem 2rem; font-size:0.95rem;">
+        <div style="margin-top:14px;text-align:center;">
+            <button class="btn btn-primary" id="next-btn" onclick="nextLine()" style="display:none;min-width:140px;">
                 다음 줄 →
-            </button>
-        </div>
-
-        <div id="legend">
-            <span class="legend-row"><span class="ld" style="background:#4ade80;"></span>같은 칸 (정확)</span>
-            <span class="legend-row"><span class="ld" style="background:#f87171;"></span>다른 칸 (오차)</span>
-            <span class="legend-row"><span style="display:inline-block;width:18px;border-top:2px dashed rgba(255,255,255,0.3);vertical-align:middle;"></span>점 경로</span>
-        </div>
-
-        <div id="result-section">
-            <hr class="rs-divider">
-            <div class="rs-title">🎯 시선 정확도 결과</div>
-            <div class="rs-main">
-                <span class="rs-px" id="result-px">--</span>
-                <span class="rs-unit">% 정확도</span>
-            </div>
-            <div class="rs-grade" id="result-grade"></div>
-            <div class="rs-lines" id="result-lines"></div>
-            <button class="btn" onclick="location.reload()"
-                style="background:rgba(255,255,255,0.07); color:#9ca3af; padding:0.5rem 1.6rem; font-size:0.88rem;">
-                다시 검사하기
             </button>
         </div>
     </div>
 
-    <div id="gaze-dot"></div>
-    <div id="target-dot"></div>
-    <div id="status-bar"></div>
-    <div id="progress-wrap"><div id="progress-bar"></div></div>
+    <div id="results-box">
+        <div class="result-score" id="result-score"></div>
+        <div class="result-label">전체 평균 정확도 (줄 단위 감지 기준)</div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;">
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th>대상 줄</th>
+                        <th>정확도</th>
+                        <th>그래프</th>
+                        <th>샘플/적중</th>
+                    </tr>
+                </thead>
+                <tbody id="result-tbody"></tbody>
+            </table>
+        </div>
+        <div style="text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center;">
+            <button class="btn btn-line" onclick="location.reload()">다시 측정</button>
+            <button class="btn btn-primary" onclick="history.back()">돌아가기</button>
+        </div>
+    </div>
+</div>
+</main>
 
-    <div id="cal-mode-badge" style="display:none;position:fixed;top:80px;right:20px;background:linear-gradient(135deg,#c0392b,#e74c3c);color:white;padding:9px 18px;border-radius:10px;font-size:0.82rem;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(231,76,60,0.4);pointer-events:none;letter-spacing:0.01em;backdrop-filter:blur(8px);">🎯 마우스 보정 모드 &nbsp;|&nbsp; Q 로 해제</div>
+<div style="position:fixed;inset:0;pointer-events:none;opacity:0.3;z-index:0;">
+    <div class="aurora"></div>
+</div>
 
-    <script src="/static/js/accuracy.js" defer></script>
+<!-- Q키 보정 모드 배지 -->
+<div id="cal-mode-badge" style="
+    display: none; position: fixed; top: 80px; right: 20px;
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    color: white; padding: 9px 18px; border-radius: 10px;
+    font-size: 0.82rem; font-weight: 600; z-index: 9999;
+    box-shadow: 0 4px 16px rgba(231,76,60,0.4);
+    pointer-events: none; letter-spacing: 0.01em;
+">🎯 마우스 보정 모드 &nbsp;|&nbsp; Q 로 해제</div>
 
-    <script type="module">
-    import { addCalibrationPoint, setYCorrection } from '/static/js/api/gazeApi.js';
-    const CLICK_COUNT = 20;
-    let calMode = false, sending = false;
-    const badge = document.getElementById('cal-mode-badge');
-    document.addEventListener('keydown', (e) => {
-        if (e.key !== 'q' && e.key !== 'Q') return;
-        calMode = !calMode;
-        badge.style.display = calMode ? 'block' : 'none';
-        document.body.classList.toggle('cal-mode', calMode);
-        document.body.style.cursor = calMode ? 'crosshair' : '';
-        setYCorrection(!calMode);
-    });
-    document.addEventListener('click', async (e) => {
-        if (!calMode || sending) return;
-        sending = true;
-        try { await addCalibrationPoint(e.clientX, e.clientY, CLICK_COUNT); }
-        finally { sending = false; }
-    });
-    </script>
+<script src="/static/js/accuracy.js"></script>
+
+<script type="module">
+import { addCalibrationPoint, setYCorrection } from '/static/js/api/gazeApi.js';
+
+const badge = document.getElementById('cal-mode-badge');
+let calMode = false;
+let sending = false;
+const CLICK_COUNT = 20;
+
+document.addEventListener('keydown', e => {
+    if (e.key !== 'q' && e.key !== 'Q') return;
+    calMode = !calMode;
+    badge.style.display        = calMode ? 'block' : 'none';
+    document.body.style.cursor = calMode ? 'crosshair' : '';
+    setYCorrection(!calMode);
+});
+
+document.addEventListener('click', async e => {
+    if (!calMode || sending) return;
+    sending = true;
+    try { await addCalibrationPoint(e.clientX, e.clientY, CLICK_COUNT); }
+    finally { sending = false; }
+});
+</script>
 </body>
 </html>

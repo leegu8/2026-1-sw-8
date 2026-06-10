@@ -1,15 +1,32 @@
-// ── 텍스트 렌더 ──────────────────────────────────────────
-const TEST_TEXT =
-    '인간의 눈은 독서할 때 매끄럽게 움직이지 않습니다. 시선은 짧은 도약 운동인 단속성 안구 운동을 통해 ' +
-    '한 위치에서 다른 위치로 빠르게 이동하며, 그 사이에 짧은 정착을 반복합니다. 이러한 특성 때문에 ' +
-    '시선 추적 기술은 독서 습관을 분석하는 데 매우 유용한 도구로 활용됩니다. 특히 역행 안구 운동은 ' +
-    '독자가 이미 읽은 텍스트로 시선을 되돌리는 현상으로, 독해력이나 집중력과 밀접한 관련이 있습니다. ' +
-    '이 시스템은 이러한 패턴을 실시간으로 감지하여 독서 습관 개선을 위한 피드백을 제공합니다.';
+const TEST_PARAS = [
+    '시선 추적 정확도 측정 테스트입니다. 초록색으로 강조된 줄을 눈으로 바라봐 주세요.',
+    '각 줄을 충분히 응시한 뒤 측정 버튼을 눌러 주세요. 고개는 고정하고 눈만 움직여 주세요.',
+    '이 테스트는 독서 페이지와 동일한 줄 단위 감지 방식으로 정확도를 측정합니다.',
+    '카메라와 40~70cm 거리를 유지하면 더 정확한 측정 결과를 얻을 수 있습니다.',
+    '보정이 잘 이루어진 경우 높은 정확도가 측정됩니다. 집중해서 응시해 주세요.',
+    '테스트가 완료되면 줄별 정확도와 전체 평균 정확도를 확인할 수 있습니다.',
+];
 
 const DEV_MODE = new URLSearchParams(location.search).has('dev');
+if (DEV_MODE) {
+    const dot = document.getElementById('gaze-dot');
+    dot.style.display = 'block';
+    document.body.style.cursor = 'none';
+    let lx = 0, ly = 0;
+    document.addEventListener('mousemove', e => {
+        lx = e.clientX; ly = e.clientY;
+        dot.style.left = lx + 'px'; dot.style.top = ly + 'px';
+    });
+    setInterval(() => {
+        window.dispatchEvent(new CustomEvent('gaze:tracking', { detail: { x: lx, y: ly } }));
+    }, 33);
+} else {
+    import('/static/js/gaze.js');
+}
 
-// ── 라인 계산 ─────────────────────────────────────────────
+// ── 줄 목록 (reading 페이지와 동일) ──────────────────────
 let lineList = [];
+let readingAreaRect = null;
 
 function buildLineList() {
     const map = new Map();
@@ -25,274 +42,186 @@ function buildLineList() {
             l.xMax   = Math.max(l.xMax, r.right);
         }
     });
-    lineList = [...map.entries()]
-        .sort((a, b) => a[0] - b[0])
-        .map(([, v]) => v)
-        .slice(0, 4);
-}
-
-(function renderText() {
-    const container = document.getElementById('reading-text');
-    container.innerHTML =
-        `<p>${TEST_TEXT.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`;
-
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-        buildLineList();
-        if (lineList.length < 4) {
-            document.getElementById('start-desc').textContent =
-                '⚠ 텍스트 줄이 4줄 미만입니다. 창 크기를 키워주세요.';
-            return;
-        }
-        const area    = document.getElementById('reading-area');
-        const areaTop = area.getBoundingClientRect().top;
-        const h       = lineList[3].bottom - window.scrollY - areaTop + 10;
-        area.style.height = h + 'px';
-
-        const canvas  = document.getElementById('accuracy-canvas');
-        canvas.width  = area.offsetWidth;
-        canvas.height = h;
-
-        document.getElementById('start-btn').disabled = false;
-    }));
-})();
-
-// ── 시선 추적 ────────────────────────────────────────────
-if (DEV_MODE) {
-    let lx = 0, ly = 0;
-    document.addEventListener('mousemove', e => { lx = e.clientX; ly = e.clientY; });
-    setInterval(() => {
-        window.dispatchEvent(new CustomEvent('gaze:tracking', { detail: { x: lx, y: ly } }));
-    }, 33);
-} else {
-    import('/static/js/gaze.js');
-}
-
-let gazeX = 0, gazeY = 0;
-window.addEventListener('gaze:tracking', ({ detail: { x, y } }) => { gazeX = x; gazeY = y; });
-
-// ── 줄 박스 안에 있는지 판별 ──────────────────────────────
-function isInLineBox(gazeX, gazeY, li) {
-    if (li < 0 || li >= lineList.length) return false;
-    const l  = lineList[li];
-    const vt = l.top    - window.scrollY;
-    const vb = l.bottom - window.scrollY;
-    return gazeX >= l.xMin && gazeX <= l.xMax && gazeY >= vt && gazeY <= vb;
-}
-
-// ── 이상치 필터 ───────────────────────────────────────────
-function filterOutliers(points) {
-    if (points.length < 4) return points;
-    const errs = points.map(p => Math.hypot(p.gazeX - p.dotX, p.gazeY - p.dotY));
-    const sorted = [...errs].sort((a, b) => a - b);
-    const median = sorted[Math.floor(sorted.length / 2)];
-    const thresh = Math.min(Math.max(median * 3 + 30, 80), 300);
-    return points.filter((_, i) => errs[i] <= thresh);
-}
-
-// ── 이동 경로 ─────────────────────────────────────────────
-const MOVE_SPEED_PX_S  = 280;  // 가로 이동 속도 (px/s)
-const TRANSITION_MS    = 350;  // 줄 이동 시간 (수집 안 함)
-
-let trackPoints = []; // { dotX, dotY, gazeX, gazeY }
-
-function buildSegments() {
-    const segs = [];
-    for (let li = 0; li < lineList.length; li++) {
-        const l  = lineList[li];
-        const cy = (l.top + l.bottom) / 2 - window.scrollY;
-        const duration = (l.xMax - l.xMin) / MOVE_SPEED_PX_S * 1000;
-        segs.push({ fromX: l.xMin, fromY: cy, toX: l.xMax, toY: cy, duration, lineIdx: li });
-    }
-    return segs;
-}
-
-function runSegment(seg) {
-    return new Promise(resolve => {
-        let startTs = null;
-        function frame(ts) {
-            if (!startTs) startTs = ts;
-            const t    = Math.min((ts - startTs) / seg.duration, 1);
-            const dotX = seg.fromX + (seg.toX - seg.fromX) * t;
-            const dotY = seg.fromY + (seg.toY - seg.fromY) * t;
-
-            targetDot.style.left = dotX + 'px';
-            targetDot.style.top  = dotY + 'px';
-
-            trackPoints.push({ dotX, dotY, gazeX, gazeY, lineIdx: seg.lineIdx });
-
-            if (t < 1) requestAnimationFrame(frame);
-            else resolve();
-        }
-        requestAnimationFrame(frame);
-    });
-}
-
-// ── UI ───────────────────────────────────────────────────
-const statusEl     = document.getElementById('status-bar');
-const progressEl   = document.getElementById('progress-bar');
-const progressWrap = document.getElementById('progress-wrap');
-const targetDot    = document.getElementById('target-dot');
-const nextArea     = document.getElementById('next-area');
-const nextBtn      = document.getElementById('next-btn');
-
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-function waitNext() {
-    return new Promise(resolve => {
-        nextArea.style.display = 'block';
-        nextBtn.onclick = () => { nextArea.style.display = 'none'; resolve(); };
-    });
-}
-
-async function blinkDot(x, y) {
-    targetDot.style.left    = x + 'px';
-    targetDot.style.top     = y + 'px';
-    targetDot.style.display = 'block';
-    for (let i = 0; i < 3; i++) {
-        targetDot.style.opacity = '1';
-        await delay(180);
-        targetDot.style.opacity = '0.1';
-        await delay(130);
-    }
-    targetDot.style.opacity = '1';
-    await delay(200);
-}
-
-async function startTest() {
-    document.getElementById('start-area').style.display = 'none';
-    document.body.style.overflowY = 'hidden';
-    progressWrap.style.display    = 'block';
-    statusEl.style.display        = 'block';
-    trackPoints = [];
-
-    const segs    = buildSegments();
-    const totalMs = segs.reduce((s, g) => s + g.duration, 0);
-    let elapsed   = 0;
-
-    for (let i = 0; i < segs.length; i++) {
-        const seg = segs[i];
-
-        // 첫 줄 제외 — 버튼 누를 때까지 대기
+    lineList = [...map.entries()].sort((a, b) => a[0] - b[0]).map(([, v]) => v);
+    readingAreaRect = document.querySelector('.reading-area')?.getBoundingClientRect() ?? null;
+    for (let i = 0; i < lineList.length; i++) {
         if (i > 0) {
-            statusEl.textContent = `줄 ${seg.lineIdx + 1} 준비되면 버튼을 누르세요`;
-            await waitNext();
+            const mid = Math.round((lineList[i-1].bottom + lineList[i].top) / 2);
+            lineList[i-1].bottom = mid;
+            lineList[i].top = mid + 1;
         }
-
-        statusEl.textContent = `줄 ${seg.lineIdx + 1} / ${lineList.length}  —  점을 따라가세요`;
-
-        // 시작점 깜박임
-        await blinkDot(seg.fromX, seg.fromY);
-
-        await runSegment(seg);
-        elapsed += seg.duration;
-        progressEl.style.width = (elapsed / totalMs * 100) + '%';
-
-        // 줄 끝 → 점 사라짐
-        targetDot.style.opacity = '0';
-        await delay(400);
-        targetDot.style.display = 'none';
-    }
-
-    progressEl.style.width        = '100%';
-    statusEl.style.display        = 'none';
-    progressWrap.style.display    = 'none';
-    document.body.style.overflowY = '';
-
-    drawResults();
-    document.getElementById('legend').style.display = 'block';
-    showSummary();
-}
-
-document.getElementById('start-btn').addEventListener('click', startTest);
-
-// ── 결과 시각화 ───────────────────────────────────────────
-function drawResults() {
-    const area   = document.getElementById('reading-area');
-    const canvas = document.getElementById('accuracy-canvas');
-    const ctx    = canvas.getContext('2d');
-    const rect   = area.getBoundingClientRect();
-    canvas.width  = area.offsetWidth;
-    canvas.height = area.offsetHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const filtered = filterOutliers(trackPoints);
-    if (!filtered.length) return;
-
-    const toC = (vx, vy) => ({ x: vx - rect.left, y: vy - rect.top });
-
-    // 줄 박스 테두리
-    for (let li = 0; li < lineList.length; li++) {
-        const l  = lineList[li];
-        const bx = l.xMin   - rect.left;
-        const by = l.top    - window.scrollY - rect.top;
-        const bw = l.xMax   - l.xMin;
-        const bh = l.bottom - l.top;
-        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(bx, by, bw, bh);
-    }
-
-    // 점 경로 (흰색 점선, 줄별로 끊김)
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth   = 1.5;
-    ctx.setLineDash([5, 4]);
-    ctx.beginPath();
-    let prevLi = -1;
-    filtered.forEach(p => {
-        const { x, y } = toC(p.dotX, p.dotY);
-        if (p.lineIdx !== prevLi) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-        prevLi = p.lineIdx;
-    });
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // 시선 점 — 박스 안이면 초록, 밖이면 빨강
-    for (const p of filtered) {
-        const { x, y } = toC(p.gazeX, p.gazeY);
-        const inside = isInLineBox(p.gazeX, p.gazeY, p.lineIdx);
-        ctx.fillStyle = inside ? 'rgba(74,222,128,0.65)' : 'rgba(248,113,113,0.65)';
-        ctx.beginPath();
-        ctx.arc(x, y, 3, 0, Math.PI * 2);
-        ctx.fill();
     }
 }
 
-// ── 결과 요약 (인라인) ─────────────────────────────────────
-function showSummary() {
-    const filtered = filterOutliers(trackPoints);
-    if (!filtered.length) return;
+// reading 페이지와 동일한 getLineIndex
+function getLineIndex(y) {
+    if (!lineList.length) return -1;
+    const docY = y + window.scrollY;
+    for (let i = 0; i < lineList.length; i++) {
+        if (docY >= lineList[i].top && docY <= lineList[i].bottom) return i;
+    }
+    return -1;
+}
 
-    // 전체 정확도 (줄 박스 안에 있는 비율)
-    const totalCorrect = filtered.filter(p => isInLineBox(p.gazeX, p.gazeY, p.lineIdx)).length;
-    const overallAcc   = Math.round(totalCorrect / filtered.length * 100);
+function highlightLine(lineIdx) {
+    const el   = document.getElementById('target-highlight');
+    const area = document.querySelector('.reading-area');
+    if (lineIdx < 0 || lineIdx >= lineList.length || !area) { el.style.display = 'none'; return; }
+    const areaTop = area.getBoundingClientRect().top + window.scrollY;
+    const ln = lineList[lineIdx];
+    el.style.top    = (ln.top - areaTop) + 'px';
+    el.style.height = (ln.bottom - ln.top + 4) + 'px';
+    el.style.display = 'block';
+}
 
-    // 줄별 정확도
-    const lineAccs = Array.from({ length: lineList.length }, (_, li) => {
-        const lr = filtered.filter(p => p.lineIdx === li);
-        if (!lr.length) return null;
-        const correct = lr.filter(p => isInLineBox(p.gazeX, p.gazeY, li)).length;
-        return Math.round(correct / lr.length * 100);
+function barColor(pct) {
+    return pct >= 75 ? '#6EE7A6' : pct >= 50 ? '#FFC56B' : '#FF7676';
+}
+
+// ── 점 좌→우 이동 + 시선 측정 ────────────────────────────
+const DOT_DURATION_MS = 3000;
+
+function animateDot(lineIdx) {
+    return new Promise(resolve => {
+        const ln  = lineList[lineIdx];
+        const dot = document.getElementById('moving-dot');
+
+        const startX  = ln.xMin;
+        const endX    = ln.xMax;
+        const screenY = (ln.top + ln.bottom) / 2 - window.scrollY;
+
+        dot.style.top     = screenY + 'px';
+        dot.style.left    = startX + 'px';
+        dot.style.display = 'block';
+
+        let total = 0, correct = 0;
+
+        const gazeHandler = ({ detail: { x, y } }) => {
+            total++;
+            if (getLineIndex(y) === lineIdx) correct++;
+        };
+        window.addEventListener('gaze:tracking', gazeHandler);
+
+        const startTime = performance.now();
+        function step(now) {
+            const progress = Math.min((now - startTime) / DOT_DURATION_MS, 1);
+            dot.style.left = (startX + (endX - startX) * progress) + 'px';
+
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                dot.style.display = 'none';
+                window.removeEventListener('gaze:tracking', gazeHandler);
+                resolve({
+                    acc:     total > 0 ? Math.round(correct / total * 100) : 0,
+                    total,
+                    correct,
+                });
+            }
+        }
+        requestAnimationFrame(step);
     });
+}
 
-    document.getElementById('result-px').textContent = overallAcc;
+// ── 상태 ─────────────────────────────────────────────────
+let testLines = [];
+let testIdx   = 0;
+let results   = [];
+let currentTargetLine = -1;
+let measuring = false;
 
-    let grade;
-    if      (overallAcc >= 80) grade = '✅ 우수 — 독서 시선 추적에 충분한 정확도입니다.';
-    else if (overallAcc >= 60) grade = '🟡 양호 — 대부분의 줄을 정확히 인식할 수 있습니다.';
-    else if (overallAcc >= 40) grade = '🟠 보통 — 재보정 시 정확도가 향상될 수 있습니다.';
-    else                       grade = '🔴 낮음 — 보정 페이지에서 재보정을 권장합니다.';
-    document.getElementById('result-grade').textContent = grade;
+// ── 테스트 시작 ───────────────────────────────────────────
+async function startTest() {
+    document.getElementById('start-box').style.display = 'none';
+    document.getElementById('test-section').style.display = 'block';
 
-    const colorFor = pct => pct >= 80 ? '#4ade80' : pct >= 60 ? '#facc15' : pct >= 40 ? '#fb923c' : '#f87171';
-    document.getElementById('result-lines').innerHTML = lineAccs.map((pct, i) =>
-        `<div class="rs-line-card">
-            <div class="rs-line-label">줄 ${i + 1}</div>
-            <div class="rs-line-val" style="color:${pct != null ? colorFor(pct) : '#4b5563'}">
-                ${pct != null ? pct + '%' : '—'}
-            </div>
-        </div>`
+    const textEl = document.getElementById('reading-text');
+    textEl.innerHTML = TEST_PARAS.map(p =>
+        `<p>${p.split(/\s+/).map(w => `<span class="word">${w}</span>`).join(' ')}</p>`
     ).join('');
 
-    document.getElementById('result-section').style.display = 'block';
+    await new Promise(r => setTimeout(r, 100));
+    buildLineList();
+
+    if (!lineList.length) {
+        document.getElementById('status-msg').textContent = '줄 목록을 구성하지 못했습니다.';
+        return;
+    }
+
+    const MAX  = 6;
+    const step = Math.max(1, Math.floor(lineList.length / MAX));
+    testLines  = [];
+    for (let i = 0; i < lineList.length; i += step) {
+        testLines.push(i);
+        if (testLines.length >= MAX) break;
+    }
+
+    testIdx = 0;
+    results = [];
+    showLine(0);
+}
+
+function showLine(idx) {
+    currentTargetLine = testLines[idx];
+    measuring = false;
+
+    highlightLine(currentTargetLine);
+
+    const btn = document.getElementById('next-btn');
+    document.getElementById('status-msg').textContent  = `${currentTargetLine + 1}번째 줄을 바라보세요`;
+    document.getElementById('status-prog').textContent = `${idx + 1} / ${testLines.length}`;
+    btn.textContent    = '측정하기';
+    btn.style.display  = 'inline-block';
+    btn.disabled       = false;
+}
+
+// ── 버튼 클릭 → 점 이동하며 측정 ─────────────────────────
+async function nextLine() {
+    if (measuring) return;
+    measuring = true;
+
+    const btn = document.getElementById('next-btn');
+    btn.disabled      = true;
+    btn.textContent   = '측정 중...';
+    document.getElementById('status-msg').textContent = `${currentTargetLine + 1}번째 줄 — 점을 눈으로 따라가세요`;
+
+    const { acc, total, correct } = await animateDot(currentTargetLine);
+    results.push({ line: currentTargetLine, acc, total, correct });
+
+    // 결과 잠깐 표시
+    document.getElementById('status-msg').textContent = `${currentTargetLine + 1}번째 줄: ${acc}%`;
+    btn.style.display = 'none';
+    await new Promise(r => setTimeout(r, 700));
+
+    testIdx++;
+    if (testIdx < testLines.length) {
+        showLine(testIdx);
+    } else {
+        document.getElementById('target-highlight').style.display = 'none';
+        showResults(results);
+    }
+}
+
+// ── 결과 표시 ────────────────────────────────────────────
+function showResults(results) {
+    document.getElementById('test-section').style.display = 'none';
+    document.getElementById('results-box').style.display  = 'block';
+
+    const avg = Math.round(results.reduce((s, r) => s + r.acc, 0) / results.length);
+    const scoreEl = document.getElementById('result-score');
+    scoreEl.textContent = `${avg}%`;
+    scoreEl.style.color = barColor(avg);
+
+    document.getElementById('result-tbody').innerHTML = results.map(r => `
+        <tr>
+            <td>${r.line + 1}번째 줄</td>
+            <td style="font-weight:600;color:${barColor(r.acc)}">${r.acc}%</td>
+            <td>
+                <div class="mini-bar">
+                    <div class="mini-fill" style="width:${r.acc}%;background:${barColor(r.acc)};"></div>
+                </div>
+            </td>
+            <td style="color:rgba(232,238,255,0.45)">${r.correct} / ${r.total}</td>
+        </tr>
+    `).join('');
 }

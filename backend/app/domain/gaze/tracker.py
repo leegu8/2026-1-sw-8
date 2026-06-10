@@ -10,7 +10,7 @@ from ...core.config import DEADZONE_PX, Y_CORRECTION_K
 
 # 칼만 필터 파라미터 (값이 클수록 해당 노이즈를 크게 가정)
 _PROCESS_NOISE     = 20.0   # 상태 변화 노이즈 (클수록 빠른 움직임에 민감)
-_MEASUREMENT_NOISE = 600.0  # 측정 노이즈 (클수록 측정값을 덜 신뢰 → 더 부드러움)
+_MEASUREMENT_NOISE = 300.0  # 측정 노이즈 (클수록 측정값을 덜 신뢰 → 더 부드러움)
 _DT                = 1 / 30 # 프레임 간격 (30fps 기준)
 
 
