@@ -53,7 +53,7 @@ python -m gaze_client
 
 ```bash
 git clone https://github.com/사용자명/저장소명.git
-cd RET_2ver
+cd 2026-1-sw-8
 ```
 
 #### 2. 패키지 설치
